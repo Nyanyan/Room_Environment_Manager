@@ -194,7 +194,7 @@ void graph_add_data(Graph_data &graph_data, Sensor_data &sensor_data){
 
 
 void graph_data_update(Time_info &time_info, Graph_data &graph_data, Sensor_data &sensor_data){
-  if (time_info.minute != graph_data.last_data_update_minute && time_info.minute % GRAPH_DATA_INTERVAL){
+  if (time_info.minute != graph_data.last_data_update_minute && time_info.minute % GRAPH_DATA_INTERVAL == 0){
     graph_data.last_data_update_minute = time_info.minute;
     graph_add_data(graph_data, sensor_data);
   }
