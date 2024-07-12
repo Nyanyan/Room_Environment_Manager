@@ -89,19 +89,6 @@ void graph_draw(Graph_data &graph_data, Graph_img &graph_img){
   for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
     int32_t minute = graph_data.last_data_update_minute + 1440 - (GRAPH_DATA_N - 1 - x) * GRAPH_DATA_INTERVAL;
     int32_t hour = graph_data.last_data_update_hour + minute / 60;
-    Serial.print(graph_data.last_data_update_hour);
-    Serial.print(':');
-    Serial.print(graph_data.last_data_update_minute);
-    Serial.print('\t');
-    Serial.print(x);
-    Serial.print('\t');
-    Serial.print(hour);
-    Serial.print(' ');
-    Serial.print(hour % 24);
-    Serial.print('\t');
-    Serial.print(minute);
-    Serial.print(' ');
-    Serial.println(minute % 60);
     if (6 <= hour % 24 && hour % 24 < 18){ // daytime
       for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
         graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_YELLOW;
