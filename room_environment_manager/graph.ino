@@ -9,7 +9,7 @@ const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
   {  0,   0, 255}, // blue
   {255, 178,  44}, // orange
   {250, 255, 175}, // yellow
-  {150, 201, 244}, // light blue
+  {187, 233, 255}, // light blue
   {127, 127, 127}, // gray
   {200, 200, 200} // light gray
 };
@@ -85,6 +85,37 @@ void graph_draw(Graph_data &graph_data, Graph_img &graph_img){
     y_max += 3;
   }
 
+  // x scale + daytime-night coloring
+  for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
+    int32_t hour = graph_data.last_data_update_hour + (x * GRAPH_DATA_INTERVAL + 59) / 60;
+    int32_t minute = graph_data.last_data_update_minute + (x + 1) * GRAPH_DATA_INTERVAL;
+    if (6 <= hour % 24 && hour % 24 < 18){ // daytime
+      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_YELLOW;
+      }
+    } else{ // night
+      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTBLUE;
+      }
+    }
+    if (minute % 60 == 0){ // every 1 hour
+      graph_img.graph[GRAPH_SY - 1][GRAPH_SX + x] = PALETTE_GRAY;
+      if (hour % 3 == 0){ // every 3 hour
+        for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+          graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTGRAY;
+        }
+        if (hour % 12 == 0){ // 0 o'clock & 12 o'clock
+          graph_img.graph[GRAPH_SY - 2][GRAPH_SX + x] = PALETTE_GRAY;
+          graph_img.graph[GRAPH_SY - 3][GRAPH_SX + x] = PALETTE_GRAY;
+          if (hour % 24 == 0){ // 0 o'clock
+            graph_img.graph[GRAPH_SY - 4][GRAPH_SX + x] = PALETTE_GRAY;
+            graph_img.graph[GRAPH_SY - 5][GRAPH_SX + x] = PALETTE_GRAY;
+          }
+        }
+      }
+    }
+  }
+
   // y scale
   for (int32_t t = y_min; t <= y_max; ++t){
     uint8_t line_color = PALETTE_LIGHTGRAY;
@@ -96,34 +127,6 @@ void graph_draw(Graph_data &graph_data, Graph_img &graph_img){
     int32_t y = (float)GRAPH_AREA_HEIGHT * (t - y_min) / (y_max - y_min);
     for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
       graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = line_color;
-    }
-  }
-
-  // x scale
-  for (int32_t x = 1; x < GRAPH_DATA_N; ++x){
-    int32_t hour = graph_data.last_data_update_hour - 24 + x * GRAPH_DATA_INTERVAL / 60;
-    int32_t minute = graph_data.last_data_update_minute + x * GRAPH_DATA_INTERVAL;
-    int32_t hour_positive = (hour + 24) % 24;
-    if (6 <= hour_positive && hour_positive < 18){ // daytime
-      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
-        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_YELLOW;
-      }
-    } else{ // night
-      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
-        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTBLUE;
-      }
-    }
-    if (minute % 60 == 0){ // every 1 hour
-      graph_img.graph[GRAPH_SY - 1][GRAPH_SX + x] = PALETTE_GRAY;
-      if (minute % 360 == 0 && (hour + 24) % 6 == 0){ // 0, 6, 12, 18 o'clock
-        for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
-          graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTGRAY;
-        }
-        if (hour == 0 || hour == -24){
-          graph_img.graph[GRAPH_SY - 2][GRAPH_SX + x] = PALETTE_GRAY;
-          graph_img.graph[GRAPH_SY - 3][GRAPH_SX + x] = PALETTE_GRAY;
-        }
-      }
     }
   }
 

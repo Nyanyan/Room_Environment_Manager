@@ -24,6 +24,7 @@ void setup() {
 
   display_clear();
   display_print(0, 0, "Started");
+  time_info = time_get_local();
   slack_send_message(time_info, "[INFO] Started");
 }
 
@@ -34,6 +35,16 @@ void loop() {
 
   // get sensor data
   Sensor_data sensor_data = get_sensor_data();
+
+  // update graph data
+  if (graph_data.last_data_update_minute == -1){ // forced update
+    int tmp_minute = time_info.minute;
+    time_info.minute = time_info.minute / GRAPH_DATA_INTERVAL * GRAPH_DATA_INTERVAL;
+    graph_data_update(time_info, graph_data, sensor_data);
+    time_info.minute = tmp_minute;
+  } else { // regular update
+    graph_data_update(time_info, graph_data, sensor_data);
+  }
 
   // get command from user
   Command command = command_get();
@@ -47,9 +58,6 @@ void loop() {
 
   // air conditioner auto mode
   ac_auto(settings, sensor_data, ac_status, time_info);
-
-  // update graph data
-  graph_data_update(time_info, graph_data, sensor_data);
 
   // send regular message
   regular_message(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
