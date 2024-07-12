@@ -8,19 +8,21 @@
 struct Graph_data{
   float temperature[GRAPH_DATA_N];
   int last_data_update_minute;
+  int last_data_update_hour;
 
   Graph_data(){
     for (int i = 0; i < GRAPH_DATA_N; ++i){
       temperature[i] = GRAPH_DATA_UNDEFINED;
     }
     last_data_update_minute = -1;
+    last_data_update_hour = -1;
   }
 };
 
 
 
 // bitmap color palette
-#define BMP_N_COLOR_PALETTE 9
+#define BMP_N_COLOR_PALETTE 11
 #define PALETTE_WHITE 0
 #define PALETTE_BLACK 1
 #define PALETTE_RED 2
@@ -28,8 +30,10 @@ struct Graph_data{
 #define PALETTE_SKYBLUE 4
 #define PALETTE_BLUE 5
 #define PALETTE_ORANGE 6
-#define PALETTE_GRAY 7
-#define PALETTE_LIGHTGRAY 8
+#define PALETTE_YELLOW 7
+#define PALETTE_LIGHTBLUE 8
+#define PALETTE_GRAY 9
+#define PALETTE_LIGHTGRAY 10
 
 
 
@@ -79,6 +83,7 @@ struct Value_color{
   int value;
   uint8_t color;
 };
+
 
 
 

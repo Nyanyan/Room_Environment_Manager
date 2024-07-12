@@ -8,6 +8,8 @@ const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
   { 54, 194, 206}, // sky blue
   {  0,   0, 255}, // blue
   {255, 178,  44}, // orange
+  {250, 255, 175}, // yellow
+  {150, 201, 244}, // light blue
   {127, 127, 127}, // gray
   {200, 200, 200} // light gray
 };
@@ -83,7 +85,7 @@ void graph_draw(Graph_data &graph_data, Graph_img &graph_img){
     y_max += 3;
   }
 
-  // x = const
+  // y scale
   for (int32_t t = y_min; t <= y_max; ++t){
     uint8_t line_color = PALETTE_LIGHTGRAY;
     for (int i = 0; i < N_COLOR_TEMPERATURE; ++i){
@@ -91,39 +93,58 @@ void graph_draw(Graph_data &graph_data, Graph_img &graph_img){
         line_color = color_temperature[i].color;
       }
     }
-    if (t == y_min || t == y_max){
-      line_color = PALETTE_GRAY;
-    }
     int32_t y = (float)GRAPH_AREA_HEIGHT * (t - y_min) / (y_max - y_min);
     for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
       graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = line_color;
     }
   }
 
-  // y = 0
+  // x scale
+  for (int32_t x = 1; x < GRAPH_DATA_N; ++x){
+    int32_t hour = graph_data.last_data_update_hour - 24 + x * GRAPH_DATA_INTERVAL / 60;
+    int32_t minute = graph_data.last_data_update_minute + x * GRAPH_DATA_INTERVAL;
+    int32_t hour_positive = (hour + 24) % 24;
+    if (6 <= hour_positive && hour_positive < 18){ // daytime
+      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_YELLOW;
+      }
+    } else{ // night
+      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTBLUE;
+      }
+    }
+    if (minute % 60 == 0){ // every 1 hour
+      graph_img.graph[GRAPH_SY - 1][GRAPH_SX + x] = PALETTE_GRAY;
+      if (minute % 360 == 0 && (hour + 24) % 6 == 0){ // 0, 6, 12, 18 o'clock
+        for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+          graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTGRAY;
+        }
+        if (hour == 0 || hour == -24){
+          graph_img.graph[GRAPH_SY - 2][GRAPH_SX + x] = PALETTE_GRAY;
+          graph_img.graph[GRAPH_SY - 3][GRAPH_SX + x] = PALETTE_GRAY;
+        }
+      }
+    }
+  }
+
+  // y = y_min
+  for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
+    graph_img.graph[GRAPH_SY][GRAPH_SX + x] = PALETTE_GRAY;
+  }
+  
+  // y = y_max
+  for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
+    graph_img.graph[GRAPH_SY + GRAPH_AREA_HEIGHT][GRAPH_SX + x] = PALETTE_GRAY;
+  }
+
+  // x = 0
   for (int32_t y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
     graph_img.graph[GRAPH_SY + y][GRAPH_SX - 1] = PALETTE_GRAY;
   }
 
-  // y = end
+  // x = end
   for (int32_t y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
     graph_img.graph[GRAPH_SY + y][GRAPH_SX + GRAPH_AREA_WIDTH] = PALETTE_GRAY;
-  }
-
-  // x scale
-  for (int32_t x = 1; x < GRAPH_DATA_N; ++x){
-    int32_t minute = x * GRAPH_DATA_INTERVAL;
-    if (minute % 60 == 0){ // every 1 hour
-      graph_img.graph[GRAPH_SY - 1][GRAPH_SX + x] = PALETTE_GRAY;
-      if (minute % 360 == 0){ // every 6 hour
-        graph_img.graph[GRAPH_SY - 2][GRAPH_SX + x] = PALETTE_GRAY;
-        graph_img.graph[GRAPH_SY - 3][GRAPH_SX + x] = PALETTE_GRAY;
-        if (minute % 720 == 0){ // every 12 hour
-          graph_img.graph[GRAPH_SY - 4][GRAPH_SX + x] = PALETTE_GRAY;
-          graph_img.graph[GRAPH_SY - 5][GRAPH_SX + x] = PALETTE_GRAY;
-        }
-      }
-    }
   }
 
   // plot temperature graph
@@ -196,6 +217,7 @@ void graph_add_data(Graph_data &graph_data, Sensor_data &sensor_data){
 void graph_data_update(Time_info &time_info, Graph_data &graph_data, Sensor_data &sensor_data){
   if (time_info.minute != graph_data.last_data_update_minute && time_info.minute % GRAPH_DATA_INTERVAL == 0){
     graph_data.last_data_update_minute = time_info.minute;
+    graph_data.last_data_update_hour = time_info.hour;
     graph_add_data(graph_data, sensor_data);
   }
 }
