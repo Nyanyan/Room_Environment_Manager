@@ -87,7 +87,7 @@ void graph_draw(Graph_data &graph_data, Graph_img &graph_img){
 
   // x scale + daytime-night coloring
   for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
-    int32_t hour = graph_data.last_data_update_hour + (x * GRAPH_DATA_INTERVAL + 59) / 60;
+    int32_t hour = graph_data.last_data_update_hour + (x + 2) * GRAPH_DATA_INTERVAL / 60;
     int32_t minute = graph_data.last_data_update_minute + (x + 1) * GRAPH_DATA_INTERVAL;
     if (6 <= hour % 24 && hour % 24 < 18){ // daytime
       for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
