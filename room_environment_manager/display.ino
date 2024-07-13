@@ -27,7 +27,6 @@ void display_print(int x, int y, const char *str) {
 void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Time_info &time_info){
   display_print(0, 0, String(sensor_data.temperature, 1) + " *C ");
   display_print(11, 0, String(sensor_data.humidity, 0) + " %  ");
-
   display_print(0, 1, String(sensor_data.pressure, 1) + " hPa ");
   display_print(11, 1, String(sensor_data.co2_concentration, 0) + " ppm  ");
 
@@ -37,9 +36,9 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
     display_print(0, 2, "AC MANUAL");
   }
   if (ac_status.is_on){
-    display_print(0, 2, String("AC ON ") + String(ac_status.temp));
+    display_print(11, 2, String("AC ON ") + String(ac_status.temp));
   } else{
-    display_print(0, 2, "AC OFF  ");
+    display_print(11, 2, "AC OFF  ");
   }
 
   if (settings.alert_when_hot){
