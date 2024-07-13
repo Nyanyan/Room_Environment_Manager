@@ -175,7 +175,9 @@ void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
   for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
     int32_t minute = graph_data.last_data_update_minute + 1440 - (GRAPH_DATA_N - 1 - x) * GRAPH_DATA_INTERVAL;
     int32_t hour = graph_data.last_data_update_hour + minute / 60;
-    if (6 <= hour % 24 && hour % 24 < 18){ // daytime
+    int hour_mod = hour % 24;
+    // coloring
+    if (6 <= hour_mod && hour_mod < 18){ // daytime
       for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
         graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_YELLOW;
       }
@@ -184,19 +186,30 @@ void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
         graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTBLUE;
       }
     }
+    // scale
     if (minute % 60 == 0){ // every 1 hour
       graph_img.graph[GRAPH_SY - 2][GRAPH_SX + x] = PALETTE_GRAY;
       if (hour % 3 == 0){ // every 3 hour
         for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
           graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTGRAY;
         }
-      }
-      if (hour % 12 == 0){ // 0 o'clock & 12 o'clock
-        graph_img.graph[GRAPH_SY - 3][GRAPH_SX + x] = PALETTE_GRAY;
-        graph_img.graph[GRAPH_SY - 4][GRAPH_SX + x] = PALETTE_GRAY;
-      }
-      if (hour % 24 == 0){ // 0 o'clock
-        graph_img.graph[GRAPH_SY - 5][GRAPH_SX + x] = PALETTE_GRAY;
+        // hour as string
+        int n_digit = 1;
+        if (hour_mod >= 10) {
+          n_digit = 2;
+        }
+        int ex = GRAPH_SX + x + (CHAR_WIDTH * n_digit) / 2;
+        int ey = GRAPH_SY - 3 - CHAR_HEIGHT;
+        int h = hour_mod;
+        for (int i = 0; i < 2; ++i) {
+          int digit = h % 10;
+          graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+          ex -= CHAR_WIDTH + CHAR_SPACE;
+          h /= 10;
+          if (h == 0) {
+            break;
+          }
+        }
       }
     }
   }
@@ -328,7 +341,8 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
 
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_TEMPERATURE_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_temperature, CHAR_TEMPERATURE_N); // title
-  graph_draw_str(graph_img, CHAR_UNIT_Y_MARGIN_Y, CHAR_UNIT_Y_EX, char_idx_degree, CHAR_DEGREE_N); // y unit
+  graph_draw_str(graph_img, CHAR_UNIT_X_EY, CHAR_UNIT_X_EX, char_idx_time, CHAR_TIME_N); // x unit
+  graph_draw_str(graph_img, CHAR_UNIT_Y_EY, CHAR_UNIT_Y_EX, char_idx_degree, CHAR_DEGREE_N); // y unit
   graph_draw_time(graph_img, time_info);
 }
 
@@ -354,7 +368,8 @@ void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info
 
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_HUMIDITY_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_humidity, CHAR_HUMIDITY_N); // title
-  graph_draw_str(graph_img, CHAR_UNIT_Y_MARGIN_Y, CHAR_UNIT_Y_EX, char_idx_percent, CHAR_PERCENT_N); // y unit
+  graph_draw_str(graph_img, CHAR_UNIT_X_EY, CHAR_UNIT_X_EX, char_idx_time, CHAR_TIME_N); // x unit
+  graph_draw_str(graph_img, CHAR_UNIT_Y_EY, CHAR_UNIT_Y_EX, char_idx_percent, CHAR_PERCENT_N); // y unit
   graph_draw_time(graph_img, time_info);
 }
 
@@ -393,7 +408,8 @@ void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info
 
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_PRESSURE_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_pressure, CHAR_PRESSURE_N); // title
-  graph_draw_str(graph_img, CHAR_UNIT_Y_MARGIN_Y, CHAR_UNIT_Y_EX, char_idx_hpa, CHAR_HPA_N); // y unit
+  graph_draw_str(graph_img, CHAR_UNIT_X_EY, CHAR_UNIT_X_EX, char_idx_time, CHAR_TIME_N); // x unit
+  graph_draw_str(graph_img, CHAR_UNIT_Y_EY, CHAR_UNIT_Y_EX, char_idx_hpa, CHAR_HPA_N); // y unit
   graph_draw_time(graph_img, time_info);
 }
 
@@ -431,7 +447,8 @@ void graph_draw_co2_concentration(Graph_data &graph_data, Graph_img &graph_img, 
 
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_CO2_CONCENTRATION_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_co2_concentration, CHAR_CO2_CONCENTRATION_N); // title
-  graph_draw_str(graph_img, CHAR_UNIT_Y_MARGIN_Y, CHAR_UNIT_Y_EX, char_idx_ppm, CHAR_PPM_N); // y unit
+  graph_draw_str(graph_img, CHAR_UNIT_X_EY, CHAR_UNIT_X_EX, char_idx_time, CHAR_TIME_N); // x unit
+  graph_draw_str(graph_img, CHAR_UNIT_Y_EY, CHAR_UNIT_Y_EX, char_idx_ppm, CHAR_PPM_N); // y unit
   graph_draw_time(graph_img, time_info);
 }
 

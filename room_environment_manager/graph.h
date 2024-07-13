@@ -47,10 +47,10 @@ struct Graph_data{
 
 // graph area
 #define GRAPH_IMG_HEIGHT 146
-#define GRAPH_IMG_WIDTH 176
+#define GRAPH_IMG_WIDTH 184
 #define GRAPH_AREA_HEIGHT 120
 #define GRAPH_AREA_WIDTH 144
-#define GRAPH_SX 28
+#define GRAPH_SX 32
 #define GRAPH_SY 14
 
 
