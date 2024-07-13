@@ -19,7 +19,7 @@
 
 // graph unit
 #define CHAR_UNIT_MARGIN_Y 2
-#define CHAR_UNIT_MARGIN_X 4
+#define CHAR_UNIT_EX (GRAPH_SX - 4)
 #define CHAR_DEGREE_N 1 // *C (special character)
 #define CHAR_PERCENT_N 1 // %
 #define CHAR_HPA_N 3 // hPa
@@ -104,6 +104,12 @@ const int char_idx_hpa[CHAR_HPA_N] = {
   CHAR_LIST_h, 
   CHAR_LIST_P, 
   CHAR_LIST_a
+};
+
+const int char_idx_ppm[CHAR_PPM_N] = {
+  CHAR_LIST_p, 
+  CHAR_LIST_p, 
+  CHAR_LIST_m
 };
 
 

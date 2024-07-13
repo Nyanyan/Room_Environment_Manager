@@ -116,7 +116,7 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
   // print :
-  graph_draw_char(graph_img, ey, ex, char_colon);
+  graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_COLON]);
   ex -= CHAR_WIDTH + CHAR_SPACE;
   // print hh
   for (int i = 0; i < 2; ++i) {
@@ -133,7 +133,7 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
   // print /
-  graph_draw_char(graph_img, ey, ex, char_slash);
+  graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_SLASH]);
   ex -= CHAR_WIDTH + CHAR_SPACE;
   // print MM
   for (int i = 0; i < 2; ++i) {
@@ -142,12 +142,21 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
   // print /
-  graph_draw_char(graph_img, ey, ex, char_slash);
+  graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_SLASH]);
   ex -= CHAR_WIDTH + CHAR_SPACE;
   // print YYYY
   for (int i = 0; i < 4; ++i) {
     int digit = time_info.day_str[3 - i] - '0';
     graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+  }
+}
+
+void graph_draw_unit(Graph_img &graph_img, const int str[], int len_str) {
+  int ex = CHAR_UNIT_EX;
+  int ey = CHAR_UNIT_MARGIN_Y;
+  for (int i = len_str - 1; i >= 0; --i) {
+    graph_draw_char(graph_img, ey, ex, char_list[str[i]]);
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
 }
@@ -343,6 +352,7 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
   graph_draw_y_scale(graph_img, y_min, y_max, color_temperature, N_COLOR_TEMPERATURE);
   graph_draw_frame(graph_img);
   graph_draw_title(graph_img, char_idx_temperature, CHAR_TEMPERATURE_N);
+  graph_draw_unit(graph_img, char_idx_degree, CHAR_DEGREE_N);
   graph_draw_time(graph_img, time_info);
 }
 
@@ -382,6 +392,7 @@ void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info
   graph_draw_y_scale(graph_img, GRAPH_HUMIDITY_Y_MIN, GRAPH_HUMIDITY_Y_MAX, color_humidity, N_COLOR_HUMIDITY);
   graph_draw_frame(graph_img);
   graph_draw_title(graph_img, char_idx_humidity, CHAR_HUMIDITY_N);
+  graph_draw_unit(graph_img, char_idx_percent, CHAR_PERCENT_N);
   graph_draw_time(graph_img, time_info);
 }
 
@@ -433,6 +444,7 @@ void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info
   graph_draw_y_scale(graph_img, y_min, y_max, color_pressure, N_COLOR_PRESSURE);
   graph_draw_frame(graph_img);
   graph_draw_title(graph_img, char_idx_pressure, CHAR_PRESSURE_N);
+  graph_draw_unit(graph_img, char_idx_hpa, CHAR_HPA_N);
   graph_draw_time(graph_img, time_info);
 }
 
@@ -483,6 +495,7 @@ void graph_draw_co2_concentration(Graph_data &graph_data, Graph_img &graph_img, 
   graph_draw_y_scale(graph_img, y_min, y_max, color_co2_concentration, N_COLOR_CO2_CONCENTRATION);
   graph_draw_frame(graph_img);
   graph_draw_title(graph_img, char_idx_co2_concentration, CHAR_CO2_CONCENTRATION_N);
+  graph_draw_unit(graph_img, char_idx_ppm, CHAR_PPM_N);
   graph_draw_time(graph_img, time_info);
 }
 
