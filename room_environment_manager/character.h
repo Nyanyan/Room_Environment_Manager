@@ -10,10 +10,6 @@
 #define CHAR_TIME_MARGIN_X 4
 #define CHAR_TIME_MARGIN_Y 2
 
-// graph title
-#define CHAR_TITLE_MARGIN_Y 2
-#define CHAR_TEMPERATURE_N 11
-
 const bool char_digit[10][CHAR_HEIGHT][CHAR_WIDTH] = {
   { // 0
     {0, 1, 1, 1, 0}, 
@@ -127,15 +123,71 @@ const bool char_colon[CHAR_HEIGHT][CHAR_WIDTH] = {
   {0, 0, 0, 0, 0}
 };
 
-const bool char_temerature[CHAR_TEMPERATURE_N][CHAR_HEIGHT][CHAR_WIDTH] = {
-  { // T
-    {1, 1, 1, 1, 1}, 
-    {0, 0, 1, 0, 0}, 
-    {0, 0, 1, 0, 0}, 
-    {0, 0, 1, 0, 0}, 
-    {0, 0, 1, 0, 0}, 
-    {0, 0, 1, 0, 0}, 
-    {0, 0, 1, 0, 0}
+
+
+// graph title
+#define CHAR_TITLE_MARGIN_Y 3
+#define CHAR_TEMPERATURE_N 11
+#define CHAR_HUMIDITY_N 8
+
+// alphabet
+#define CHAR_N_LIST 12
+#define CHAR_LIST_a 0
+#define CHAR_LIST_d 1
+#define CHAR_LIST_e 2
+#define CHAR_LIST_i 3
+#define CHAR_LIST_m 4
+#define CHAR_LIST_p 5
+#define CHAR_LIST_r 6
+#define CHAR_LIST_t 7
+#define CHAR_LIST_u 8
+#define CHAR_LIST_y 9
+#define CHAR_LIST_H 10
+#define CHAR_LIST_T 11
+
+const int char_idx_temperature[CHAR_TEMPERATURE_N] = {
+  CHAR_LIST_T, 
+  CHAR_LIST_e, 
+  CHAR_LIST_m, 
+  CHAR_LIST_p, 
+  CHAR_LIST_e, 
+  CHAR_LIST_r, 
+  CHAR_LIST_a, 
+  CHAR_LIST_t, 
+  CHAR_LIST_u, 
+  CHAR_LIST_r, 
+  CHAR_LIST_e
+};
+
+const int char_idx_humidity[CHAR_HUMIDITY_N] = {
+  CHAR_LIST_H, 
+  CHAR_LIST_u, 
+  CHAR_LIST_m, 
+  CHAR_LIST_i, 
+  CHAR_LIST_d, 
+  CHAR_LIST_i, 
+  CHAR_LIST_t, 
+  CHAR_LIST_y
+};
+
+const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
+  { // a
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0}, 
+    {0, 1, 1, 1, 0}, 
+    {0, 0, 0, 0, 1}, 
+    {0, 1, 1, 1, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {0, 1, 1, 1, 1}
+  },
+  { // d
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 1}, 
+    {0, 0, 0, 0, 1}, 
+    {0, 1, 1, 1, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 1, 1}, 
+    {0, 1, 1, 0, 1}
   },
   { // e
     {0, 0, 0, 0, 0}, 
@@ -144,6 +196,15 @@ const bool char_temerature[CHAR_TEMPERATURE_N][CHAR_HEIGHT][CHAR_WIDTH] = {
     {1, 0, 0, 0, 1}, 
     {1, 1, 1, 1, 1}, 
     {1, 0, 0, 0, 0}, 
+    {0, 1, 1, 1, 0}
+  },
+  { // i
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 0, 0, 0}, 
+    {0, 1, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
     {0, 1, 1, 1, 0}
   },
   { // m
@@ -164,15 +225,6 @@ const bool char_temerature[CHAR_TEMPERATURE_N][CHAR_HEIGHT][CHAR_WIDTH] = {
     {1, 0, 0, 0, 0}, 
     {1, 0, 0, 0, 0}
   },
-  { // e
-    {0, 0, 0, 0, 0}, 
-    {0, 0, 0, 0, 0}, 
-    {0, 1, 1, 1, 0}, 
-    {1, 0, 0, 0, 1}, 
-    {1, 1, 1, 1, 1}, 
-    {1, 0, 0, 0, 0}, 
-    {0, 1, 1, 1, 0}
-  },
   { // r
     {0, 0, 0, 0, 0}, 
     {0, 0, 0, 0, 0}, 
@@ -181,15 +233,6 @@ const bool char_temerature[CHAR_TEMPERATURE_N][CHAR_HEIGHT][CHAR_WIDTH] = {
     {1, 0, 0, 0, 0}, 
     {1, 0, 0, 0, 0}, 
     {1, 0, 0, 0, 0}
-  },
-  { // a
-    {0, 0, 0, 0, 0}, 
-    {0, 0, 0, 0, 0}, 
-    {0, 1, 1, 1, 0}, 
-    {0, 0, 0, 0, 1}, 
-    {0, 1, 1, 1, 1}, 
-    {1, 0, 0, 0, 1}, 
-    {0, 1, 1, 1, 1}
   },
   { // t
     {0, 0, 0, 0, 0}, 
@@ -209,24 +252,33 @@ const bool char_temerature[CHAR_TEMPERATURE_N][CHAR_HEIGHT][CHAR_WIDTH] = {
     {1, 0, 0, 1, 1}, 
     {0, 1, 1, 0, 1}
   },
-  { // r
+  { // y
     {0, 0, 0, 0, 0}, 
     {0, 0, 0, 0, 0}, 
-    {1, 0, 1, 1, 1}, 
-    {1, 1, 0, 0, 0}, 
-    {1, 0, 0, 0, 0}, 
-    {1, 0, 0, 0, 0}, 
-    {1, 0, 0, 0, 0}
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {0, 1, 0, 1, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {1, 1, 0, 0, 0}
   },
-  { // e
-    {0, 0, 0, 0, 0}, 
-    {0, 0, 0, 0, 0}, 
-    {0, 1, 1, 1, 0}, 
+  { // H
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
     {1, 0, 0, 0, 1}, 
     {1, 1, 1, 1, 1}, 
-    {1, 0, 0, 0, 0}, 
-    {0, 1, 1, 1, 0}
-  }
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}
+  },
+  { // T
+    {1, 1, 1, 1, 1}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}
+  },
 };
 
 

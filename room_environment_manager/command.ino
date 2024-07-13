@@ -50,7 +50,11 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
 void command_send_graph(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
   graph_draw_temperature(graph_data, graph_img, time_info);
   graph_encode_bmp(graph_img);
-  slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME);
+  slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_TEMPERATURE);
+
+  graph_draw_humidity(graph_data, graph_img, time_info);
+  graph_encode_bmp(graph_img);
+  slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_HUMIDITY);
 }
 
 
