@@ -10,6 +10,104 @@
 #define CHAR_TIME_MARGIN_X 4
 #define CHAR_TIME_MARGIN_Y 2
 
+// graph title
+#define CHAR_TITLE_MARGIN_Y 2
+#define CHAR_TEMPERATURE_N 11
+#define CHAR_HUMIDITY_N 8
+#define CHAR_PRESSURE_N 8
+#define CHAR_CO2_CONCENTRATION_N 3
+
+// graph unit
+#define CHAR_UNIT_MARGIN_Y 2
+#define CHAR_UNIT_MARGIN_X 4
+#define CHAR_DEGREE_N 1 // *C (special character)
+#define CHAR_PERCENT_N 1 // %
+#define CHAR_HPA_N 3 // hPa
+#define CHAR_PPM_N 3 // ppm
+
+// alphabet
+#define CHAR_N_LIST 22
+#define CHAR_LIST_a 0
+#define CHAR_LIST_d 1
+#define CHAR_LIST_e 2
+#define CHAR_LIST_h 3
+#define CHAR_LIST_i 4
+#define CHAR_LIST_m 5
+#define CHAR_LIST_p 6
+#define CHAR_LIST_r 7
+#define CHAR_LIST_s 8
+#define CHAR_LIST_t 9
+#define CHAR_LIST_u 10
+#define CHAR_LIST_y 11
+#define CHAR_LIST_C 12
+#define CHAR_LIST_H 13
+#define CHAR_LIST_O 14
+#define CHAR_LIST_P 15
+#define CHAR_LIST_T 16
+#define CHAR_LIST_2 17
+#define CHAR_LIST_SLASH 18
+#define CHAR_LIST_COLON 19
+#define CHAR_LIST_DEGREE 20
+#define CHAR_LIST_PERCENT 21
+
+const int char_idx_temperature[CHAR_TEMPERATURE_N] = {
+  CHAR_LIST_T, 
+  CHAR_LIST_e, 
+  CHAR_LIST_m, 
+  CHAR_LIST_p, 
+  CHAR_LIST_e, 
+  CHAR_LIST_r, 
+  CHAR_LIST_a, 
+  CHAR_LIST_t, 
+  CHAR_LIST_u, 
+  CHAR_LIST_r, 
+  CHAR_LIST_e
+};
+
+const int char_idx_humidity[CHAR_HUMIDITY_N] = {
+  CHAR_LIST_H, 
+  CHAR_LIST_u, 
+  CHAR_LIST_m, 
+  CHAR_LIST_i, 
+  CHAR_LIST_d, 
+  CHAR_LIST_i, 
+  CHAR_LIST_t, 
+  CHAR_LIST_y
+};
+
+const int char_idx_pressure[CHAR_PRESSURE_N] = {
+  CHAR_LIST_P, 
+  CHAR_LIST_r, 
+  CHAR_LIST_e, 
+  CHAR_LIST_s, 
+  CHAR_LIST_s, 
+  CHAR_LIST_u, 
+  CHAR_LIST_r, 
+  CHAR_LIST_e
+};
+
+const int char_idx_co2_concentration[CHAR_CO2_CONCENTRATION_N] = {
+  CHAR_LIST_C, 
+  CHAR_LIST_O, 
+  CHAR_LIST_2
+};
+
+const int char_idx_degree[CHAR_DEGREE_N] = {
+  CHAR_LIST_DEGREE
+};
+
+const int char_idx_percent[CHAR_PERCENT_N] = {
+  CHAR_LIST_PERCENT
+};
+
+const int char_idx_hpa[CHAR_HPA_N] = {
+  CHAR_LIST_h, 
+  CHAR_LIST_P, 
+  CHAR_LIST_a
+};
+
+
+
 const bool char_digit[10][CHAR_HEIGHT][CHAR_WIDTH] = {
   { // 0
     {0, 1, 1, 1, 0}, 
@@ -103,96 +201,9 @@ const bool char_digit[10][CHAR_HEIGHT][CHAR_WIDTH] = {
   }
 };
 
-const bool char_slash[CHAR_HEIGHT][CHAR_WIDTH] = {
-  {0, 0, 0, 1, 0}, 
-  {0, 0, 0, 1, 0}, 
-  {0, 0, 1, 0, 0}, 
-  {0, 0, 1, 0, 0}, 
-  {0, 1, 0, 0, 0}, 
-  {0, 1, 0, 0, 0}, 
-  {1, 0, 0, 0, 0}
-};
-
-const bool char_colon[CHAR_HEIGHT][CHAR_WIDTH] = {
-  {0, 0, 0, 0, 0}, 
-  {0, 1, 1, 0, 0}, 
-  {0, 1, 1, 0, 0}, 
-  {0, 0, 0, 0, 0}, 
-  {0, 1, 1, 0, 0}, 
-  {0, 1, 1, 0, 0}, 
-  {0, 0, 0, 0, 0}
-};
 
 
 
-// graph title
-#define CHAR_TITLE_MARGIN_Y 2
-#define CHAR_TEMPERATURE_N 11
-#define CHAR_HUMIDITY_N 8
-#define CHAR_PRESSURE_N 8
-#define CHAR_CO2_CONCENTRATION_N 3
-
-// alphabet
-#define CHAR_N_LIST 17
-#define CHAR_LIST_a 0
-#define CHAR_LIST_d 1
-#define CHAR_LIST_e 2
-#define CHAR_LIST_i 3
-#define CHAR_LIST_m 4
-#define CHAR_LIST_p 5
-#define CHAR_LIST_r 6
-#define CHAR_LIST_s 7
-#define CHAR_LIST_t 8
-#define CHAR_LIST_u 9
-#define CHAR_LIST_y 10
-#define CHAR_LIST_C 11
-#define CHAR_LIST_H 12
-#define CHAR_LIST_O 13
-#define CHAR_LIST_P 14
-#define CHAR_LIST_T 15
-#define CHAR_LIST_2 16
-
-const int char_idx_temperature[CHAR_TEMPERATURE_N] = {
-  CHAR_LIST_T, 
-  CHAR_LIST_e, 
-  CHAR_LIST_m, 
-  CHAR_LIST_p, 
-  CHAR_LIST_e, 
-  CHAR_LIST_r, 
-  CHAR_LIST_a, 
-  CHAR_LIST_t, 
-  CHAR_LIST_u, 
-  CHAR_LIST_r, 
-  CHAR_LIST_e
-};
-
-const int char_idx_humidity[CHAR_HUMIDITY_N] = {
-  CHAR_LIST_H, 
-  CHAR_LIST_u, 
-  CHAR_LIST_m, 
-  CHAR_LIST_i, 
-  CHAR_LIST_d, 
-  CHAR_LIST_i, 
-  CHAR_LIST_t, 
-  CHAR_LIST_y
-};
-
-const int char_idx_pressure[CHAR_PRESSURE_N] = {
-  CHAR_LIST_P, 
-  CHAR_LIST_r, 
-  CHAR_LIST_e, 
-  CHAR_LIST_s, 
-  CHAR_LIST_s, 
-  CHAR_LIST_u, 
-  CHAR_LIST_r, 
-  CHAR_LIST_e
-};
-
-const int char_idx_co2_concentration[CHAR_CO2_CONCENTRATION_N] = {
-  CHAR_LIST_C, 
-  CHAR_LIST_O, 
-  CHAR_LIST_2
-};
 
 const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
   { // a
@@ -221,6 +232,15 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
     {1, 1, 1, 1, 1}, 
     {1, 0, 0, 0, 0}, 
     {0, 1, 1, 1, 0}
+  },
+  { // h
+    {1, 0, 0, 0, 0}, 
+    {1, 0, 0, 0, 0}, 
+    {1, 0, 1, 1, 0}, 
+    {1, 1, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}
   },
   { // i
     {0, 0, 0, 0, 0}, 
@@ -347,7 +367,43 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
     {0, 0, 1, 0, 0}, 
     {0, 1, 0, 0, 0}, 
     {1, 1, 1, 1, 1}
-  }
+  },
+  { // /
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 1}, 
+    {0, 0, 0, 1, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 1, 0, 0, 0}, 
+    {1, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0}
+  },
+  { // :
+    {0, 0, 0, 0, 0}, 
+    {0, 1, 1, 0, 0}, 
+    {0, 1, 1, 0, 0}, 
+    {0, 0, 0, 0, 0}, 
+    {0, 1, 1, 0, 0}, 
+    {0, 1, 1, 0, 0}, 
+    {0, 0, 0, 0, 0}
+  },
+  { // *C (special character)
+    {1, 0, 0, 0, 0}, 
+    {0, 0, 1, 1, 0}, 
+    {0, 1, 0, 0, 1}, 
+    {0, 1, 0, 0, 0}, 
+    {0, 1, 0, 0, 0}, 
+    {0, 1, 0, 0, 1}, 
+    {0, 0, 1, 1, 0}
+  },
+  { // %
+    {1, 1, 0, 0, 0}, 
+    {1, 1, 0, 0, 1}, 
+    {0, 0, 0, 1, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 1, 0, 0, 0}, 
+    {1, 0, 0, 1, 1}, 
+    {0, 0, 0, 1, 1}
+  },
 };
 
 
