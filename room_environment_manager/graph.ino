@@ -193,14 +193,18 @@ void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
 }
 
 
-void graph_draw_y_scale(Graph_img &graph_img, int y_min, int y_max, Value_color &scale, int n_scale) {
+void graph_draw_y_scale(Graph_img &graph_img, int y_min, int y_max, const Value_color scale[], int n_scale) {
   for (int i = 0; i < n_scale; ++i) {
-    int32_t ey = round((float)GRAPH_AREA_HEIGHT * (scale[i].value - y_min) / (y_max - y_min)) - CHAR_HEIGHT / 2;
-    int32_t ex = GRAPH_SX - 1;
-    String str = String(scale[i].value);
-    for (int j = str.length() - 1; j >= 0; --j) {
-      graph_draw_char(graph_img, ey, ex, char_digit[str[i] - '0']);
-      ex -= CHAR_WIDTH + CHAR_SPACE;
+    if (y_min <= scale[i].value && scale[i].value <= y_max) {
+      int32_t ey = GRAPH_SY + round((float)GRAPH_AREA_HEIGHT * (scale[i].value - y_min) / (y_max - y_min)) - CHAR_HEIGHT / 2;
+      int32_t ex = GRAPH_SX - 4;
+      int v = scale[i].value;
+      while (v) {
+        int digit = v % 10;
+        graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+        ex -= CHAR_WIDTH + CHAR_SPACE;
+        v /= 10;
+      }
     }
   }
 }
@@ -270,14 +274,40 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
     }
   }
   if (y_min == 10000){
-    y_min = 0;
+    y_min = 20;
   }
   if (y_max == -10000){
-    y_max = 0;
+    y_max = 20;
   }
-  while (y_max - y_min < 6){
-    --y_min;
-    ++y_max;
+
+  while (true) {
+    int n_main_scale = 0;
+    for (int32_t t = y_min; t <= y_max; ++t){
+      for (int i = 0; i < N_COLOR_TEMPERATURE; ++i){
+        if (t == color_temperature[i].value){
+          ++n_main_scale;
+        }
+      }
+    }
+    if (n_main_scale >= 2) {
+      break;
+    }
+    int n_sub_min = (y_min + 100) % 5;
+    if (n_sub_min == 0) {
+      n_sub_min = 5;
+    }
+    if (y_min <= color_temperature[0].value) {
+      n_sub_min = 100;
+    }
+    int n_add_max = 5 - (y_max + 100) % 5;
+    if (y_max >= color_temperature[N_COLOR_TEMPERATURE - 1].value) {
+      n_add_max = 100;
+    }
+    if (n_sub_min < n_add_max) {
+      y_min -= n_sub_min + 1;
+    } else{
+      y_max += n_add_max + 1;
+    }
   }
 
   // y scale

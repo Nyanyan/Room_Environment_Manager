@@ -126,7 +126,7 @@ const bool char_colon[CHAR_HEIGHT][CHAR_WIDTH] = {
 
 
 // graph title
-#define CHAR_TITLE_MARGIN_Y 3
+#define CHAR_TITLE_MARGIN_Y 2
 #define CHAR_TEMPERATURE_N 11
 #define CHAR_HUMIDITY_N 8
 #define CHAR_PRESSURE_N 8
