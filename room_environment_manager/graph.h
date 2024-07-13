@@ -85,7 +85,7 @@ struct Value_color{
 #define GRAPH_HUMIDITY_Y_MAX 100
 
 // pressure graph
-#define N_COLOR_PRESSURE 5
+#define N_COLOR_PRESSURE 4
 #define GRAPH_PRESSURE_SCALE_INTERVAL 5
 
 // co2 concentration graph

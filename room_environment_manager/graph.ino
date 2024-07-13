@@ -35,8 +35,7 @@ const Value_color color_humidity[N_COLOR_HUMIDITY] = {
 };
 
 const Value_color color_pressure[N_COLOR_PRESSURE] = {
-  {980, PALETTE_BLUE},
-  {990, PALETTE_SKYBLUE},
+  {990, PALETTE_BLUE},
   {1000, PALETTE_GREEN},
   {1010, PALETTE_ORANGE},
   {1020, PALETTE_RED}
@@ -381,7 +380,7 @@ void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info
   graph_draw_x_scale(graph_img, graph_data);
 
   // y range
-  int y_min = 975, y_max = 1025;
+  int y_min = 985, y_max = 1025;
   for (int i = 0; i < GRAPH_DATA_N; ++i){
     if (graph_data.pressure[i] != GRAPH_DATA_UNDEFINED){
       y_min = min(y_min, (int)graph_data.pressure[i] - 1);
