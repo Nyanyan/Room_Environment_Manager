@@ -1,4 +1,5 @@
 #include "graph.h"
+#include "character.h"
 
 const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
   {255, 255, 255}, // white
@@ -58,7 +59,86 @@ void init_graph(Graph_img &graph_img){
   }
 }
 
-void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img){
+void graph_draw_char(Graph_img &graph_img, int ey, int ex, const bool char_data[CHAR_HEIGHT][CHAR_WIDTH]) {
+  for (int y = 0; y < CHAR_HEIGHT; ++y) {
+    for (int x = 0; x < CHAR_WIDTH; ++x) {
+      if (char_data[y][x]) {
+        graph_img.graph[ey + CHAR_HEIGHT - 1 - y][ex - CHAR_WIDTH + 1 + x] = PALETTE_BLACK;
+      }
+    }
+  }
+}
+
+void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
+  // format: YYYY/MM/DD hh:mm
+  int ex = GRAPH_IMG_WIDTH - CHAR_TIME_MARGIN_X;
+  int ey = CHAR_TIME_MARGIN_Y;
+  // print mm
+  for (int i = 0; i < 2; ++i) {
+    int digit = time_info.time_str[4 - i] - '0';
+    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+  }
+  // print :
+  graph_draw_char(graph_img, ey, ex, char_colon);
+  ex -= CHAR_WIDTH + CHAR_SPACE;
+  // print hh
+  for (int i = 0; i < 2; ++i) {
+    int digit = time_info.time_str[1 - i] - '0';
+    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+  }
+  // print space
+  ex -= CHAR_WIDTH + CHAR_SPACE;
+  // print DD
+  for (int i = 0; i < 2; ++i) {
+    int digit = time_info.day_str[9 - i] - '0';
+    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+  }
+  // print /
+  graph_draw_char(graph_img, ey, ex, char_slash);
+  ex -= CHAR_WIDTH + CHAR_SPACE;
+  // print MM
+  for (int i = 0; i < 2; ++i) {
+    int digit = time_info.day_str[6 - i] - '0';
+    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+  }
+  // print /
+  graph_draw_char(graph_img, ey, ex, char_slash);
+  ex -= CHAR_WIDTH + CHAR_SPACE;
+  // print YYYY
+  for (int i = 0; i < 4; ++i) {
+    int digit = time_info.day_str[3 - i] - '0';
+    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+  }
+}
+
+void graph_draw_frame(Graph_img &graph_img) {
+  // y = y_min
+  for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
+    graph_img.graph[GRAPH_SY][GRAPH_SX + x] = PALETTE_GRAY;
+  }
+  
+  // y = y_max
+  for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
+    graph_img.graph[GRAPH_SY + GRAPH_AREA_HEIGHT][GRAPH_SX + x] = PALETTE_GRAY;
+  }
+
+  // x = 0
+  for (int32_t y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+    graph_img.graph[GRAPH_SY + y][GRAPH_SX - 1] = PALETTE_GRAY;
+  }
+
+  // x = end
+  for (int32_t y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+    graph_img.graph[GRAPH_SY + y][GRAPH_SX + GRAPH_AREA_WIDTH] = PALETTE_GRAY;
+  }
+}
+
+void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
   // white canvas
   for (int y = 0; y < GRAPH_IMG_HEIGHT; ++y){
     for (int x = 0; x < GRAPH_IMG_WIDTH; ++x){
@@ -130,26 +210,6 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img){
     }
   }
 
-  // y = y_min
-  for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
-    graph_img.graph[GRAPH_SY][GRAPH_SX + x] = PALETTE_GRAY;
-  }
-  
-  // y = y_max
-  for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
-    graph_img.graph[GRAPH_SY + GRAPH_AREA_HEIGHT][GRAPH_SX + x] = PALETTE_GRAY;
-  }
-
-  // x = 0
-  for (int32_t y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
-    graph_img.graph[GRAPH_SY + y][GRAPH_SX - 1] = PALETTE_GRAY;
-  }
-
-  // x = end
-  for (int32_t y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
-    graph_img.graph[GRAPH_SY + y][GRAPH_SX + GRAPH_AREA_WIDTH] = PALETTE_GRAY;
-  }
-
   // plot temperature graph
   int32_t fy = GRAPH_DATA_UNDEFINED;
   for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
@@ -177,6 +237,9 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img){
       fy = y;
     }
   }
+
+  graph_draw_frame(graph_img);
+  graph_draw_time(graph_img, time_info);
 }
 
 
