@@ -26,7 +26,7 @@ void ac_on(AC_status &ac_status, int set_temp){
     ac.setFan(kPanasonicAcFanAuto);
     ac.setMode(kPanasonicAcCool);
     ac.setTemp(set_temp);
-    ac.setSwingVertical(kPanasonicAcSwingVAuto);
+    ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
     ac.send();
     delay(1000);
