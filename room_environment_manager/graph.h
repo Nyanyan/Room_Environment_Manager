@@ -28,27 +28,28 @@ struct Graph_data{
 
 
 // bitmap color palette
-#define BMP_N_COLOR_PALETTE 11
+#define BMP_N_COLOR_PALETTE 12
 #define PALETTE_WHITE 0
 #define PALETTE_BLACK 1
-#define PALETTE_RED 2
-#define PALETTE_GREEN 3
-#define PALETTE_SKYBLUE 4
-#define PALETTE_BLUE 5
-#define PALETTE_ORANGE 6
-#define PALETTE_YELLOW 7
-#define PALETTE_LIGHTBLUE 8
-#define PALETTE_GRAY 9
-#define PALETTE_LIGHTGRAY 10
+#define PALETTE_GRAY 2
+#define PALETTE_LIGHTGRAY 3
+#define PALETTE_RED 4
+#define PALETTE_GREEN 5
+#define PALETTE_SKYBLUE 6
+#define PALETTE_BLUE 7
+#define PALETTE_ORANGE 8
+#define PALETTE_YELLOW 9
+#define PALETTE_LIGHTBLUE 10
+#define PALETTE_PURPLE 11
 
 
 
 // graph area
 #define GRAPH_IMG_HEIGHT 150
-#define GRAPH_IMG_WIDTH 160
+#define GRAPH_IMG_WIDTH 180
 #define GRAPH_AREA_HEIGHT 120
 #define GRAPH_AREA_WIDTH 144
-#define GRAPH_SX 8
+#define GRAPH_SX 28
 #define GRAPH_SY 16
 
 // graph character
@@ -89,8 +90,8 @@ struct Value_color{
 #define GRAPH_PRESSURE_SCALE_INTERVAL 5
 
 // co2 concentration graph
-#define N_COLOR_CO2_CONCENTRATION 5
-#define GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL 100
+#define N_COLOR_CO2_CONCENTRATION 6
+#define GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL 50
 
 
 // graph bitmap

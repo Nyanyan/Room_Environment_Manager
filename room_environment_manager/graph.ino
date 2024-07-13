@@ -4,6 +4,8 @@
 const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
   {255, 255, 255}, // white
   {  0,   0,   0}, // black
+  {127, 127, 127}, // gray
+  {200, 200, 200}, // light gray
   {255,   0,   0}, // red
   { 80, 230,  78}, // green
   { 54, 194, 206}, // sky blue
@@ -11,8 +13,7 @@ const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
   {255, 178,  44}, // orange
   {250, 255, 175}, // yellow
   {187, 233, 255}, // light blue
-  {127, 127, 127}, // gray
-  {200, 200, 200} // light gray
+  {220,   0, 151}  // purple
 };
 
 const Value_color color_temperature[N_COLOR_TEMPERATURE] = {
@@ -39,11 +40,12 @@ const Value_color color_pressure[N_COLOR_PRESSURE] = {
 };
 
 const Value_color color_co2_concentration[N_COLOR_CO2_CONCENTRATION] = {
-  {600, PALETTE_BLUE},
-  {700, PALETTE_SKYBLUE},
-  {800, PALETTE_GREEN},
-  {900, PALETTE_ORANGE},
-  {1000, PALETTE_RED}
+  {500, PALETTE_BLUE},
+  {600, PALETTE_SKYBLUE},
+  {700, PALETTE_GREEN},
+  {800, PALETTE_ORANGE},
+  {900, PALETTE_RED},
+  {1000, PALETTE_PURPLE},
 };
 
 void init_graph(Graph_img &graph_img){
@@ -87,38 +89,6 @@ void graph_draw_white(Graph_img &graph_img) {
     for (int x = 0; x < GRAPH_IMG_WIDTH; ++x){
       graph_img.graph[y][x] = PALETTE_WHITE;
    }
-  }
-}
-
-void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
-  // x scale + daytime-night coloring
-  for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
-    int32_t minute = graph_data.last_data_update_minute + 1440 - (GRAPH_DATA_N - 1 - x) * GRAPH_DATA_INTERVAL;
-    int32_t hour = graph_data.last_data_update_hour + minute / 60;
-    if (6 <= hour % 24 && hour % 24 < 18){ // daytime
-      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
-        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_YELLOW;
-      }
-    } else{ // night
-      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
-        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTBLUE;
-      }
-    }
-    if (minute % 60 == 0){ // every 1 hour
-      graph_img.graph[GRAPH_SY - 2][GRAPH_SX + x] = PALETTE_GRAY;
-      if (hour % 3 == 0){ // every 3 hour
-        for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
-          graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTGRAY;
-        }
-      }
-      if (hour % 12 == 0){ // 0 o'clock & 12 o'clock
-        graph_img.graph[GRAPH_SY - 3][GRAPH_SX + x] = PALETTE_GRAY;
-        graph_img.graph[GRAPH_SY - 4][GRAPH_SX + x] = PALETTE_GRAY;
-      }
-      if (hour % 24 == 0){ // 0 o'clock
-        graph_img.graph[GRAPH_SY - 5][GRAPH_SX + x] = PALETTE_GRAY;
-      }
-    }
   }
 }
 
@@ -188,6 +158,53 @@ void graph_draw_title(Graph_img &graph_img, const int str[], int len_str) {
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
 }
+
+
+void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
+  // x scale + daytime-night coloring
+  for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
+    int32_t minute = graph_data.last_data_update_minute + 1440 - (GRAPH_DATA_N - 1 - x) * GRAPH_DATA_INTERVAL;
+    int32_t hour = graph_data.last_data_update_hour + minute / 60;
+    if (6 <= hour % 24 && hour % 24 < 18){ // daytime
+      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_YELLOW;
+      }
+    } else{ // night
+      for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+        graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTBLUE;
+      }
+    }
+    if (minute % 60 == 0){ // every 1 hour
+      graph_img.graph[GRAPH_SY - 2][GRAPH_SX + x] = PALETTE_GRAY;
+      if (hour % 3 == 0){ // every 3 hour
+        for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+          graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTGRAY;
+        }
+      }
+      if (hour % 12 == 0){ // 0 o'clock & 12 o'clock
+        graph_img.graph[GRAPH_SY - 3][GRAPH_SX + x] = PALETTE_GRAY;
+        graph_img.graph[GRAPH_SY - 4][GRAPH_SX + x] = PALETTE_GRAY;
+      }
+      if (hour % 24 == 0){ // 0 o'clock
+        graph_img.graph[GRAPH_SY - 5][GRAPH_SX + x] = PALETTE_GRAY;
+      }
+    }
+  }
+}
+
+
+void graph_draw_y_scale(Graph_img &graph_img, int y_min, int y_max, Value_color &scale, int n_scale) {
+  for (int i = 0; i < n_scale; ++i) {
+    int32_t ey = round((float)GRAPH_AREA_HEIGHT * (scale[i].value - y_min) / (y_max - y_min)) - CHAR_HEIGHT / 2;
+    int32_t ex = GRAPH_SX - 1;
+    String str = String(scale[i].value);
+    for (int j = str.length() - 1; j >= 0; --j) {
+      graph_draw_char(graph_img, ey, ex, char_digit[str[i] - '0']);
+      ex -= CHAR_WIDTH + CHAR_SPACE;
+    }
+  }
+}
+
 
 void graph_draw_frame(Graph_img &graph_img) {
   // y = y_min
@@ -290,6 +307,7 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
     }
   }
 
+  graph_draw_y_scale(graph_img, y_min, y_max, color_temperature, N_COLOR_TEMPERATURE);
   graph_draw_frame(graph_img);
   graph_draw_title(graph_img, char_idx_temperature, CHAR_TEMPERATURE_N);
   graph_draw_time(graph_img, time_info);
@@ -328,6 +346,7 @@ void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info
     }
   }
 
+  graph_draw_y_scale(graph_img, GRAPH_HUMIDITY_Y_MIN, GRAPH_HUMIDITY_Y_MAX, color_humidity, N_COLOR_HUMIDITY);
   graph_draw_frame(graph_img);
   graph_draw_title(graph_img, char_idx_humidity, CHAR_HUMIDITY_N);
   graph_draw_time(graph_img, time_info);
@@ -378,6 +397,7 @@ void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info
     }
   }
 
+  graph_draw_y_scale(graph_img, y_min, y_max, color_pressure, N_COLOR_PRESSURE);
   graph_draw_frame(graph_img);
   graph_draw_title(graph_img, char_idx_pressure, CHAR_PRESSURE_N);
   graph_draw_time(graph_img, time_info);
@@ -427,6 +447,7 @@ void graph_draw_co2_concentration(Graph_data &graph_data, Graph_img &graph_img, 
     }
   }
 
+  graph_draw_y_scale(graph_img, y_min, y_max, color_co2_concentration, N_COLOR_CO2_CONCENTRATION);
   graph_draw_frame(graph_img);
   graph_draw_title(graph_img, char_idx_co2_concentration, CHAR_CO2_CONCENTRATION_N);
   graph_draw_time(graph_img, time_info);
