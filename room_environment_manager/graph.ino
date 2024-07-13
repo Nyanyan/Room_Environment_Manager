@@ -116,6 +116,16 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
   }
 }
 
+
+void graph_draw_title(Graph_img &graph_img, const bool str[][CHAR_HEIGHT][CHAR_WIDTH], int len_str) {
+  int ex = (float)GRAPH_IMG_WIDTH / 2.0 + (float)len_str / 2.0 * CHAR_WIDTH + (float)(len_str - 1) / 2.0 * CHAR_SPACE;
+  int ey = GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y;
+  for (int i = len_str - 1; i >= 0; --i) {
+    graph_draw_char(graph_img, ey, ex, str[i]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+  }
+}
+
 void graph_draw_frame(Graph_img &graph_img) {
   // y = y_min
   for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
@@ -239,6 +249,7 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
   }
 
   graph_draw_frame(graph_img);
+  graph_draw_title(graph_img, char_temerature, CHAR_TEMPERATURE_N);
   graph_draw_time(graph_img, time_info);
 }
 
