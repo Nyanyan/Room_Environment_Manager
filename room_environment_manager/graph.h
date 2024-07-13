@@ -8,6 +8,8 @@
 struct Graph_data{
   float temperature[GRAPH_DATA_N];
   float humidity[GRAPH_DATA_N];
+  float pressure[GRAPH_DATA_N];
+  float co2_concentration[GRAPH_DATA_N];
   int last_data_update_minute;
   int last_data_update_hour;
 
@@ -15,6 +17,8 @@ struct Graph_data{
     for (int i = 0; i < GRAPH_DATA_N; ++i){
       temperature[i] = GRAPH_DATA_UNDEFINED;
       humidity[i] = GRAPH_DATA_UNDEFINED;
+      pressure[i] = GRAPH_DATA_UNDEFINED;
+      co2_concentration[i] = GRAPH_DATA_UNDEFINED;
     }
     last_data_update_minute = -1;
     last_data_update_hour = -1;
@@ -59,6 +63,8 @@ struct Graph_data{
 #define BMP_GRAPH_FILE_SIZE (BMP_OFFSET_TO_IMG_DATA + GRAPH_IMG_HEIGHT * GRAPH_IMG_WIDTH * BMP_BIT_PER_PIXEL / 8)
 #define BMP_GRAPH_FILE_NAME_TEMPERATURE "temperature.bmp"
 #define BMP_GRAPH_FILE_NAME_HUMIDITY "humidity.bmp"
+#define BMP_GRAPH_FILE_NAME_PRESSURE "pressure.bmp"
+#define BMP_GRAPH_FILE_NAME_CO2_CONCENTRATION "co2.bmp"
 #define HTTP_BOUNDARY "boundary"
 
 
@@ -72,12 +78,19 @@ struct Value_color{
 // temperature graph
 #define N_COLOR_TEMPERATURE 5
 
-
-
 // humidity graph
+#define N_COLOR_HUMIDITY 4
 #define GRAPH_HUMIDITY_SCALE_INTERVAL 10
-#define N_COLOR_HUMIDITY 5
+#define GRAPH_HUMIDITY_Y_MIN 0
+#define GRAPH_HUMIDITY_Y_MAX 100
 
+// pressure graph
+#define N_COLOR_PRESSURE 5
+#define GRAPH_PRESSURE_SCALE_INTERVAL 5
+
+// co2 concentration graph
+#define N_COLOR_CO2_CONCENTRATION 5
+#define GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL 100
 
 
 // graph bitmap

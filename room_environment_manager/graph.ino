@@ -30,6 +30,22 @@ const Value_color color_humidity[N_COLOR_HUMIDITY] = {
   {80, PALETTE_RED}
 };
 
+const Value_color color_pressure[N_COLOR_PRESSURE] = {
+  {980, PALETTE_BLUE},
+  {990, PALETTE_SKYBLUE},
+  {1000, PALETTE_GREEN},
+  {1010, PALETTE_ORANGE},
+  {1020, PALETTE_RED}
+};
+
+const Value_color color_co2_concentration[N_COLOR_CO2_CONCENTRATION] = {
+  {600, PALETTE_BLUE},
+  {700, PALETTE_SKYBLUE},
+  {800, PALETTE_GREEN},
+  {900, PALETTE_ORANGE},
+  {1000, PALETTE_RED}
+};
+
 void init_graph(Graph_img &graph_img){
   uint16_t* bmp_img_16;            // bmp header as uint16_t
   uint32_t* bmp_img_32;            // bmp header as uint32_t
@@ -89,19 +105,18 @@ void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
       }
     }
     if (minute % 60 == 0){ // every 1 hour
-      graph_img.graph[GRAPH_SY - 1][GRAPH_SX + x] = PALETTE_GRAY;
+      graph_img.graph[GRAPH_SY - 2][GRAPH_SX + x] = PALETTE_GRAY;
       if (hour % 3 == 0){ // every 3 hour
         for (int y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
           graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_LIGHTGRAY;
         }
-        if (hour % 12 == 0){ // 0 o'clock & 12 o'clock
-          graph_img.graph[GRAPH_SY - 2][GRAPH_SX + x] = PALETTE_GRAY;
-          graph_img.graph[GRAPH_SY - 3][GRAPH_SX + x] = PALETTE_GRAY;
-          if (hour % 24 == 0){ // 0 o'clock
-            graph_img.graph[GRAPH_SY - 4][GRAPH_SX + x] = PALETTE_GRAY;
-            graph_img.graph[GRAPH_SY - 5][GRAPH_SX + x] = PALETTE_GRAY;
-          }
-        }
+      }
+      if (hour % 12 == 0){ // 0 o'clock & 12 o'clock
+        graph_img.graph[GRAPH_SY - 3][GRAPH_SX + x] = PALETTE_GRAY;
+        graph_img.graph[GRAPH_SY - 4][GRAPH_SX + x] = PALETTE_GRAY;
+      }
+      if (hour % 24 == 0){ // 0 o'clock
+        graph_img.graph[GRAPH_SY - 5][GRAPH_SX + x] = PALETTE_GRAY;
       }
     }
   }
@@ -177,7 +192,7 @@ void graph_draw_title(Graph_img &graph_img, const int str[], int len_str) {
 void graph_draw_frame(Graph_img &graph_img) {
   // y = y_min
   for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
-    graph_img.graph[GRAPH_SY][GRAPH_SX + x] = PALETTE_GRAY;
+    graph_img.graph[GRAPH_SY - 1][GRAPH_SX + x] = PALETTE_GRAY;
   }
   
   // y = y_max
@@ -186,14 +201,48 @@ void graph_draw_frame(Graph_img &graph_img) {
   }
 
   // x = 0
-  for (int32_t y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+  for (int32_t y = -1; y <= GRAPH_AREA_HEIGHT; ++y){
     graph_img.graph[GRAPH_SY + y][GRAPH_SX - 1] = PALETTE_GRAY;
   }
 
   // x = end
-  for (int32_t y = 0; y <= GRAPH_AREA_HEIGHT; ++y){
+  for (int32_t y = -1; y <= GRAPH_AREA_HEIGHT; ++y){
     graph_img.graph[GRAPH_SY + y][GRAPH_SX + GRAPH_AREA_WIDTH] = PALETTE_GRAY;
   }
+}
+
+
+void graph_draw_graph_line(Graph_img &graph_img, int fy, int fx, int ny, int nx) {
+  int to_y;
+  int y = fy;
+  for (int x = fx; x <= nx; ++x) {
+    to_y = round((float)fy + (float)(ny - fy) / (nx - fx) * (0.5 + x - fx));
+    while (y != to_y) {
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
+      if (y < to_y) {
+        ++y;
+      } else if (y > to_y) {
+        --y;
+      }
+    }
+  }
+  /*
+  if (fy < ny){
+    for (int32_t y = fy + 1; y < y_mid; ++y){
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x - 1] = PALETTE_BLACK;
+    }
+    for (int32_t y = y_mid; y < ny; ++y){
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
+    }
+  } else if (fy > ny){
+    for (int32_t y = fy - 1; y > y_mid; --y){
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x - 1] = PALETTE_BLACK;
+    }
+    for (int32_t y = y_mid; y > ny; --y){
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
+    }
+  }
+  */
 }
 
 
@@ -242,22 +291,7 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
       int32_t y = round((float)GRAPH_AREA_HEIGHT * (graph_data.temperature[x] - y_min) / (y_max - y_min));
       graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
       if (fy != GRAPH_DATA_UNDEFINED){
-        int32_t y_mid = (fy + y) / 2;
-        if (fy < y){
-          for (int32_t yy = fy + 1; yy < y_mid; ++yy){
-            graph_img.graph[GRAPH_SY + yy][GRAPH_SX + x - 1] = PALETTE_BLACK;
-          }
-          for (int32_t yy = y_mid; yy < y; ++yy){
-            graph_img.graph[GRAPH_SY + yy][GRAPH_SX + x] = PALETTE_BLACK;
-          }
-        } else if (fy > y){
-          for (int32_t yy = fy - 1; yy > y_mid; --yy){
-            graph_img.graph[GRAPH_SY + yy][GRAPH_SX + x - 1] = PALETTE_BLACK;
-          }
-          for (int32_t yy = y_mid; yy > y; --yy){
-            graph_img.graph[GRAPH_SY + yy][GRAPH_SX + x] = PALETTE_BLACK;
-          }
-        }
+        graph_draw_graph_line(graph_img, fy, x - 1, y, x);
       }
       fy = y;
     }
@@ -275,14 +309,14 @@ void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info
   graph_draw_x_scale(graph_img, graph_data);
 
   // y scale
-  for (int32_t t = 0; t <= 100; t += GRAPH_HUMIDITY_SCALE_INTERVAL){
+  for (int32_t t = GRAPH_HUMIDITY_Y_MIN; t <= GRAPH_HUMIDITY_Y_MAX; t += GRAPH_HUMIDITY_SCALE_INTERVAL){
     uint8_t line_color = PALETTE_LIGHTGRAY;
     for (int i = 0; i < N_COLOR_HUMIDITY; ++i){
       if (t == color_humidity[i].value){
         line_color = color_humidity[i].color;
       }
     }
-    int32_t y = round((float)GRAPH_AREA_HEIGHT * t / 100.0);
+    int32_t y = round((float)GRAPH_AREA_HEIGHT * (t - GRAPH_HUMIDITY_Y_MIN) / (GRAPH_HUMIDITY_Y_MAX - GRAPH_HUMIDITY_Y_MIN));
     for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
       graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = line_color;
     }
@@ -292,25 +326,10 @@ void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info
   int32_t fy = GRAPH_DATA_UNDEFINED;
   for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
     if (graph_data.humidity[x] != GRAPH_DATA_UNDEFINED){
-      int32_t y = round((float)GRAPH_AREA_HEIGHT * graph_data.humidity[x] / 100.0);
+      int32_t y = round((float)GRAPH_AREA_HEIGHT * (graph_data.humidity[x] - GRAPH_HUMIDITY_Y_MIN) / (GRAPH_HUMIDITY_Y_MAX - GRAPH_HUMIDITY_Y_MIN));
       graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
       if (fy != GRAPH_DATA_UNDEFINED){
-        int32_t y_mid = (fy + y) / 2;
-        if (fy < y){
-          for (int32_t yy = fy + 1; yy < y_mid; ++yy){
-            graph_img.graph[GRAPH_SY + yy][GRAPH_SX + x - 1] = PALETTE_BLACK;
-          }
-          for (int32_t yy = y_mid; yy < y; ++yy){
-            graph_img.graph[GRAPH_SY + yy][GRAPH_SX + x] = PALETTE_BLACK;
-          }
-        } else if (fy > y){
-          for (int32_t yy = fy - 1; yy > y_mid; --yy){
-            graph_img.graph[GRAPH_SY + yy][GRAPH_SX + x - 1] = PALETTE_BLACK;
-          }
-          for (int32_t yy = y_mid; yy > y; --yy){
-            graph_img.graph[GRAPH_SY + yy][GRAPH_SX + x] = PALETTE_BLACK;
-          }
-        }
+        graph_draw_graph_line(graph_img, fy, x - 1, y, x);
       }
       fy = y;
     }
@@ -318,6 +337,105 @@ void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info
 
   graph_draw_frame(graph_img);
   graph_draw_title(graph_img, char_idx_humidity, CHAR_HUMIDITY_N);
+  graph_draw_time(graph_img, time_info);
+}
+
+
+
+
+void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
+  graph_draw_white(graph_img);
+  graph_draw_x_scale(graph_img, graph_data);
+
+  // y range
+  int y_min = 975, y_max = 1025;
+  for (int i = 0; i < GRAPH_DATA_N; ++i){
+    if (graph_data.pressure[i] != GRAPH_DATA_UNDEFINED){
+      y_min = min(y_min, (int)graph_data.pressure[i] - 1);
+      y_max = max(y_max, (int)graph_data.pressure[i] + 1);
+    }
+  }
+  y_min -= y_min % GRAPH_PRESSURE_SCALE_INTERVAL;
+  y_max += (GRAPH_PRESSURE_SCALE_INTERVAL - y_max % GRAPH_PRESSURE_SCALE_INTERVAL) % GRAPH_PRESSURE_SCALE_INTERVAL;
+
+  // y scale
+  for (int32_t t = y_min; t <= y_max; t += GRAPH_PRESSURE_SCALE_INTERVAL){
+    uint8_t line_color = PALETTE_LIGHTGRAY;
+    for (int i = 0; i < N_COLOR_PRESSURE; ++i){
+      if (t == color_pressure[i].value){
+        line_color = color_pressure[i].color;
+      }
+    }
+    int32_t y = round((float)GRAPH_AREA_HEIGHT * (t - y_min) / (y_max - y_min));
+    for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = line_color;
+    }
+  }
+
+  // plot pressure graph
+  int32_t fy = GRAPH_DATA_UNDEFINED;
+  for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
+    if (graph_data.pressure[x] != GRAPH_DATA_UNDEFINED){
+      int32_t y = round((float)GRAPH_AREA_HEIGHT * (graph_data.pressure[x] - y_min) / (y_max - y_min));
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
+      if (fy != GRAPH_DATA_UNDEFINED){
+        graph_draw_graph_line(graph_img, fy, x - 1, y, x);
+      }
+      fy = y;
+    }
+  }
+
+  graph_draw_frame(graph_img);
+  graph_draw_title(graph_img, char_idx_pressure, CHAR_PRESSURE_N);
+  graph_draw_time(graph_img, time_info);
+}
+
+
+
+void graph_draw_co2_concentration(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
+  graph_draw_white(graph_img);
+  graph_draw_x_scale(graph_img, graph_data);
+
+  // y range
+  int y_min = 400, y_max = 1100;
+  for (int i = 0; i < GRAPH_DATA_N; ++i){
+    if (graph_data.co2_concentration[i] != GRAPH_DATA_UNDEFINED){
+      y_min = min(y_min, (int)graph_data.co2_concentration[i] - 1);
+      y_max = max(y_max, (int)graph_data.co2_concentration[i] + 1);
+    }
+  }
+  y_min -= y_min % GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL;
+  y_max += (GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL - y_max % GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL) % GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL;
+
+  // y scale
+  for (int32_t t = y_min; t <= y_max; t += GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL){
+    uint8_t line_color = PALETTE_LIGHTGRAY;
+    for (int i = 0; i < N_COLOR_CO2_CONCENTRATION; ++i){
+      if (t == color_co2_concentration[i].value){
+        line_color = color_co2_concentration[i].color;
+      }
+    }
+    int32_t y = round((float)GRAPH_AREA_HEIGHT * (t - y_min) / (y_max - y_min));
+    for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = line_color;
+    }
+  }
+
+  // plot co2 concentration graph
+  int32_t fy = GRAPH_DATA_UNDEFINED;
+  for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
+    if (graph_data.co2_concentration[x] != GRAPH_DATA_UNDEFINED){
+      int32_t y = round((float)GRAPH_AREA_HEIGHT * (graph_data.co2_concentration[x] - y_min) / (y_max - y_min));
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
+      if (fy != GRAPH_DATA_UNDEFINED){
+        graph_draw_graph_line(graph_img, fy, x - 1, y, x);
+      }
+      fy = y;
+    }
+  }
+
+  graph_draw_frame(graph_img);
+  graph_draw_title(graph_img, char_idx_co2_concentration, CHAR_CO2_CONCENTRATION_N);
   graph_draw_time(graph_img, time_info);
 }
 
@@ -354,9 +472,13 @@ void graph_add_data(Graph_data &graph_data, Sensor_data &sensor_data){
   for (int i = 0; i < GRAPH_DATA_N - 1; ++i){
     graph_data.temperature[i] = graph_data.temperature[i + 1];
     graph_data.humidity[i] = graph_data.humidity[i + 1];
+    graph_data.pressure[i] = graph_data.pressure[i + 1];
+    graph_data.co2_concentration[i] = graph_data.co2_concentration[i + 1];
   }
   graph_data.temperature[GRAPH_DATA_N - 1] = sensor_data.temperature;
   graph_data.humidity[GRAPH_DATA_N - 1] = sensor_data.humidity;
+  graph_data.pressure[GRAPH_DATA_N - 1] = sensor_data.pressure;
+  graph_data.co2_concentration[GRAPH_DATA_N - 1] = sensor_data.co2_concentration;
 }
 
 

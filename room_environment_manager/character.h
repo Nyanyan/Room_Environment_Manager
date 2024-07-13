@@ -130,7 +130,7 @@ const bool char_colon[CHAR_HEIGHT][CHAR_WIDTH] = {
 #define CHAR_TEMPERATURE_N 11
 #define CHAR_HUMIDITY_N 8
 #define CHAR_PRESSURE_N 8
-#define CHAR_CO2_N 3
+#define CHAR_CO2_CONCENTRATION_N 3
 
 // alphabet
 #define CHAR_N_LIST 17
@@ -188,7 +188,7 @@ const int char_idx_pressure[CHAR_PRESSURE_N] = {
   CHAR_LIST_e
 };
 
-const int char_idx_co2[CHAR_CO2_N] = {
+const int char_idx_co2_concentration[CHAR_CO2_CONCENTRATION_N] = {
   CHAR_LIST_C, 
   CHAR_LIST_O, 
   CHAR_LIST_2
@@ -287,7 +287,7 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
   },
   { // y
     {0, 0, 0, 0, 0}, 
-    {0, 0, 0, 0, 0}, 
+    {1, 0, 0, 0, 1}, 
     {1, 0, 0, 0, 1}, 
     {1, 0, 0, 0, 1}, 
     {0, 1, 0, 1, 0}, 
