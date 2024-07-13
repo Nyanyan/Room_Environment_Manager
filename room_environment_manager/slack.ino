@@ -11,9 +11,6 @@
 // json
 StaticJsonDocument<512> doc;
 
-Slack_bmp_const slack_bmp_const;
-
-
 void init_wifi(){
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {

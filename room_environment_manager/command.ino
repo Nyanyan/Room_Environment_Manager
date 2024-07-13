@@ -48,7 +48,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
 
 
 void command_send_graph(Graph_data &graph_data, Graph_img &graph_img){
-  graph_draw(graph_data, graph_img);
+  graph_draw_temperature(graph_data, graph_img);
   graph_encode_bmp(graph_img);
   slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME);
 }

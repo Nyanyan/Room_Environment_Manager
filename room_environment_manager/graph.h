@@ -52,28 +52,8 @@ struct Graph_data{
 #define BMP_HEADER_BYTE (14 + 40)
 #define BMP_OFFSET_TO_IMG_DATA (BMP_HEADER_BYTE + BMP_N_COLOR_PALETTE * 4)
 #define BMP_GRAPH_FILE_SIZE (BMP_OFFSET_TO_IMG_DATA + GRAPH_IMG_HEIGHT * GRAPH_IMG_WIDTH * BMP_BIT_PER_PIXEL / 8)
-#define BMP_GRAPH_FILE_NAME "graph.bmp"
+#define BMP_GRAPH_FILE_NAME "temperature.bmp"
 #define HTTP_BOUNDARY "boundary"
-struct Slack_bmp_const{
-  String bmp_https_head, bmp_https_foot;
-  int32_t len_bmp_https_head, len_bmp_https_foot;
-  
-  Slack_bmp_const(){
-    // https header
-    bmp_https_head = "";
-    bmp_https_head += String("--") + HTTP_BOUNDARY + "\r\n";
-    bmp_https_head += String("Content-Disposition: form-data; name=\"uploadFile\"; filename=\"./") + BMP_GRAPH_FILE_NAME + "\"\r\n";
-    bmp_https_head += "\r\n";
-    len_bmp_https_head = bmp_https_head.length();
-
-    // https footer
-    bmp_https_foot = "";
-    bmp_https_foot += "\r\n";
-    bmp_https_foot += String("--") + HTTP_BOUNDARY + "--\r\n";
-    bmp_https_foot += "\r\n";
-    len_bmp_https_foot = bmp_https_foot.length();
-  }
-};
 
 
 

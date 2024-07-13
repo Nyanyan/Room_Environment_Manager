@@ -58,7 +58,7 @@ void init_graph(Graph_img &graph_img){
   }
 }
 
-void graph_draw(Graph_data &graph_data, Graph_img &graph_img){
+void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img){
   // white canvas
   for (int y = 0; y < GRAPH_IMG_HEIGHT; ++y){
     for (int x = 0; x < GRAPH_IMG_WIDTH; ++x){
