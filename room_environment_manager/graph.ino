@@ -213,18 +213,11 @@ void graph_draw_frame(Graph_img &graph_img) {
 
 
 void graph_draw_graph_line(Graph_img &graph_img, int fy, int fx, int ny, int nx) {
-  int to_y;
-  int y = fy;
-  for (int x = fx; x <= nx; ++x) {
-    to_y = round((float)fy + (float)(ny - fy) / (nx - fx) * (0.5 + x - fx));
-    while (y != to_y) {
-      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
-      if (y < to_y) {
-        ++y;
-      } else if (y > to_y) {
-        --y;
-      }
-    }
+  int min_y = min(fy, ny);
+  int max_y = max(fy, ny);
+  for (int y = min_y + 1; y < max_y; ++y) {
+    int x = round((float)fx + (float)(y - fy) / (ny - fy) * (nx - fx));
+    graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
   }
   /*
   if (fy < ny){
