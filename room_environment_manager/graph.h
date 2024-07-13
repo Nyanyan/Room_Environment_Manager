@@ -28,7 +28,7 @@ struct Graph_data{
 
 
 // bitmap color palette
-#define BMP_N_COLOR_PALETTE 12
+#define BMP_N_COLOR_PALETTE 13
 #define PALETTE_WHITE 0
 #define PALETTE_BLACK 1
 #define PALETTE_GRAY 2
@@ -41,6 +41,7 @@ struct Graph_data{
 #define PALETTE_YELLOW 9
 #define PALETTE_LIGHTBLUE 10
 #define PALETTE_PURPLE 11
+#define PALETTE_NAVYBLUE 12
 
 
 
@@ -74,7 +75,7 @@ struct Value_color{
 
 
 // temperature graph
-#define N_COLOR_TEMPERATURE 5
+#define N_COLOR_TEMPERATURE 7
 
 // humidity graph
 #define N_COLOR_HUMIDITY 4

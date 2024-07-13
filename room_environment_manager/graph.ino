@@ -13,15 +13,18 @@ const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
   {255, 178,  44}, // orange
   {250, 255, 175}, // yellow
   {187, 233, 255}, // light blue
-  {220,   0, 151}  // purple
+  {220,   0, 151}, // purple
+  { 67,  61, 139}  // navy blue
 };
 
 const Value_color color_temperature[N_COLOR_TEMPERATURE] = {
+  {5, PALETTE_NAVYBLUE},
   {10, PALETTE_BLUE},
   {15, PALETTE_SKYBLUE},
   {20, PALETTE_GREEN},
   {25, PALETTE_ORANGE},
-  {30, PALETTE_RED}
+  {30, PALETTE_RED},
+  {35, PALETTE_PURPLE},
 };
 
 const Value_color color_humidity[N_COLOR_HUMIDITY] = {
