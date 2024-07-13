@@ -1,7 +1,7 @@
 #ifndef SENSORS_H
 #define SENSORS_H
 
-#define SENSOR_N_DATA_FOR_AVERAGE 10
+#define SENSOR_N_DATA_FOR_AVERAGE 20
 
 // Temperature & Humidity SHT31
 #define SHT31_ADDR 0x45
