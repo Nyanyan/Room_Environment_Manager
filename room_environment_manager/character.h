@@ -11,15 +11,21 @@
 #define CHAR_TIME_MARGIN_Y 2
 
 // graph title
+#define CHAR_TITLE_MARGIN_X 4
 #define CHAR_TITLE_MARGIN_Y 2
 #define CHAR_TEMPERATURE_N 11
 #define CHAR_HUMIDITY_N 8
 #define CHAR_PRESSURE_N 8
 #define CHAR_CO2_CONCENTRATION_N 3
 
-// graph unit
-#define CHAR_UNIT_MARGIN_Y 2
-#define CHAR_UNIT_EX (GRAPH_SX - 4)
+// graph x unit
+#define CHAR_TIME_N 4 // time
+#define CHAR_UNIT_X_EY 4
+#define CHAR_UNIT_X_EX (GRAPH_SX + CHAR_TIME_N * CHAR_WIDTH + (CHAR_TIME_N - 1) * CHAR_SPACE)
+
+// graph y unit
+#define CHAR_UNIT_Y_MARGIN_Y 8
+#define CHAR_UNIT_Y_EX (GRAPH_SX - 4)
 #define CHAR_DEGREE_N 1 // *C (special character)
 #define CHAR_PERCENT_N 1 // %
 #define CHAR_HPA_N 3 // hPa
@@ -110,6 +116,13 @@ const int char_idx_ppm[CHAR_PPM_N] = {
   CHAR_LIST_p, 
   CHAR_LIST_p, 
   CHAR_LIST_m
+};
+
+const int char_idx_time[CHAR_TIME_N] = {
+  CHAR_LIST_t, 
+  CHAR_LIST_i, 
+  CHAR_LIST_m, 
+  CHAR_LIST_e
 };
 
 

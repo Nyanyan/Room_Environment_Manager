@@ -76,6 +76,7 @@ struct Value_color{
 
 // temperature graph
 #define N_COLOR_TEMPERATURE 7
+#define GRAPH_TEMPERATURE_SCALE_INTERVAL 1
 
 // humidity graph
 #define N_COLOR_HUMIDITY 4
