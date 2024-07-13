@@ -63,7 +63,7 @@ void loop() {
   regular_message(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
   
   // LCD
-  display_print_info(sensor_data, settings, time_info);
+  display_print_info(sensor_data, settings, ac_status, time_info);
 
   delay(1000);
 }
