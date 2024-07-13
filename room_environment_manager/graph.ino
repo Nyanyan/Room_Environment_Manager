@@ -80,9 +80,9 @@ void graph_draw(Graph_data &graph_data, Graph_img &graph_img){
   if (y_max == -10000){
     y_max = 0;
   }
-  if (y_max - y_min < 6){
-    y_min -= 3;
-    y_max += 3;
+  while (y_max - y_min < 6){
+    --y_min;
+    ++y_max;
   }
 
   // x scale + daytime-night coloring
