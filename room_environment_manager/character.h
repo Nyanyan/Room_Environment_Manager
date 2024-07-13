@@ -129,9 +129,11 @@ const bool char_colon[CHAR_HEIGHT][CHAR_WIDTH] = {
 #define CHAR_TITLE_MARGIN_Y 3
 #define CHAR_TEMPERATURE_N 11
 #define CHAR_HUMIDITY_N 8
+#define CHAR_PRESSURE_N 8
+#define CHAR_CO2_N 3
 
 // alphabet
-#define CHAR_N_LIST 12
+#define CHAR_N_LIST 17
 #define CHAR_LIST_a 0
 #define CHAR_LIST_d 1
 #define CHAR_LIST_e 2
@@ -139,11 +141,16 @@ const bool char_colon[CHAR_HEIGHT][CHAR_WIDTH] = {
 #define CHAR_LIST_m 4
 #define CHAR_LIST_p 5
 #define CHAR_LIST_r 6
-#define CHAR_LIST_t 7
-#define CHAR_LIST_u 8
-#define CHAR_LIST_y 9
-#define CHAR_LIST_H 10
-#define CHAR_LIST_T 11
+#define CHAR_LIST_s 7
+#define CHAR_LIST_t 8
+#define CHAR_LIST_u 9
+#define CHAR_LIST_y 10
+#define CHAR_LIST_C 11
+#define CHAR_LIST_H 12
+#define CHAR_LIST_O 13
+#define CHAR_LIST_P 14
+#define CHAR_LIST_T 15
+#define CHAR_LIST_2 16
 
 const int char_idx_temperature[CHAR_TEMPERATURE_N] = {
   CHAR_LIST_T, 
@@ -168,6 +175,23 @@ const int char_idx_humidity[CHAR_HUMIDITY_N] = {
   CHAR_LIST_i, 
   CHAR_LIST_t, 
   CHAR_LIST_y
+};
+
+const int char_idx_pressure[CHAR_PRESSURE_N] = {
+  CHAR_LIST_P, 
+  CHAR_LIST_r, 
+  CHAR_LIST_e, 
+  CHAR_LIST_s, 
+  CHAR_LIST_s, 
+  CHAR_LIST_u, 
+  CHAR_LIST_r, 
+  CHAR_LIST_e
+};
+
+const int char_idx_co2[CHAR_CO2_N] = {
+  CHAR_LIST_C, 
+  CHAR_LIST_O, 
+  CHAR_LIST_2
 };
 
 const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
@@ -234,6 +258,15 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
     {1, 0, 0, 0, 0}, 
     {1, 0, 0, 0, 0}
   },
+  { // s
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0}, 
+    {0, 1, 1, 1, 1}, 
+    {1, 0, 0, 0, 0}, 
+    {0, 1, 1, 1, 0}, 
+    {0, 0, 0, 0, 1}, 
+    {1, 1, 1, 1, 0}
+  },
   { // t
     {0, 0, 0, 0, 0}, 
     {0, 0, 0, 0, 0}, 
@@ -261,6 +294,15 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
     {0, 0, 1, 0, 0}, 
     {1, 1, 0, 0, 0}
   },
+  { // C
+    {0, 1, 1, 1, 0}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 0}, 
+    {1, 0, 0, 0, 0}, 
+    {1, 0, 0, 0, 0}, 
+    {1, 0, 0, 0, 1}, 
+    {0, 1, 1, 1, 0}
+  },
   { // H
     {1, 0, 0, 0, 1}, 
     {1, 0, 0, 0, 1}, 
@@ -269,6 +311,24 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
     {1, 0, 0, 0, 1}, 
     {1, 0, 0, 0, 1}, 
     {1, 0, 0, 0, 1}
+  },
+  { // O
+    {0, 1, 1, 1, 0}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {0, 1, 1, 1, 0}
+  },
+  { // P
+    {1, 1, 1, 1, 0}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 0, 0, 0, 1}, 
+    {1, 1, 1, 1, 0}, 
+    {1, 0, 0, 0, 0}, 
+    {1, 0, 0, 0, 0}, 
+    {1, 0, 0, 0, 0}
   },
   { // T
     {1, 1, 1, 1, 1}, 
@@ -279,6 +339,15 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
     {0, 0, 1, 0, 0}, 
     {0, 0, 1, 0, 0}
   },
+  { // 2
+    {0, 1, 1, 1, 0}, 
+    {1, 0, 0, 0, 1}, 
+    {0, 0, 0, 0, 1}, 
+    {0, 0, 0, 1, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 1, 0, 0, 0}, 
+    {1, 1, 1, 1, 1}
+  }
 };
 
 
