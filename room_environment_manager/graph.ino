@@ -156,7 +156,7 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
   ex = graph_draw_int_digit(graph_img, ey, ex, time_info.month, 2); // print MM
   graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_SLASH]); // print /
   ex -= CHAR_WIDTH + CHAR_SPACE;
-  ex = graph_draw_int_digit(graph_img, ey, ex, time_info.year, 2); // print YYYY
+  ex = graph_draw_int_digit(graph_img, ey, ex, time_info.year, 4); // print YYYY
 }
 
 void graph_draw_str(Graph_img &graph_img, int ey, int ex, const int str[], int len_str) {
