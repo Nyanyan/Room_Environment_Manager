@@ -229,7 +229,7 @@ void graph_draw_frame(Graph_img &graph_img) {
   
   // y = y_max
   for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
-    graph_img.graph[GRAPH_SY + GRAPH_AREA_HEIGHT][GRAPH_SX + x] = PALETTE_GRAY;
+    graph_img.graph[GRAPH_SY + GRAPH_AREA_HEIGHT + 1][GRAPH_SX + x] = PALETTE_GRAY;
   }
 
   // x = 0
