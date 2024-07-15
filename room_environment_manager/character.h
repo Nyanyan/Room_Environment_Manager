@@ -11,7 +11,7 @@
 #define CHAR_TIME_MARGIN_Y 2
 
 // graph title
-#define CHAR_TITLE_MARGIN_X 4
+#define CHAR_TITLE_MARGIN_X 3
 #define CHAR_TITLE_MARGIN_Y 2
 #define CHAR_TEMPERATURE_N 13 // Temperature *C
 #define CHAR_HUMIDITY_N 10 // Humidity %
