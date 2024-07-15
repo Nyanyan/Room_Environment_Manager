@@ -20,11 +20,11 @@
 
 // graph x unit
 #define CHAR_TIME_N 4 // time
-#define CHAR_UNIT_X_EY 4
+#define CHAR_UNIT_X_EY 3
 #define CHAR_UNIT_X_EX (GRAPH_SX - 7)
 
 // graph y unit
-#define CHAR_UNIT_Y_EY (GRAPH_SY - 1)
+#define CHAR_UNIT_Y_EY (GRAPH_SY - 2)
 #define CHAR_UNIT_Y_EX (GRAPH_SX - 7)
 #define CHAR_DEGREE_N 1 // *C (special character)
 #define CHAR_PERCENT_N 1 // %
