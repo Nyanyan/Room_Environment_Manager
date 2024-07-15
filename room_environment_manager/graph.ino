@@ -223,12 +223,12 @@ void graph_draw_y_scale(Graph_img &graph_img, int y_min, int y_max, int interval
 
 void graph_draw_frame(Graph_img &graph_img) {
   // y = y_min
-  for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
+  for (int32_t x = -1; x <= GRAPH_AREA_WIDTH; ++x){
     graph_img.graph[GRAPH_SY - 1][GRAPH_SX + x] = PALETTE_GRAY;
   }
   
   // y = y_max
-  for (int32_t x = 0; x <= GRAPH_AREA_WIDTH; ++x){
+  for (int32_t x = -1; x <= GRAPH_AREA_WIDTH; ++x){
     graph_img.graph[GRAPH_SY + GRAPH_AREA_HEIGHT + 1][GRAPH_SX + x] = PALETTE_GRAY;
   }
 
@@ -301,6 +301,16 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
       y_min -= n_sub_min + 1;
     } else{
       y_max += n_add_max + 1;
+    }
+  }
+  for (int i = 0; i < N_COLOR_TEMPERATURE; ++i){
+    if (y_max == color_temperature[i].value){
+      ++y_max;
+    }
+  }
+  for (int i = 0; i < N_COLOR_TEMPERATURE; ++i){
+    if (y_min == color_temperature[i].value){
+      --y_min;
     }
   }
 
