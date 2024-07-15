@@ -13,26 +13,18 @@
 // graph title
 #define CHAR_TITLE_MARGIN_X 4
 #define CHAR_TITLE_MARGIN_Y 2
-#define CHAR_TEMPERATURE_N 11
-#define CHAR_HUMIDITY_N 8
-#define CHAR_PRESSURE_N 8
-#define CHAR_CO2_CONCENTRATION_N 3
+#define CHAR_TEMPERATURE_N 13 // Temperature *C
+#define CHAR_HUMIDITY_N 10 // Humidity %
+#define CHAR_PRESSURE_N 12 // Pressure hPa
+#define CHAR_CO2_CONCENTRATION_N 7 // CO2 ppm
 
 // graph x unit
 #define CHAR_TIME_N 4 // time
 #define CHAR_UNIT_X_EY 3
 #define CHAR_UNIT_X_EX (GRAPH_SX - 7)
 
-// graph y unit
-#define CHAR_UNIT_Y_EY (GRAPH_SY - 2)
-#define CHAR_UNIT_Y_EX (GRAPH_SX - 7)
-#define CHAR_DEGREE_N 1 // *C (special character)
-#define CHAR_PERCENT_N 1 // %
-#define CHAR_HPA_N 3 // hPa
-#define CHAR_PPM_N 3 // ppm
-
 // alphabet
-#define CHAR_N_LIST 31
+#define CHAR_N_LIST 32
 #define CHAR_LIST_2 2
 #define CHAR_LIST_a 10
 #define CHAR_LIST_d 11
@@ -51,10 +43,11 @@
 #define CHAR_LIST_O 24
 #define CHAR_LIST_P 25
 #define CHAR_LIST_T 26
-#define CHAR_LIST_SLASH 27
-#define CHAR_LIST_COLON 28
-#define CHAR_LIST_DEGREE 29
-#define CHAR_LIST_PERCENT 30
+#define CHAR_LIST_SPACE 27
+#define CHAR_LIST_SLASH 28
+#define CHAR_LIST_COLON 29
+#define CHAR_LIST_DEGREE 30
+#define CHAR_LIST_PERCENT 31
 
 const int char_idx_temperature[CHAR_TEMPERATURE_N] = {
   CHAR_LIST_T, 
@@ -67,7 +60,9 @@ const int char_idx_temperature[CHAR_TEMPERATURE_N] = {
   CHAR_LIST_t, 
   CHAR_LIST_u, 
   CHAR_LIST_r, 
-  CHAR_LIST_e
+  CHAR_LIST_e,
+  CHAR_LIST_SPACE,
+  CHAR_LIST_DEGREE
 };
 
 const int char_idx_humidity[CHAR_HUMIDITY_N] = {
@@ -78,7 +73,9 @@ const int char_idx_humidity[CHAR_HUMIDITY_N] = {
   CHAR_LIST_d, 
   CHAR_LIST_i, 
   CHAR_LIST_t, 
-  CHAR_LIST_y
+  CHAR_LIST_y,
+  CHAR_LIST_SPACE,
+  CHAR_LIST_PERCENT
 };
 
 const int char_idx_pressure[CHAR_PRESSURE_N] = {
@@ -89,32 +86,20 @@ const int char_idx_pressure[CHAR_PRESSURE_N] = {
   CHAR_LIST_s, 
   CHAR_LIST_u, 
   CHAR_LIST_r, 
-  CHAR_LIST_e
+  CHAR_LIST_e,
+  CHAR_LIST_SPACE,
+  CHAR_LIST_h,
+  CHAR_LIST_P,
+  CHAR_LIST_a
 };
 
 const int char_idx_co2_concentration[CHAR_CO2_CONCENTRATION_N] = {
   CHAR_LIST_C, 
   CHAR_LIST_O, 
-  CHAR_LIST_2
-};
-
-const int char_idx_degree[CHAR_DEGREE_N] = {
-  CHAR_LIST_DEGREE
-};
-
-const int char_idx_percent[CHAR_PERCENT_N] = {
-  CHAR_LIST_PERCENT
-};
-
-const int char_idx_hpa[CHAR_HPA_N] = {
-  CHAR_LIST_h, 
-  CHAR_LIST_P, 
-  CHAR_LIST_a
-};
-
-const int char_idx_ppm[CHAR_PPM_N] = {
-  CHAR_LIST_p, 
-  CHAR_LIST_p, 
+  CHAR_LIST_2,
+  CHAR_LIST_SPACE,
+  CHAR_LIST_p,
+  CHAR_LIST_p,
   CHAR_LIST_m
 };
 
@@ -380,6 +365,15 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
     {0, 0, 1, 0, 0}, 
     {0, 1, 0, 0, 0}, 
     {1, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0}
+  },
+  { // SPACE
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0}, 
     {0, 0, 0, 0, 0}
   },
   { // :
