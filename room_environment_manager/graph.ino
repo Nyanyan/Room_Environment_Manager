@@ -254,66 +254,64 @@ void graph_draw_graph_line(Graph_img &graph_img, int fy, int fx, int ny, int nx)
 }
 
 
+int graph_calculate_n_main_scale(int y_min, int y_max, const Value_color scales[], const int n_scales) {
+  int n_main_scale = 0;
+  for (int32_t t = y_min; t <= y_max; ++t){
+    for (int i = 0; i < n_scales; ++i){
+      if (t == scales[i].value){
+        ++n_main_scale;
+      }
+    }
+  }
+  return n_main_scale;
+}
+
+
+void graph_calculate_range(float values[], const Value_color scales[], const int n_scales, const int interval, int *y_min, int *y_max) {
+  *y_min = 10000;
+  *y_max = -10000;
+  for (int i = 0; i < GRAPH_DATA_N; ++i){
+    if (values[i] != GRAPH_DATA_UNDEFINED){
+      *y_min = min(*y_min, (int)(values[i] - 0.9999));
+      *y_max = max(*y_max, (int)(values[i] + 0.9999));
+    }
+  }
+  while (graph_calculate_n_main_scale(*y_min, *y_max, scales, n_scales) < 2) {
+    int n_sub, n_add;
+    for (n_sub = 1; n_sub < 200; ++n_sub) {
+      if (graph_calculate_n_main_scale(*y_min - n_sub, *y_min - n_sub, scales, n_scales)) {
+        break;
+      }
+    }
+    for (n_add = 1; n_add < 200; ++n_add) {
+      if (graph_calculate_n_main_scale(*y_max + n_add, *y_max + n_add, scales, n_scales)) {
+        break;
+      }
+    }
+    if (n_sub < n_add) {
+      *y_min -= n_sub;
+    } else {
+      *y_max += n_add;
+    }
+  }
+  if (graph_calculate_n_main_scale(*y_min, *y_min, scales, n_scales)) {
+    *y_min -= interval;
+  }
+  if (graph_calculate_n_main_scale(*y_max, *y_max, scales, n_scales)) {
+    *y_max += interval;
+  }
+}
+
+
 
 void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
   graph_draw_white(graph_img);
   graph_draw_x_scale(graph_img, graph_data);
 
   // y range
-  int y_min = 10000, y_max = -10000;
-  for (int i = 0; i < GRAPH_DATA_N; ++i){
-    if (graph_data.temperature[i] != GRAPH_DATA_UNDEFINED){
-      y_min = min(y_min, (int)graph_data.temperature[i] - 1);
-      y_max = max(y_max, (int)graph_data.temperature[i] + 1);
-    }
-  }
-  if (y_min == 10000){
-    y_min = 20;
-  }
-  if (y_max == -10000){
-    y_max = 20;
-  }
-
-  while (true) {
-    int n_main_scale = 0;
-    for (int32_t t = y_min; t <= y_max; ++t){
-      for (int i = 0; i < N_COLOR_TEMPERATURE; ++i){
-        if (t == color_temperature[i].value){
-          ++n_main_scale;
-        }
-      }
-    }
-    if (n_main_scale >= 2) {
-      break;
-    }
-    int n_sub_min = (y_min + 100) % 5;
-    if (n_sub_min == 0) {
-      n_sub_min = 5;
-    }
-    if (y_min <= color_temperature[0].value) {
-      n_sub_min = 100;
-    }
-    int n_add_max = 5 - (y_max + 100) % 5;
-    if (y_max >= color_temperature[N_COLOR_TEMPERATURE - 1].value) {
-      n_add_max = 100;
-    }
-    if (n_sub_min < n_add_max) {
-      y_min -= n_sub_min + 1;
-    } else{
-      y_max += n_add_max + 1;
-    }
-  }
-  for (int i = 0; i < N_COLOR_TEMPERATURE; ++i){
-    if (y_max == color_temperature[i].value){
-      ++y_max;
-    }
-  }
-  for (int i = 0; i < N_COLOR_TEMPERATURE; ++i){
-    if (y_min == color_temperature[i].value){
-      --y_min;
-    }
-  }
-
+  int y_min, y_max;
+  graph_calculate_range(graph_data.temperature, color_temperature, N_COLOR_TEMPERATURE, GRAPH_TEMPERATURE_SCALE_INTERVAL, &y_min, &y_max);
+  
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_TEMPERATURE_SCALE_INTERVAL, color_temperature, N_COLOR_TEMPERATURE);
 
   // plot temperature graph
