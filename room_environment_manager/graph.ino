@@ -104,51 +104,47 @@ void graph_draw_char(Graph_img &graph_img, int ey, int ex, const bool char_data[
   }
 }
 
+int graph_draw_int(Graph_img &graph_img, int ey, int ex, int num) {
+  if (num == 0) {
+    graph_draw_char(graph_img, ey, ex, char_list[0]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+    return ex;
+  }
+  while (num) {
+    int digit = num % 10;
+    graph_draw_char(graph_img, ey, ex, char_list[digit]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+    num /= 10;
+  }
+  return ex;
+}
+
+int graph_draw_int_digit(Graph_img &graph_img, int ey, int ex, int num, int n_digit) {
+  for (int i = 0; i < n_digit; ++i) {
+    int digit = num % 10;
+    graph_draw_char(graph_img, ey, ex, char_list[digit]);
+    ex -= CHAR_WIDTH + CHAR_SPACE;
+    num /= 10;
+  }
+  return ex;
+}
+
 void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
   // format: YYYY/MM/DD hh:mm
   int ex = GRAPH_IMG_WIDTH - CHAR_TIME_MARGIN_X;
   int ey = GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TIME_MARGIN_Y;
-  // print mm
-  for (int i = 0; i < 2; ++i) {
-    int digit = time_info.time_str[4 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_list[digit]);
-    ex -= CHAR_WIDTH + CHAR_SPACE;
-  }
-  // print :
-  graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_COLON]);
+  ex = graph_draw_int_digit(graph_img, ey, ex, time_info.minute, 2); // print mm
+  graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_COLON]); // print :
   ex -= CHAR_WIDTH + CHAR_SPACE;
-  // print hh
-  for (int i = 0; i < 2; ++i) {
-    int digit = time_info.time_str[1 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_list[digit]);
-    ex -= CHAR_WIDTH + CHAR_SPACE;
-  }
-  // print space
+  ex = graph_draw_int_digit(graph_img, ey, ex, time_info.hour, 2); // print hh
+  ex -= CHAR_WIDTH + CHAR_SPACE; // print space
+  ex = graph_draw_int_digit(graph_img, ey, ex, time_info.day, 2); // print DD
+  graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_SLASH]); // print /
   ex -= CHAR_WIDTH + CHAR_SPACE;
-  // print DD
-  for (int i = 0; i < 2; ++i) {
-    int digit = time_info.day_str[9 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_list[digit]);
-    ex -= CHAR_WIDTH + CHAR_SPACE;
-  }
-  // print /
-  graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_SLASH]);
+  ex = graph_draw_int_digit(graph_img, ey, ex, time_info.month, 2); // print MM
+  graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_SLASH]); // print /
   ex -= CHAR_WIDTH + CHAR_SPACE;
-  // print MM
-  for (int i = 0; i < 2; ++i) {
-    int digit = time_info.day_str[6 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_list[digit]);
-    ex -= CHAR_WIDTH + CHAR_SPACE;
-  }
-  // print /
-  graph_draw_char(graph_img, ey, ex, char_list[CHAR_LIST_SLASH]);
-  ex -= CHAR_WIDTH + CHAR_SPACE;
-  // print YYYY
-  for (int i = 0; i < 4; ++i) {
-    int digit = time_info.day_str[3 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_list[digit]);
-    ex -= CHAR_WIDTH + CHAR_SPACE;
-  }
+  ex = graph_draw_int_digit(graph_img, ey, ex, time_info.year, 2); // print YYYY
 }
 
 void graph_draw_str(Graph_img &graph_img, int ey, int ex, const int str[], int len_str) {
@@ -199,16 +195,7 @@ void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
         }
         int ex = GRAPH_SX + x + (CHAR_WIDTH * n_digit) / 2;
         int ey = GRAPH_SY - 3 - CHAR_HEIGHT;
-        int h = hour_mod;
-        for (int i = 0; i < 2; ++i) {
-          int digit = h % 10;
-          graph_draw_char(graph_img, ey, ex, char_list[digit]);
-          ex -= CHAR_WIDTH + CHAR_SPACE;
-          h /= 10;
-          if (h == 0) {
-            break;
-          }
-        }
+        graph_draw_int(graph_img, ey, ex, hour_mod);
       }
     }
   }
@@ -223,13 +210,7 @@ void graph_draw_y_scale(Graph_img &graph_img, int y_min, int y_max, int interval
         line_color = scale[i].color;
         int32_t ey = GRAPH_SY + round((float)GRAPH_AREA_HEIGHT * (scale[i].value - y_min) / (y_max - y_min)) - CHAR_HEIGHT / 2;
         int32_t ex = GRAPH_SX - 4;
-        int v = scale[i].value;
-        while (v) {
-          int digit = v % 10;
-          graph_draw_char(graph_img, ey, ex, char_list[digit]);
-          ex -= CHAR_WIDTH + CHAR_SPACE;
-          v /= 10;
-        }
+        graph_draw_int(graph_img, ey, ex, scale[i].value);
       }
     }
     int32_t y = round((float)GRAPH_AREA_HEIGHT * (t - y_min) / (y_max - y_min));
