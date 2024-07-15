@@ -4,15 +4,19 @@ ESP32-based environment manager with Slack
 
 
 
+## About
+
 This project can do
 
 * measure temperature, humidity, atmospheric pressure, and CO2 concentration
 * show room environment on display
 * send room environment on Slack every 1 hour
-* send room environment graph on Slack
+* send room environment graph (bitmap image) on Slack
 * control an air conditioner via Slack
 
+Graphs:
 
+![graph](image/graph.png)
 
 ## Hardware
 
