@@ -23,10 +23,13 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     }
     str += "!!!!!HEAT!!!!!\n";
   }
+  // temperature-humidity index
+  float thi = 0.81 * sensor_data.temperature + 0.01 * sensor_data.humidity * (0.99 * sensor_data.temperature - 14.3) + 46.3;
   str += "Temp : " + String(sensor_data.temperature) + " *C\n";
   str += "Hum : " + String(sensor_data.humidity) + " pct.\n";
   str += "Pres : " + String(sensor_data.pressure) + " hPa\n";
   str += "CO2 : " + String(sensor_data.co2_concentration) + " ppm\n";
+  str += "THI : " + String(thi) + "\n";
   if (settings.ac_auto_mode){
     str += "AC auto : ON\n";
   } else {
