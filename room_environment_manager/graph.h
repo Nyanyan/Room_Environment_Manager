@@ -79,7 +79,7 @@ struct Value_color{
 #define GRAPH_TEMPERATURE_SCALE_INTERVAL 1
 
 // humidity graph
-#define N_COLOR_HUMIDITY 4
+#define N_COLOR_HUMIDITY 6
 #define GRAPH_HUMIDITY_SCALE_INTERVAL 10
 
 // pressure graph

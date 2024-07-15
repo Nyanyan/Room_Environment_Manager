@@ -28,10 +28,12 @@ const Value_color color_temperature[N_COLOR_TEMPERATURE] = {
 };
 
 const Value_color color_humidity[N_COLOR_HUMIDITY] = {
+  {0, PALETTE_NAVYBLUE},
   {20, PALETTE_BLUE},
   {40, PALETTE_GREEN},
   {60, PALETTE_ORANGE},
-  {80, PALETTE_RED}
+  {80, PALETTE_RED},
+  {100, PALETTE_PURPLE}
 };
 
 const Value_color color_pressure[N_COLOR_PRESSURE] = {
