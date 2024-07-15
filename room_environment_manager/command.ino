@@ -23,13 +23,11 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     }
     str += "!!!!!HEAT!!!!!\n";
   }
-  // temperature-humidity index
-  float thi = 0.81 * sensor_data.temperature + 0.01 * sensor_data.humidity * (0.99 * sensor_data.temperature - 14.3) + 46.3;
   str += "Temp : " + String(sensor_data.temperature) + " *C\n";
   str += "Hum : " + String(sensor_data.humidity) + " pct.\n";
   str += "Pres : " + String(sensor_data.pressure) + " hPa\n";
   str += "CO2 : " + String(sensor_data.co2_concentration) + " ppm\n";
-  str += "THI : " + String(thi) + "\n";
+  str += "THI : " + String(sensor_calc_thi(sensor_data.temperature, sensor_data.humidity)) + "\n";
   if (settings.ac_auto_mode){
     str += "AC auto : ON\n";
   } else {
@@ -66,6 +64,10 @@ void command_send_graph(Graph_data &graph_data, Graph_img &graph_img, Time_info 
   graph_draw_co2_concentration(graph_data, graph_img, time_info);
   graph_encode_bmp(graph_img);
   slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_CO2_CONCENTRATION);
+
+  graph_draw_thi(graph_data, graph_img, time_info);
+  graph_encode_bmp(graph_img);
+  slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_THI);
 }
 
 

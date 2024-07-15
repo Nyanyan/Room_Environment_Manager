@@ -17,6 +17,7 @@
 #define CHAR_HUMIDITY_N 10 // Humidity %
 #define CHAR_PRESSURE_N 12 // Pressure hPa
 #define CHAR_CO2_CONCENTRATION_N 7 // CO2 ppm
+#define CHAR_THI_N 3 // THI
 
 // graph x unit
 #define CHAR_TIME_N 4 // time
@@ -24,7 +25,7 @@
 #define CHAR_UNIT_X_EX (GRAPH_SX - 7)
 
 // alphabet
-#define CHAR_N_LIST 32
+#define CHAR_N_LIST 33
 #define CHAR_LIST_2 2
 #define CHAR_LIST_a 10
 #define CHAR_LIST_d 11
@@ -40,14 +41,15 @@
 #define CHAR_LIST_y 21
 #define CHAR_LIST_C 22
 #define CHAR_LIST_H 23
-#define CHAR_LIST_O 24
-#define CHAR_LIST_P 25
-#define CHAR_LIST_T 26
-#define CHAR_LIST_SPACE 27
-#define CHAR_LIST_SLASH 28
-#define CHAR_LIST_COLON 29
-#define CHAR_LIST_DEGREE 30
-#define CHAR_LIST_PERCENT 31
+#define CHAR_LIST_I 24
+#define CHAR_LIST_O 25
+#define CHAR_LIST_P 26
+#define CHAR_LIST_T 27
+#define CHAR_LIST_SPACE 28
+#define CHAR_LIST_SLASH 29
+#define CHAR_LIST_COLON 30
+#define CHAR_LIST_DEGREE 31
+#define CHAR_LIST_PERCENT 32
 
 const int char_idx_temperature[CHAR_TEMPERATURE_N] = {
   CHAR_LIST_T, 
@@ -101,6 +103,12 @@ const int char_idx_co2_concentration[CHAR_CO2_CONCENTRATION_N] = {
   CHAR_LIST_p,
   CHAR_LIST_p,
   CHAR_LIST_m
+};
+
+const int char_idx_thi[CHAR_THI_N] = {
+  CHAR_LIST_T, 
+  CHAR_LIST_H, 
+    CHAR_LIST_I
 };
 
 const int char_idx_time[CHAR_TIME_N] = {
@@ -330,6 +338,15 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
     {1, 0, 0, 0, 1}, 
     {1, 0, 0, 0, 1}, 
     {1, 0, 0, 0, 1}
+  },
+  { // I
+    {0, 1, 1, 1, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 0, 1, 0, 0}, 
+    {0, 1, 1, 1, 0}
   },
   { // O
     {0, 1, 1, 1, 0}, 
