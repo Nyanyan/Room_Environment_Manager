@@ -111,7 +111,7 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
   // print mm
   for (int i = 0; i < 2; ++i) {
     int digit = time_info.time_str[4 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    graph_draw_char(graph_img, ey, ex, char_list[digit]);
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
   // print :
@@ -120,7 +120,7 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
   // print hh
   for (int i = 0; i < 2; ++i) {
     int digit = time_info.time_str[1 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    graph_draw_char(graph_img, ey, ex, char_list[digit]);
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
   // print space
@@ -128,7 +128,7 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
   // print DD
   for (int i = 0; i < 2; ++i) {
     int digit = time_info.day_str[9 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    graph_draw_char(graph_img, ey, ex, char_list[digit]);
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
   // print /
@@ -137,7 +137,7 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
   // print MM
   for (int i = 0; i < 2; ++i) {
     int digit = time_info.day_str[6 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    graph_draw_char(graph_img, ey, ex, char_list[digit]);
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
   // print /
@@ -146,7 +146,7 @@ void graph_draw_time(Graph_img &graph_img, Time_info &time_info) {
   // print YYYY
   for (int i = 0; i < 4; ++i) {
     int digit = time_info.day_str[3 - i] - '0';
-    graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+    graph_draw_char(graph_img, ey, ex, char_list[digit]);
     ex -= CHAR_WIDTH + CHAR_SPACE;
   }
 }
@@ -202,7 +202,7 @@ void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
         int h = hour_mod;
         for (int i = 0; i < 2; ++i) {
           int digit = h % 10;
-          graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+          graph_draw_char(graph_img, ey, ex, char_list[digit]);
           ex -= CHAR_WIDTH + CHAR_SPACE;
           h /= 10;
           if (h == 0) {
@@ -226,7 +226,7 @@ void graph_draw_y_scale(Graph_img &graph_img, int y_min, int y_max, int interval
         int v = scale[i].value;
         while (v) {
           int digit = v % 10;
-          graph_draw_char(graph_img, ey, ex, char_digit[digit]);
+          graph_draw_char(graph_img, ey, ex, char_list[digit]);
           ex -= CHAR_WIDTH + CHAR_SPACE;
           v /= 10;
         }

@@ -32,29 +32,29 @@
 #define CHAR_PPM_N 3 // ppm
 
 // alphabet
-#define CHAR_N_LIST 22
-#define CHAR_LIST_a 0
-#define CHAR_LIST_d 1
-#define CHAR_LIST_e 2
-#define CHAR_LIST_h 3
-#define CHAR_LIST_i 4
-#define CHAR_LIST_m 5
-#define CHAR_LIST_p 6
-#define CHAR_LIST_r 7
-#define CHAR_LIST_s 8
-#define CHAR_LIST_t 9
-#define CHAR_LIST_u 10
-#define CHAR_LIST_y 11
-#define CHAR_LIST_C 12
-#define CHAR_LIST_H 13
-#define CHAR_LIST_O 14
-#define CHAR_LIST_P 15
-#define CHAR_LIST_T 16
-#define CHAR_LIST_2 17
-#define CHAR_LIST_SLASH 18
-#define CHAR_LIST_COLON 19
-#define CHAR_LIST_DEGREE 20
-#define CHAR_LIST_PERCENT 21
+#define CHAR_N_LIST 31
+#define CHAR_LIST_2 2
+#define CHAR_LIST_a 10
+#define CHAR_LIST_d 11
+#define CHAR_LIST_e 12
+#define CHAR_LIST_h 13
+#define CHAR_LIST_i 14
+#define CHAR_LIST_m 15
+#define CHAR_LIST_p 16
+#define CHAR_LIST_r 17
+#define CHAR_LIST_s 18
+#define CHAR_LIST_t 19
+#define CHAR_LIST_u 20
+#define CHAR_LIST_y 21
+#define CHAR_LIST_C 22
+#define CHAR_LIST_H 23
+#define CHAR_LIST_O 24
+#define CHAR_LIST_P 25
+#define CHAR_LIST_T 26
+#define CHAR_LIST_SLASH 27
+#define CHAR_LIST_COLON 28
+#define CHAR_LIST_DEGREE 29
+#define CHAR_LIST_PERCENT 30
 
 const int char_idx_temperature[CHAR_TEMPERATURE_N] = {
   CHAR_LIST_T, 
@@ -127,7 +127,9 @@ const int char_idx_time[CHAR_TIME_N] = {
 
 
 
-const bool char_digit[10][CHAR_HEIGHT][CHAR_WIDTH] = {
+
+
+const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
   { // 0
     {0, 1, 1, 1, 0}, 
     {1, 0, 0, 0, 1}, 
@@ -217,14 +219,7 @@ const bool char_digit[10][CHAR_HEIGHT][CHAR_WIDTH] = {
     {0, 0, 0, 0, 1}, 
     {0, 0, 0, 1, 0}, 
     {0, 0, 1, 0, 0}
-  }
-};
-
-
-
-
-
-const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
+  },
   { // a
     {0, 0, 0, 0, 0}, 
     {0, 0, 0, 0, 0}, 
@@ -377,15 +372,6 @@ const bool char_list[CHAR_N_LIST][CHAR_HEIGHT][CHAR_WIDTH] = {
     {0, 0, 1, 0, 0}, 
     {0, 0, 1, 0, 0}, 
     {0, 0, 1, 0, 0}
-  },
-  { // 2
-    {0, 1, 1, 1, 0}, 
-    {1, 0, 0, 0, 1}, 
-    {0, 0, 0, 0, 1}, 
-    {0, 0, 0, 1, 0}, 
-    {0, 0, 1, 0, 0}, 
-    {0, 1, 0, 0, 0}, 
-    {1, 1, 1, 1, 1}
   },
   { // /
     {0, 0, 0, 0, 0}, 
