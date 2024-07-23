@@ -26,7 +26,7 @@ You need
 * [SHT31](https://akizukidenshi.com/catalog/g/g112125/)
   * Temperature & Humidity Sensor
   * I2C
-* [LPS25HB](https://akizukidenshi.com/catalog/g/g113460/)
+* [BME680](https://akizukidenshi.com/catalog/g/g114469/)
   * Atmospheric Pressure Sensor
   * I2C
 * [MH-Z19C](https://akizukidenshi.com/catalog/g/g116142/)

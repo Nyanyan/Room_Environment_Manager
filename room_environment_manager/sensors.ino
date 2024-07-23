@@ -2,11 +2,14 @@
 #include <MHZ19_uart.h> // https://github.com/nara256/mhz19_uart
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
+#include "Adafruit_BME680.h"
 #include "sensors.h"
 
 // CO2 sensor
 MHZ19_uart mhz19;
 
+// Pressure Sensor
+Adafruit_BME680 bme;
 
 
 void init_SHT31(){
@@ -25,16 +28,15 @@ void init_SHT31(){
 }
 
 
-
-void init_LPS25HB(){
-  Wire.beginTransmission(LPS25HB_ADDR);
-  Wire.write(0x20);
-  Wire.write(0x90);
-  Wire.endTransmission();
-  Serial.println("Pressure Sensor Initialized");
-  display_print(0, 2, "[I] LPS25HB PR");
+void init_BME680(){
+  bme.begin();
+  bme.setTemperatureOversampling(BME680_OS_8X);
+  bme.setHumidityOversampling(BME680_OS_2X);
+  bme.setPressureOversampling(BME680_OS_4X);
+  bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
+  bme.setGasHeater(320, 150);
+  display_print(0, 2, "[I] BME680 Pressure");
 }
-
 
 
 void init_MHZ19C(){
@@ -50,7 +52,7 @@ void init_MHZ19C(){
 void init_sensors(){
   Wire.begin();
   init_SHT31();
-  init_LPS25HB();
+  init_BME680();
   init_MHZ19C();
 }
 
@@ -78,16 +80,9 @@ void get_data_SHT31(float *temperature, float *humidity) {
 
 
 // Pressure
-float get_data_LPS25HB() {
-  Wire.beginTransmission(LPS25HB_ADDR);
-  Wire.write(0x28 | 0x80);
-  Wire.endTransmission();
-  delay(300);
-  Wire.requestFrom(LPS25HB_ADDR, 3);
-  int32_t pressure_int = Wire.read();
-  pressure_int |= (int32_t)Wire.read() << 8;
-  pressure_int |= (int32_t)Wire.read() << 16;
-  return (float)pressure_int / 4096.0;
+float get_data_BME680() {
+  bme.performReading();
+  return bme.pressure / 100.0;
 }
 
 
@@ -99,7 +94,7 @@ struct Sensor_data get_sensor_data(){
   for (int i = 0; i < SENSOR_N_DATA_FOR_AVERAGE; ++i){
     Serial.print("=");
     get_data_SHT31(&temperatures[i], &humidities[i]);
-    pressures[i] = get_data_LPS25HB();
+    pressures[i] = get_data_BME680();
     co2_concentrations[i] = mhz19.getCO2PPM();
     min_temperature = min(min_temperature, temperatures[i]);
     min_humidity = min(min_humidity, humidities[i]);
