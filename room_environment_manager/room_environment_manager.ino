@@ -31,10 +31,11 @@ void setup() {
 
 
 void loop() {
-  Time_info time_info = time_get_local();
-
   // get sensor data
   Sensor_data sensor_data = get_sensor_data();
+
+  // update time
+  Time_info time_info = time_get_local();
 
   // update graph data
   if (graph_data.last_data_update_minute == -1){ // forced update
