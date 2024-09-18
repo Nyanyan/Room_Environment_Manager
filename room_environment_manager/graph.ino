@@ -179,7 +179,7 @@ void graph_draw_title(Graph_img &graph_img, const int str[], int len_str) {
 
 void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
   // x scale + daytime-night coloring
-  for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
+  for (int32_t x = 0; x < GRAPH_DATA_1_DAY; ++x){
     int32_t minute = graph_data.last_data_update_minute + 1440 - (GRAPH_DATA_N - 1 - x) * GRAPH_DATA_INTERVAL;
     int32_t hour = graph_data.last_data_update_hour + minute / 60;
     int hour_mod = hour % 24;
@@ -256,12 +256,12 @@ void graph_draw_frame(Graph_img &graph_img) {
 }
 
 
-void graph_draw_graph_line(Graph_img &graph_img, int fy, int fx, int ny, int nx) {
+void graph_draw_graph_line(Graph_img &graph_img, int fy, int fx, int ny, int nx, uint8_t color) {
   int min_y = min(fy, ny);
   int max_y = max(fy, ny);
   for (int y = min_y + 1; y < max_y; ++y) {
     int x = round((float)fx + (float)(y - fy) / (ny - fy) * (nx - fx));
-    graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
+    graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = color;
   }
 }
 
@@ -319,12 +319,23 @@ void graph_calculate_range(float data[], const Value_color scales[], const int n
 
 void graph_plot(Graph_img &graph_img, float data[], int y_min, int y_max) {
   int32_t fy = GRAPH_DATA_UNDEFINED;
-  for (int32_t x = 0; x < GRAPH_DATA_N; ++x){
+  // yesterday
+  for (int32_t x = 0; x < GRAPH_DATA_1_DAY; ++x){
     if (data[x] != GRAPH_DATA_UNDEFINED){
       int32_t y = round((float)GRAPH_AREA_HEIGHT * (data[x] - y_min) / (y_max - y_min));
-      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_BLACK;
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_GRAY;
       if (fy != GRAPH_DATA_UNDEFINED){
-        graph_draw_graph_line(graph_img, fy, x - 1, y, x);
+        graph_draw_graph_line(graph_img, fy, x - 1, y, x, PALETTE_GRAY);
+      }
+      fy = y;
+    }
+  }
+  for (int32_t x = GRAPH_DATA_1_DAY; x < GRAPH_DATA_N; ++x){
+    if (data[x] != GRAPH_DATA_UNDEFINED){
+      int32_t y = round((float)GRAPH_AREA_HEIGHT * (data[x] - y_min) / (y_max - y_min));
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x - GRAPH_DATA_1_DAY] = PALETTE_BLACK;
+      if (fy != GRAPH_DATA_UNDEFINED){
+        graph_draw_graph_line(graph_img, fy, x - GRAPH_DATA_1_DAY - 1, y, x - GRAPH_DATA_1_DAY, PALETTE_BLACK);
       }
       fy = y;
     }

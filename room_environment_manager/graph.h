@@ -3,7 +3,8 @@
 
 // graph data
 #define GRAPH_DATA_INTERVAL 10 // minute
-#define GRAPH_DATA_N 144 // 1 day
+#define GRAPH_DATA_1_DAY 144 // 1 day
+#define GRAPH_DATA_N (GRAPH_DATA_1_DAY * 2) // 1 day * 2
 #define GRAPH_DATA_UNDEFINED -9999.0
 struct Graph_data{
   float temperature[GRAPH_DATA_N];
