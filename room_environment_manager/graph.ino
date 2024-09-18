@@ -180,7 +180,7 @@ void graph_draw_title(Graph_img &graph_img, const int str[], int len_str) {
 void graph_draw_x_scale(Graph_img &graph_img, Graph_data &graph_data) {
   // x scale + daytime-night coloring
   for (int32_t x = 0; x < GRAPH_DATA_1_DAY; ++x){
-    int32_t minute = graph_data.last_data_update_minute + 1440 - (GRAPH_DATA_N - 1 - x) * GRAPH_DATA_INTERVAL;
+    int32_t minute = graph_data.last_data_update_minute + 1440 - (GRAPH_DATA_1_DAY - 1 - x) * GRAPH_DATA_INTERVAL;
     int32_t hour = graph_data.last_data_update_hour + minute / 60;
     int hour_mod = hour % 24;
     // coloring
