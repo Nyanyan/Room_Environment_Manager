@@ -35,8 +35,16 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
   } else{
     display_print(0, 2, "AC MANUAL");
   }
-  if (ac_status.is_on){
-    display_print(11, 2, String("AC ON ") + String(ac_status.temp));
+  if (ac_status.state != AC_STATE_OFF){
+    String ac_mode = "?";
+    if (ac_status.state == AC_STATE_COOL) {
+      ac_mode = "C";
+    } else if (ac_status.state == AC_STATE_DRY) {
+      ac_mode = "D";
+    } else if (ac_status.state == AC_STATE_HEAT) {
+      ac_mode = "H";
+    }
+    display_print(11, 2, String("AC " + ac_mode + " ") + String(ac_status.temp));
   } else{
     display_print(11, 2, "AC OFF  ");
   }

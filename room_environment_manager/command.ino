@@ -33,8 +33,16 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   } else {
     str += "AC auto : OFF\n";
   }
-  if (ac_status.is_on){
-    str += "AC status : ON " + String(ac_status.temp) + " *C\n";
+  if (ac_status.state != AC_STATE_OFF){
+    String ac_mode = "?";
+    if (ac_status.state == AC_STATE_COOL) {
+      ac_mode = "Cool";
+    } else if (ac_status.state == AC_STATE_DRY) {
+      ac_mode = "Dry";
+    } else if (ac_status.state == AC_STATE_HEAT) {
+      ac_mode = "Heat";
+    }
+    str += "AC status : " + ac_mode + " " + String(ac_status.temp) + " *C\n";
   } else {
     str += "AC status : OFF\n";
   }
@@ -75,13 +83,14 @@ void command_send_graph(Graph_data &graph_data, Graph_img &graph_img, Time_info 
 void command_print_command_list(Time_info &time_info){
   String str = "<command list>\n";
   str += "- ac\n";
-  str += "  - ac on [temp]\n";
+  str += "  - ac [mode] [temp]\n";
   str += "    - on air conditioner\n";
+  str += "    - mode: cool (c) / dry (d) / heat (h)\n";
   str += "    - temp must be in [16,30]\n";
   str += "  - ac off\n";
   str += "    - off air conditioner\n";
   str += "  - ac auto [on/off]\n";
-  str += "    - auto air conditioner on off\n";
+  str += "    - auto cooler on off\n";
   str += "- set\n";
   str += "  - set alert [on/off]\n";
   str += "    - alert on slack when very hot\n";
@@ -98,18 +107,44 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
   if (command.cmd != "ac") {
     return;
   }
-  if (command.arg1 == "on"){ // ac on [arg2]
+  if (command.arg1 == "cool" || command.arg1 == "c"){ // ac cool [arg2]
     int set_temp = command.arg2.toInt();
-    if (set_temp < 16 || 30 < set_temp){ // ac on [error]
-      String str = "[ERROR] AC ON temp error expected [16,30] got: " + command.arg2;
+    if (set_temp < AC_TEMP_LIMIT_MIN || AC_TEMP_LIMIT_MAX < set_temp){ // ac cool [error]
+      String str = "[ERROR] AC COOL temp error expected [16,30] got: " + command.arg2;
       Serial.println(str);
       slack_send_message(time_info, str);
-    } else{ // ac on [temp]
+    } else{ // ac cool [temp]
       settings.ac_auto_mode = false;
-      String str = "[INFO] AC ON temp: " + command.arg2 + " *C";
+      String str = "[INFO] AC COOL temp: " + command.arg2 + " *C";
       Serial.println(str);
       slack_send_message(time_info, str);
-      ac_on(ac_status, set_temp);
+      ac_cool_on(ac_status, set_temp);
+    }
+  } else if (command.arg1 == "dry" || command.arg1 == "d"){ // ac dry [arg2]
+    int set_temp = command.arg2.toInt();
+    if (set_temp < AC_TEMP_LIMIT_MIN || AC_TEMP_LIMIT_MAX < set_temp){ // ac dry [error]
+      String str = "[ERROR] AC DRY temp error expected [16,30] got: " + command.arg2;
+      Serial.println(str);
+      slack_send_message(time_info, str);
+    } else{ // ac dry [temp]
+      settings.ac_auto_mode = false;
+      String str = "[INFO] AC DRY temp: " + command.arg2 + " *C";
+      Serial.println(str);
+      slack_send_message(time_info, str);
+      ac_dry_on(ac_status, set_temp);
+    }
+  } else if (command.arg1 == "heat" || command.arg1 == "h"){ // ac heat [arg2]
+    int set_temp = command.arg2.toInt();
+    if (set_temp < AC_TEMP_LIMIT_MIN || AC_TEMP_LIMIT_MAX < set_temp){ // ac heat [error]
+      String str = "[ERROR] AC HEAT temp error expected [16,30] got: " + command.arg2;
+      Serial.println(str);
+      slack_send_message(time_info, str);
+    } else{ // ac heat [temp]
+      settings.ac_auto_mode = false;
+      String str = "[INFO] AC HEAT temp: " + command.arg2 + " *C";
+      Serial.println(str);
+      slack_send_message(time_info, str);
+      ac_heat_on(ac_status, set_temp);
     }
   } else if (command.arg1 == "off"){ // ac off
     settings.ac_auto_mode = false;

@@ -58,7 +58,7 @@ void loop() {
   command_check_reboot(command, time_info);
 
   // air conditioner auto mode
-  ac_auto(settings, sensor_data, ac_status, time_info);
+  ac_cool_auto(settings, sensor_data, ac_status, time_info);
 
   // send regular message
   regular_message(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
