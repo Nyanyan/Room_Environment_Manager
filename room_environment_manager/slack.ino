@@ -94,53 +94,6 @@ char* slack_send_message(Time_info &time_info, String str){
 
 
 
-
-char* slack_send_imgs(String img_url1){
-  static char ts[20];
-  char buf[2048];
-
-  // Slack Messaging API
-  HTTPClient http;
-  if (!http.begin(SLACK_URL_SEND)) {
-    Serial.println(String("[ERROR] cannot begin ") + SLACK_URL_SEND);
-    return "";
-  }
-  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-
-  sprintf(buf, ""
-               "token=%s"
-               "&channel=%s"
-               "&text=graph"
-               "&attachments=[{&image_url=%s}]",
-          SLACK_TOKEN,
-          SLACK_CHANNEL,
-          img_url1
-          );
-  Serial.println(buf);
-
-  strcpy(ts, "");
-
-  int status_code = http.POST((uint8_t*)buf, strlen(buf));
-  Serial.print(status_code);
-  if (status_code == HTTP_CODE_OK || status_code == HTTP_CODE_MOVED_PERMANENTLY) {
-    String json = http.getString();
-    Serial.println(json);
-    deserializeJson(doc, json);
-    if (doc.containsKey("ts")) {
-      strcpy(ts, doc["ts"]);
-      Serial.println(ts);
-    }
-  } else {
-    Serial.printf("ERR %d", status_code);
-  }
-  http.end();
-  return ts;
-}
-
-
-
-
-
 String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_file_name){
   HTTPClient http;
   String body, received_string;
