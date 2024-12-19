@@ -10,8 +10,7 @@ void regular_message(Time_info &time_info, Sensor_data &sensor_data, Settings &s
   if (time_info.hour != regular_message_last_sent_hour){
     regular_message_last_sent_hour = time_info.hour;
     Serial.println("[INFO] REGULAR MESSAGE");
-    command_send_environment(sensor_data, settings, ac_status, time_info);
-    command_send_graph(graph_data, graph_img, time_info);
+    command_send_environment(sensor_data, settings, ac_status, graph_data, graph_img, time_info);
     time_info = time_get();
   }
 }

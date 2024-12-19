@@ -15,7 +15,7 @@ struct Command command_get(){
 
 
 
-void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Time_info &time_info) {
+void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
   String str = "<room environment>\n";
   if (sensor_data.temperature >= 31.0){
     if (settings.alert_when_hot){
@@ -51,31 +51,40 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   } else{
     str += "Alert when hot : OFF\n";
   }
+  str += get_graph_urls(graph_data, graph_img, time_info);
   slack_send_message(time_info, str);
 }
 
 
 
-void command_send_graph(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
+String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
   graph_draw_temperature(graph_data, graph_img, time_info);
   graph_encode_bmp(graph_img);
-  slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_TEMPERATURE);
+  String graph_temperature = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_TEMPERATURE);
 
   graph_draw_humidity(graph_data, graph_img, time_info);
   graph_encode_bmp(graph_img);
-  slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_HUMIDITY);
+  String graph_humidity = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_HUMIDITY);
 
   graph_draw_pressure(graph_data, graph_img, time_info);
   graph_encode_bmp(graph_img);
-  slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_PRESSURE);
+  String graph_pressure = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_PRESSURE);
 
   graph_draw_co2_concentration(graph_data, graph_img, time_info);
   graph_encode_bmp(graph_img);
-  slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_CO2_CONCENTRATION);
+  String graph_co2 = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_CO2_CONCENTRATION);
 
   graph_draw_thi(graph_data, graph_img, time_info);
   graph_encode_bmp(graph_img);
-  slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_THI);
+  String graph_thi = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_THI);
+
+  String str = 
+    String("<") + graph_temperature + String("| >") + 
+    String("<") + graph_humidity + String("| >") + 
+    String("<") + graph_pressure + String("| >") + 
+    String("<") + graph_co2 + String("| >") + 
+    String("<") + graph_thi + String("| >");
+  return str;
 }
 
 
@@ -212,8 +221,7 @@ void command_check_monitor(Command command, Time_info &time_info, Sensor_data &s
     return;
   }
   Serial.println("[INFO] MONITOR");
-  command_send_environment(sensor_data, settings, ac_status, time_info);
-  command_send_graph(graph_data, graph_img, time_info);
+  command_send_environment(sensor_data, settings, ac_status, graph_data, graph_img, time_info);
 }
 
 
