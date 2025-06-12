@@ -1,3 +1,8 @@
+# include <SoftwareSerial.h>
+
+# define swrxPin 32
+# define swtxPin 33
+SoftwareSerial Printer;
 
 #define N_LINES 20
 #define N_CHARS_PER_LINE 32
@@ -52,7 +57,12 @@ char ascii_art[N_LINES][N_CHARS_PER_LINE] = {
 */
 
 void setup() {
-  Serial.begin(9600);
+
+  pinMode(swrxPin, INPUT);
+  pinMode(swtxPin, OUTPUT);
+  Printer.begin(9600, SWSERIAL_8N1, swrxPin, swtxPin , false, 256);
+
+  // Serial.begin(9600);
   
   // Serial.println("The quick brown fox jumps over the lazy dog.");
   // Serial.write(10); //Send LF
@@ -60,12 +70,13 @@ void setup() {
   // Serial.write(10);
   // Serial.write(10);
 
+  Printer.write(10);
   for (int i = 0; i < N_LINES; ++i) {
-    Serial.println(ascii_art[i]);
-    // Serial.write(10);
+    Printer.println(ascii_art[i]);
+    // Printer.write(10);
   }
-  Serial.write(10);
-  Serial.write(10);
+  Printer.write(10);
+  Printer.write(10);
 }
 
 void loop()
