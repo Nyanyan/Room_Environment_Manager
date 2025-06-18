@@ -56,31 +56,14 @@ void send_ac() {
   }
 }
 
+void reset_wifi() {
+  WiFi.persistent(false);
+  WiFi.disconnect();
+  WiFi.mode(WIFI_OFF);
+  delay(10);
+}
 
-AC_status ac_status;
-Graph_data graph_data;
-Graph_img graph_img;
-Settings settings;
-
-void setup() {
-  Serial.begin(115200);
-  // init_display();
-  // display_print(0, 0, "[I] Initializing");
-  // init_wifi();
-  // Time_info time_info = time_get();
-  // slack_send_message(time_info, "[INFO] Starting...");
-  // init_ac();  
-  // init_graph(graph_img);
-  // init_sensors();
-
-  // display_clear();
-  // display_print(0, 0, "Started");
-  // time_info = time_get_local();
-  // slack_send_message(time_info, "[INFO] Started");
-
-
-
-
+void espnow_init() {
   //Set device in STA mode to begin with
   WiFi.mode(WIFI_STA);
   esp_wifi_set_channel(CHANNEL, WIFI_SECOND_CHAN_NONE);
@@ -109,54 +92,97 @@ void setup() {
     }
   }
 }
+long last_demo_minute = -1;
+bool demo_ac_is_off = true;
 
 
+AC_status ac_status;
+Graph_data graph_data;
+Graph_img graph_img;
+Settings settings;
+
+void setup() {
+  Serial.begin(115200);
+  init_display();
+  display_print(0, 0, "[I] Initializing");
+  init_wifi();
+  Time_info time_info = time_get();
+  slack_send_message(time_info, "[INFO] Starting...");
+  init_ac();  
+  init_graph(graph_img);
+  init_sensors();
+
+  display_clear();
+  display_print(0, 0, "Started");
+  time_info = time_get_local();
+  slack_send_message(time_info, "[INFO] Started");
+
+
+  // demo
+  settings.ac_auto_mode = true;
+}
+
+void exhibition_ac_demo(Time_info &time_info) {
+  if (time_info.minute != last_demo_minute) {
+    reset_wifi();
+    espnow_init();
+    last_demo_minute = time_info.minute;
+    if (demo_ac_is_off) {
+      send_data[2] = 'i';
+      send_ac();
+      Serial.println("DEMO AC ON");
+      ac_status.state = AC_STATE_COOL;
+      ac_status.temp = 27;
+    } else {
+      send_data[2] = 'o';
+      send_ac();
+      Serial.println("DEMO AC OFF");
+      ac_status.state = AC_STATE_OFF;
+    }
+    demo_ac_is_off = !demo_ac_is_off;
+    reset_wifi();
+    init_wifi();
+  }
+}
 
 void loop() {
-  // // get sensor data
-  // Sensor_data sensor_data = get_sensor_data();
+  // get sensor data
+  Sensor_data sensor_data = get_sensor_data();
 
-  // // update time
-  // Time_info time_info = time_get_local();
+  // update time
+  Time_info time_info = time_get_local();
 
-  // // update graph data
-  // if (graph_data.last_data_update_minute == -1){ // forced update
-  //   int tmp_minute = time_info.minute;
-  //   time_info.minute = time_info.minute / GRAPH_DATA_INTERVAL * GRAPH_DATA_INTERVAL;
-  //   graph_data_update(time_info, graph_data, sensor_data);
-  //   time_info.minute = tmp_minute;
-  // } else { // regular update
-  //   graph_data_update(time_info, graph_data, sensor_data);
-  // }
+  // update graph data
+  if (graph_data.last_data_update_minute == -1){ // forced update
+    int tmp_minute = time_info.minute;
+    time_info.minute = time_info.minute / GRAPH_DATA_INTERVAL * GRAPH_DATA_INTERVAL;
+    graph_data_update(time_info, graph_data, sensor_data);
+    time_info.minute = tmp_minute;
+  } else { // regular update
+    graph_data_update(time_info, graph_data, sensor_data);
+  }
 
-  // // get command from user
-  // Command command = command_get();
+  // get command from user
+  Command command = command_get();
 
-  // // check command
-  // command_check_ac(command, time_info, settings, ac_status);
-  // command_check_set(command, time_info);
-  // command_check_monitor(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);
-  // command_check_help(command, time_info);
-  // command_check_reboot(command, time_info);
+  // check command
+  command_check_ac(command, time_info, settings, ac_status);
+  command_check_set(command, time_info);
+  command_check_monitor(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);
+  command_check_help(command, time_info);
+  command_check_reboot(command, time_info);
 
-  // // air conditioner auto mode
+  // air conditioner auto mode
   // ac_cool_auto(settings, sensor_data, ac_status, time_info);
 
-  // // send regular message
-  // regular_message(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
+  // send regular message
+  regular_message(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
 
   // exhibition demo
-  send_data[2] = 'i';
-  send_ac();
-  Serial.println("AC Open");
-  delay(5000);
-  send_data[2] = 'o';
-  send_ac();
-  Serial.println("AC Close");
-  delay(5000);
+  exhibition_ac_demo(time_info);
   
   // // LCD
-  // display_print_info(sensor_data, settings, ac_status, time_info);
+  display_print_info(sensor_data, settings, ac_status, time_info);
 
-  // delay(1000);
+  delay(1000);
 }
