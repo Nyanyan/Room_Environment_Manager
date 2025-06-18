@@ -62,7 +62,7 @@ void loop() {
 
   // send regular message
   regular_message(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
-  
+
   // LCD
   display_print_info(sensor_data, settings, ac_status, time_info);
 
