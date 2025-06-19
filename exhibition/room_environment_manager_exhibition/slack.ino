@@ -23,9 +23,7 @@ StaticJsonDocument<1024> doc;
 //   Serial.println("WiFi connected");
 // }
 
-void init_wifi(){
-  delay(1000);
-
+bool init_wifi_try() {
   WiFi.disconnect(true);  // 接続状態をリセット
   WiFi.mode(WIFI_STA);    // ステーションモードに設定
 
@@ -38,16 +36,23 @@ void init_wifi(){
   WiFi.begin(EXH_WIFI_SSID);
 
   Serial.println("Connecting to WPA2 Enterprise WiFi...");
-  while (WiFi.status() != WL_CONNECTED) {
+  for (int i = 0; i < 20 && WiFi.status() != WL_CONNECTED; ++i) {
     delay(500);
     Serial.print(".");
   }
+  
+  return WiFi.status() == WL_CONNECTED;
+}
 
+void init_wifi(){
+  
+  while (!init_wifi_try()) {
+    Serial.println("trying...");
+  }
+  
   Serial.println("");
   Serial.println("Connected!");
   Serial.println(WiFi.localIP());
-
-
   Serial.println("WiFi connected");
 }
 
