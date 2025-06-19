@@ -1,6 +1,6 @@
 #include <WiFi.h>
-// #include "esp_wpa2.h"
-#include "esp_eap_client.h"
+#include "esp_wpa2.h"
+// #include "esp_eap_client.h"
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "slack.h"
@@ -24,7 +24,6 @@ StaticJsonDocument<1024> doc;
 // }
 
 void init_wifi(){
-  Serial.begin(115200);
   delay(1000);
 
   WiFi.disconnect(true);  // 接続状態をリセット
