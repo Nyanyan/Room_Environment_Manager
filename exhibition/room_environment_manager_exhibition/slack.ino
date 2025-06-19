@@ -1,5 +1,6 @@
 #include <WiFi.h>
-#include "esp_wpa2.h"
+// #include "esp_wpa2.h"
+#include "esp_eap_client.h"
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "slack.h"
