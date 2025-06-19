@@ -51,7 +51,8 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   } else{
     str += "Alert when hot : OFF\n";
   }
-  str += get_graph_urls(graph_data, graph_img, time_info);
+  // disable for exhibition
+  // str += get_graph_urls(graph_data, graph_img, time_info);
   slack_send_message(time_info, str);
 }
 
