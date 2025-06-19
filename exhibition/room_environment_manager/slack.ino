@@ -35,7 +35,7 @@ void init_wifi(){
   esp_wifi_sta_wpa2_ent_set_password((uint8_t *)EXH_WIFI_PASS, strlen(EXH_WIFI_PASS));
   esp_wifi_sta_wpa2_ent_enable();  // WPA2-Enterpriseを有効にする
 
-  WiFi.begin(ssid);
+  WiFi.begin(EXH_WIFI_SSID);
 
   Serial.println("Connecting to WPA2 Enterprise WiFi...");
   while (WiFi.status() != WL_CONNECTED) {
