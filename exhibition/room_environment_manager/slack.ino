@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include "esp_wpa2.h"
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "slack.h"
@@ -12,12 +13,41 @@
 // json
 StaticJsonDocument<1024> doc;
 
+// void init_wifi(){
+//   WiFi.begin(WIFI_SSID, WIFI_PASS);
+//   while (WiFi.status() != WL_CONNECTED) {
+//     Serial.print(".");
+//     delay(100);
+//   }
+//   Serial.println("WiFi connected");
+// }
+
 void init_wifi(){
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  Serial.begin(115200);
+  delay(1000);
+
+  WiFi.disconnect(true);  // 接続状態をリセット
+  WiFi.mode(WIFI_STA);    // ステーションモードに設定
+
+  // WPA2-Enterpriseの設定
+  esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)EXH_WIFI_ID, strlen(EXH_WIFI_ID));
+  esp_wifi_sta_wpa2_ent_set_username((uint8_t *)EXH_WIFI_ID, strlen(EXH_WIFI_ID));
+  esp_wifi_sta_wpa2_ent_set_password((uint8_t *)EXH_WIFI_PASS, strlen(EXH_WIFI_PASS));
+  esp_wifi_sta_wpa2_ent_enable();  // WPA2-Enterpriseを有効にする
+
+  WiFi.begin(ssid);
+
+  Serial.println("Connecting to WPA2 Enterprise WiFi...");
   while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
     Serial.print(".");
-    delay(100);
   }
+
+  Serial.println("");
+  Serial.println("Connected!");
+  Serial.println(WiFi.localIP());
+
+
   Serial.println("WiFi connected");
 }
 
