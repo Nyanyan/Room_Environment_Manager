@@ -122,7 +122,7 @@ void setup() {
   settings.ac_auto_mode = true;
 }
 
-void exhibition_ac_demo(Time_info &time_info) {
+void exhibition_ac_demo(Sensor_data &sensor_data, Time_info &time_info) {
   if (time_info.minute != last_demo_minute) {
     reset_wifi();
     espnow_init();
@@ -140,6 +140,7 @@ void exhibition_ac_demo(Time_info &time_info) {
       ac_status.state = AC_STATE_OFF;
     }
     demo_ac_is_off = !demo_ac_is_off;
+    display_print_info(sensor_data, settings, ac_status, time_info);
     reset_wifi();
     init_wifi();
   }
@@ -179,9 +180,9 @@ void loop() {
   regular_message(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
 
   // exhibition demo
-  exhibition_ac_demo(time_info);
+  exhibition_ac_demo(sensor_data, time_info);
   
-  // // LCD
+  // LCD
   display_print_info(sensor_data, settings, ac_status, time_info);
 
   delay(1000);
