@@ -15,9 +15,9 @@
 #define AC_TEMP_LIMIT_MAX 30
 
 // auto
-#define AC_AUTO_THRESHOLD1 1.0 // weight = 1
-#define AC_AUTO_THRESHOLD2 3.0 // weight = 10
-#define AC_AUTO_THRESHOLD3 5.0 // weight = 100
+#define AC_AUTO_THRESHOLD1 0.5 // weight = 1
+#define AC_AUTO_THRESHOLD2 1.2 // weight = 10
+#define AC_AUTO_THRESHOLD3 2.5 // weight = 100
 #define AC_AUTO_ENDURE 50 // about 10 minutes
 
 
