@@ -14,20 +14,17 @@
 #define AC_TEMP_LIMIT_MIN 16
 #define AC_TEMP_LIMIT_MAX 30
 
-// cool auto
-#define AC_COOL_AUTO_HOT_THRESHOLD1 31.0 // weight = 1
-#define AC_COOL_AUTO_HOT_THRESHOLD2 32.0 // weight = 10
-#define AC_COOL_AUTO_HOT_THRESHOLD3 33.0 // weight = 100
-#define AC_COOL_AUTO_COLD_THRESHOLD 25.0
-#define AC_COOL_AUTO_ENDURE 150 // about 30 minutes
-#define AC_COOL_AUTO_TEMP 29
-#define AC_COOL_AUTO_TEMP_MIN 26
+// auto
+#define AC_AUTO_THRESHOLD1 1.0 // weight = 1
+#define AC_AUTO_THRESHOLD2 3.0 // weight = 10
+#define AC_AUTO_THRESHOLD3 5.0 // weight = 100
+#define AC_AUTO_ENDURE 50 // about 10 minutes
 
 
 
 struct AC_status{
-  int state;
-  int temp;
+  int state; // off / cool / dry / heat
+  int temp; // set temperature
   int hot_count;
   int cold_count;
 

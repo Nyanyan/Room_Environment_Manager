@@ -30,10 +30,19 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
   display_print(0, 1, String(sensor_data.pressure, 1) + " hPa ");
   display_print(11, 1, String(sensor_data.co2_concentration, 0) + " ppm  ");
 
-  if (settings.ac_auto_mode){
-    display_print(0, 2, "AC AUTO  ");
-  } else{
-    display_print(0, 2, "AC MANUAL");
+  if (settings.ac_auto_mode == AC_AUTO_OFF){
+    display_print(0, 2, "MANUAL   ");
+  } else {
+    String ac_auto_str = "AUTO ";
+    if (settings.ac_auto_mode == AC_AUTO_COOL) {
+      ac_auto_str += "C";
+    } else if (settings.ac_auto_mode == AC_AUTO_DRY) {
+      ac_auto_str += "D";
+    } else if (settings.ac_auto_mode == AC_AUTO_HEAT) {
+      ac_auto_str += "H";
+    }
+    ac_auto_str += String((int)settings.ac_auto_temp) + "." + String((int)(settings.ac_auto_temp * 10) - ((int)settings.ac_auto_temp * 10));
+    display_print(0, 2, ac_auto_str);
   }
   if (ac_status.state != AC_STATE_OFF){
     String ac_mode = "?";
