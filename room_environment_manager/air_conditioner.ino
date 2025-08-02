@@ -122,17 +122,19 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
       } else if (ac_status.cold_count >= AC_AUTO_ENDURE && ac_status.temp < AC_TEMP_LIMIT_MAX) { // weaker cool or dry / stronger heat
         set_temp = ac_status.temp + 1;
       }
-      // String str = "[INFO] AC AUTO ON temp: " + String(set_temp) + " *C";
-      // Serial.println(str);
-      // slack_send_message(time_info, str);
       ac_status.hot_count = 0;
       ac_status.cold_count = 0;
-      if (settings.ac_auto_mode == AC_AUTO_COOL) {
-        ac_cool_on(ac_status, set_temp);
-      } else if (settings.ac_auto_mode == AC_AUTO_DRY) {
-        ac_dry_on(ac_status, set_temp);
-      } else if (settings.ac_auto_mode == AC_AUTO_HEAT) {
-        ac_heat_on(ac_status, set_temp);
+      if (ac_status.temp != set_temp) {
+        // String str = "[INFO] AC AUTO ON temp: " + String(set_temp) + " *C";
+        // Serial.println(str);
+        // slack_send_message(time_info, str);
+        if (settings.ac_auto_mode == AC_AUTO_COOL) {
+          ac_cool_on(ac_status, set_temp);
+        } else if (settings.ac_auto_mode == AC_AUTO_DRY) {
+          ac_dry_on(ac_status, set_temp);
+        } else if (settings.ac_auto_mode == AC_AUTO_HEAT) {
+          ac_heat_on(ac_status, set_temp);
+        }
       }
     }
   } else {
