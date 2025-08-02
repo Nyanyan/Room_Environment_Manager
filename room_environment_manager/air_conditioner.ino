@@ -116,15 +116,15 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
 
     // update air conditioner
     if (ac_status.hot_count >= AC_AUTO_ENDURE || ac_status.cold_count >= AC_AUTO_ENDURE){ // too hot or too cold!!
-      int set_temp = round(settings.ac_auto_temp); // initial temperature
+      int set_temp = ac_status.temp; // initial temperature
       if (ac_status.hot_count >= AC_AUTO_ENDURE && ac_status.temp > AC_TEMP_LIMIT_MIN) { // stronger cool or dry / weaker heat
         set_temp = ac_status.temp - 1;
       } else if (ac_status.cold_count >= AC_AUTO_ENDURE && ac_status.temp < AC_TEMP_LIMIT_MAX) { // weaker cool or dry / stronger heat
         set_temp = ac_status.temp + 1;
       }
-      String str = "[INFO] AC AUTO ON temp: " + String(set_temp) + " *C";
-      Serial.println(str);
-      slack_send_message(time_info, str);
+      // String str = "[INFO] AC AUTO ON temp: " + String(set_temp) + " *C";
+      // Serial.println(str);
+      // slack_send_message(time_info, str);
       ac_status.hot_count = 0;
       ac_status.cold_count = 0;
       if (settings.ac_auto_mode == AC_AUTO_COOL) {
