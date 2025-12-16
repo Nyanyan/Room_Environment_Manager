@@ -84,10 +84,20 @@
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include "slack.h"
+#include "token.h"
 esp_now_peer_info_t slave;
 #define CHANNEL 1
 
+#define N_SLAVE_DATA 2
+uint8_t send_data[N_SLAVE_HEADER + N_SLAVE_DATA];
+
 void init_ac(){
+  for (int i = 0; i < N_SLAVE_HEADER; ++i) {
+    send_data[i] = slave_header[i];
+  }
+  for (int i = 0; i < N_SLAVE_DATA; ++i) {
+    send_data[N_SLAVE_HEADER + i] = 0;
+  }
 }
 
 void reset_wifi() {
@@ -124,7 +134,7 @@ void espnow_init() {
   // get the status of Trasnmitted packet
 
 
-  const uint8_t slave_mac_addr[6] = {0xEC, 0xDA, 0x3B, 0xBC, 0xE0, 0x79};
+  // const uint8_t slave_mac_addr[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   memset(&slave, 0, sizeof(slave));
   for (int i = 0; i < 6; ++i) {
     slave.peer_addr[i] = slave_mac_addr[i];
@@ -141,12 +151,10 @@ void espnow_init() {
   }
 }
 
-uint8_t send_data[4] = {'A', 'K', 0, 0};
-
 void send_ac() {
   reset_wifi();
   espnow_init();
-  esp_err_t result = esp_now_send(slave.peer_addr, send_data, 4);
+  esp_err_t result = esp_now_send(slave.peer_addr, send_data, N_SLAVE_HEADER + N_SLAVE_DATA);
   if (result == ESP_OK) {
     // data_status = STATUS_SEND_SUCCESS;
     //Serial.println("Success");
@@ -174,24 +182,24 @@ void send_ac() {
 void ac_cool_on(AC_status &ac_status, int set_temp){
   ac_status.state = AC_STATE_COOL;
   ac_status.temp = set_temp;
-  send_data[2] = 'C';
-  send_data[3] = 'A' + set_temp;
+  send_data[N_SLAVE_HEADER] = 'C';
+  send_data[N_SLAVE_HEADER + 1] = 'A' + set_temp;
   send_ac();
 }
 
 void ac_dry_on(AC_status &ac_status, int set_temp){
   ac_status.state = AC_STATE_DRY;
   ac_status.temp = set_temp;
-  send_data[2] = 'D';
-  send_data[3] = 'A' + set_temp;
+  send_data[N_SLAVE_HEADER] = 'D';
+  send_data[N_SLAVE_HEADER + 1] = 'A' + set_temp;
   send_ac();
 }
 
 void ac_heat_on(AC_status &ac_status, int set_temp){
   ac_status.state = AC_STATE_HEAT;
   ac_status.temp = set_temp;
-  send_data[2] = 'H';
-  send_data[3] = 'A' + set_temp;
+  send_data[N_SLAVE_HEADER] = 'H';
+  send_data[N_SLAVE_HEADER + 1] = 'A' + set_temp;
   send_ac();
 }
 
@@ -199,8 +207,8 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
 
 void ac_off(AC_status &ac_status){
   ac_status.state = AC_STATE_OFF;
-  send_data[2] = 'F';
-  send_data[3] = 'A';
+  send_data[N_SLAVE_HEADER] = 'F';
+  send_data[N_SLAVE_HEADER + 1] = 'A';
   send_ac();
 }
 

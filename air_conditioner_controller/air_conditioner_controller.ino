@@ -3,11 +3,11 @@
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <ir_Panasonic.h>
+#include "token.h"
 
 #define CHANNEL 1
 
 #define AC_LED_PIN 10
-
 #define ON_LED_PIN 9
 
 #define AC_N_TRY 1
@@ -160,12 +160,21 @@ void ac_off(){
   }
 }
 
+bool is_correct_header(const uint8_t* data) {
+  for (int i = 0; i < N_SLAVE_HEADER; ++i) {
+    if (data[i] != slave_header[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // callback when data is recv from Master
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   Serial.println("received");
-  if (data[0] == 'A' && data[1] == 'K'){ // Air-Kobito
-    char mode = data[2];
-    char temperature_char = data[3]; // 'A' + temperature(int)
+  if (is_correct_header(data)){ // check header
+    char mode = data[N_SLAVE_HEADER];
+    char temperature_char = data[N_SLAVE_HEADER + 1]; // 'A' + temperature(int)
     int temperature = temperature_char - 'A';
     Serial.print(mode);
     Serial.print(' ');
