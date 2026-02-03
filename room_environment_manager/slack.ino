@@ -7,6 +7,8 @@
 // WiFi password & Slack token
 #include "token.h"
 
+#define SLACK_CONNECT_N_TRY 3
+
 
 
 // json
@@ -33,24 +35,29 @@ String slack_get_message() {
   HTTPClient http;
   String res;
 
-  if (http.begin(SLACK_URL_RECEIVE)) {
-    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-
-    String body = String("token=") + SLACK_TOKEN + "&channel=" + SLACK_CHANNEL_ID + "&limit=1";
-    int status_code = http.POST(body);
-    Serial.printf("[HTTPS] POST... code: %d\n", status_code);
-    if (status_code == HTTP_CODE_OK || status_code == HTTP_CODE_MOVED_PERMANENTLY) {
-      String raw_json = http.getString();
-      deserializeJson(doc, raw_json);
-      const char* text = doc["messages"][0]["text"];
-      res = text;
-    } else{
-      Serial.printf("[HTTPS] POST... failed, error: %s\n", http.errorToString(status_code).c_str());
-    }
-    http.end();
-  } else {
-    Serial.printf("[HTTPS] Unable to connect\n");
+  for (int i = 0; i < SLACK_CONNECT_N_TRY && !http.begin(SLACK_URL_RECEIVE); ++i) {
+    Serial.printf("[HTTPS] Unable to connect, initializing wifi...\n");
+    init_wifi();
   }
+
+  // if (http.begin(SLACK_URL_RECEIVE)) {
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+  String body = String("token=") + SLACK_TOKEN + "&channel=" + SLACK_CHANNEL_ID + "&limit=1";
+  int status_code = http.POST(body);
+  Serial.printf("[HTTPS] POST... code: %d\n", status_code);
+  if (status_code == HTTP_CODE_OK || status_code == HTTP_CODE_MOVED_PERMANENTLY) {
+    String raw_json = http.getString();
+    deserializeJson(doc, raw_json);
+    const char* text = doc["messages"][0]["text"];
+    res = text;
+  } else{
+    Serial.printf("[HTTPS] POST... failed, error: %s\n", http.errorToString(status_code).c_str());
+  }
+  http.end();
+  // } else {
+  //   Serial.printf("[HTTPS] Unable to connect\n");
+  // }
   return res;
 }
 
@@ -62,9 +69,10 @@ char* slack_send_message(Time_info &time_info, String str){
 
   // Slack Messaging API
   HTTPClient http;
-  if (!http.begin(SLACK_URL_SEND)) {
-    Serial.println(String("[ERROR] cannot begin ") + SLACK_URL_SEND);
-    return "";
+  for (int i = 0; i < SLACK_CONNECT_N_TRY && !http.begin(SLACK_URL_SEND); ++i) {
+    Serial.println(String("[ERROR] cannot begin ") + SLACK_URL_SEND + String(", initializing wifi..."));
+    init_wifi();
+    // return "";
   }
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
@@ -107,9 +115,10 @@ String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_fi
   int status_code;
 
   // files.getUploadURLExternal
-  if (!http.begin(SLACK_URL_GET_UPLOAD_URL)) {
-    Serial.println(String("[ERROR] cannot begin ") + SLACK_URL_GET_UPLOAD_URL);
-    return String("");
+  for (int i = 0; i < SLACK_CONNECT_N_TRY && !http.begin(SLACK_URL_GET_UPLOAD_URL); ++i) {
+    Serial.println(String("[ERROR] cannot begin ") + SLACK_URL_GET_UPLOAD_URL + String(", initializing wifi..."));
+    init_wifi();
+    // return String("");
   }
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
   body = String("token=") + SLACK_TOKEN + "&length=" + String(img_file_size) + "&filename=" + img_file_name;
