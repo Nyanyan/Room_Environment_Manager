@@ -63,11 +63,11 @@ bool parse_date_str(const String &date_str, uint16_t &year, uint8_t &month, uint
 }
 
 bool parse_time_str(const String &time_str, uint8_t &hour, uint8_t &minute) {
-  if (time_str.length() != 5 || time_str.charAt(2) != ':') {
+  if (time_str.length() != 4) {
     return false;
   }
   hour = time_str.substring(0, 2).toInt();
-  minute = time_str.substring(3, 5).toInt();
+  minute = time_str.substring(2, 4).toInt();
   if (hour > 23 || minute > 59) {
     return false;
   }
@@ -197,7 +197,7 @@ void command_print_command_list(Time_info &time_info){
   str += "      - off ac auto mode\n";
   str += "- reserve (r)\n";
   str += "  - command reservation\n";
-  str += "  - reserve new (r n) [YYYYMMDD] [HH:MM] [command]\n";
+  str += "  - reserve new (r n) [YYYYMMDD] [hhmm] [command]\n";
   str += "    - new command reservation\n";
   str += "  - reserve check (r c)\n";
   str += "    - check command reservation\n";
