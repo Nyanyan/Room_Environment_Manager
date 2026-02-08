@@ -26,6 +26,9 @@
 #define AC_PID_KD 0.05
 #define AC_PID_I_CLAMP 30.0
 
+// PID history buffer
+#define AC_PID_HISTORY 120
+
 
 
 struct AC_status{
@@ -40,6 +43,12 @@ struct AC_status{
   unsigned long pid_prev_millis;
   bool pid_initialized;
 
+  // history for better smoothing/diagnostics
+  double pid_error_history[AC_PID_HISTORY];
+  unsigned long pid_time_history[AC_PID_HISTORY];
+  int pid_history_size;
+  int pid_history_index;
+
   AC_status(){
     state = AC_STATE_OFF;
     temp = -1;
@@ -49,6 +58,8 @@ struct AC_status{
     pid_prev_error = 0.0;
     pid_prev_millis = 0;
     pid_initialized = false;
+    pid_history_size = 0;
+    pid_history_index = 0;
   }
 };
 

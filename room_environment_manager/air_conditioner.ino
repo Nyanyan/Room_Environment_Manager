@@ -238,6 +238,8 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
     ac_status.pid_prev_error = 0.0;
     ac_status.pid_prev_millis = 0;
     ac_status.pid_initialized = false;
+    ac_status.pid_history_size = 0;
+    ac_status.pid_history_index = 0;
     return;
   }
 
@@ -246,11 +248,22 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
   const double current_temp = sensor_data.temperature;
   const unsigned long now = millis();
 
+   // helper: push error/time into history ring buffer
+  auto push_history = [&](double err, unsigned long ts) {
+    ac_status.pid_error_history[ac_status.pid_history_index] = err;
+    ac_status.pid_time_history[ac_status.pid_history_index] = ts;
+    ac_status.pid_history_index = (ac_status.pid_history_index + 1) % AC_PID_HISTORY;
+    if (ac_status.pid_history_size < AC_PID_HISTORY) {
+      ac_status.pid_history_size++;
+    }
+  };
+
   if (!ac_status.pid_initialized) {
     ac_status.pid_prev_millis = now;
     ac_status.pid_prev_error = target_temp - current_temp;
     ac_status.pid_integral = 0.0;
     ac_status.pid_initialized = true;
+    push_history(ac_status.pid_prev_error, now);
   }
 
   const double dt = (now - ac_status.pid_prev_millis) / 1000.0;
@@ -261,7 +274,20 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
   const double error = target_temp - current_temp;
   ac_status.pid_integral += error * dt;
   ac_status.pid_integral = constrain(ac_status.pid_integral, -AC_PID_I_CLAMP, AC_PID_I_CLAMP);
-  const double derivative = (error - ac_status.pid_prev_error) / dt;
+  push_history(error, now);
+
+  // derivative using a windowed slope for noise resistance
+  double derivative = 0.0;
+  if (ac_status.pid_history_size >= 2) {
+    int lookback = ac_status.pid_history_size < 6 ? ac_status.pid_history_size : 6; // up to last 5 intervals
+    int idx_tail = (ac_status.pid_history_index - lookback + AC_PID_HISTORY) % AC_PID_HISTORY;
+    double err_tail = ac_status.pid_error_history[idx_tail];
+    unsigned long ts_tail = ac_status.pid_time_history[idx_tail];
+    double dt_tail = (now - ts_tail) / 1000.0;
+    if (dt_tail > 0.0) {
+      derivative = (error - err_tail) / dt_tail;
+    }
+  }
 
   const double control = AC_PID_KP * error + AC_PID_KI * ac_status.pid_integral + AC_PID_KD * derivative;
 
