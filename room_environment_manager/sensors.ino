@@ -15,7 +15,7 @@ MHZ19_uart mhz19;
 Adafruit_BME680 bme;
 
 
-void init_SHT31(){
+void init_SHT31(bool show_log){
   Wire.beginTransmission(SHT31_ADDR);
   Wire.write(SHT31_SOFT_RESET_MSB);
   Wire.write(SHT31_SOFT_RESET_LSB);
@@ -27,27 +27,33 @@ void init_SHT31(){
   Wire.endTransmission();
   delay(500);
   Serial.println("Temperature & Humidity Sensor Initialized");
-  display_print(0, 1, "[I] SHT31 TH");
+  if (show_log) {
+    display_print(0, 1, "[I] SHT31 TH");
+  }
 }
 
 
-void init_BME680(){
+void init_BME680(bool show_log){
   bme.begin();
   bme.setTemperatureOversampling(BME680_OS_8X);
   bme.setHumidityOversampling(BME680_OS_2X);
   bme.setPressureOversampling(BME680_OS_4X);
   bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
   bme.setGasHeater(320, 150);
-  display_print(0, 2, "[I] BME680 Pressure");
+  if (show_log) {
+    display_print(0, 2, "[I] BME680 Pressure");
+  }
 }
 
 
-void init_MHZ19C(){
+void init_MHZ19C(bool show_log){
   mhz19.begin(MHZ19C_RX_PIN, MHZ19C_TX_PIN);
   mhz19.setAutoCalibration(true);
   delay(10000);
   Serial.println("CO2 Sensor Initialized");
-  display_print(0, 3, "[I] MH-Z19C CO2");
+  if (show_log) {
+    display_print(0, 3, "[I] MH-Z19C CO2");
+  }
 }
 
 
@@ -55,9 +61,9 @@ void init_MHZ19C(){
 void init_sensors(){
   Wire.begin();
   Wire.setTimeout(I2C_TIMEOUT_MS);
-  init_SHT31();
-  init_BME680();
-  init_MHZ19C();
+  init_SHT31(true);
+  init_BME680(true);
+  init_MHZ19C(true);
 }
 
 
@@ -73,6 +79,7 @@ bool get_data_SHT31(float *temperature, float *humidity) {
   int n_bytes = Wire.requestFrom(SHT31_ADDR, 6);
   if (n_bytes != 6) {
     Serial.println("[WARN] SHT31 read timed out");
+    init_SHT31(false);
     return false;
   }
   for (int i = 0; i < 6; ++i){
