@@ -12,6 +12,7 @@ struct Command{
   String arg1;
   String arg2;
   String arg3;
+  String arg4;
 };
 
 struct Settings{

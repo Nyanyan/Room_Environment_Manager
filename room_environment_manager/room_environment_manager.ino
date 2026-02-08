@@ -5,6 +5,7 @@
 #include "slack.h"
 #include "time_manager.h"
 #include "command.h"
+#include "memory.h"
 
 AC_status ac_status;
 Graph_data graph_data;
@@ -21,6 +22,7 @@ void setup() {
   init_ac(ac_status);  
   init_graph(graph_img);
   init_sensors();
+  memory_init();
 
   display_clear();
   display_print(0, 0, "Started");
@@ -49,13 +51,8 @@ void loop() {
 
   // get command from user
   Command command = command_get();
-
-  // check command
-  command_check_ac(command, time_info, settings, ac_status);
-  command_check_set(command, time_info);
-  command_check_monitor(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);
-  command_check_help(command, time_info);
-  command_check_reboot(command, time_info);
+  command_process(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);
+  command_execute_reservations(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
 
   // air conditioner auto mode
   ac_auto(settings, sensor_data, ac_status, time_info);

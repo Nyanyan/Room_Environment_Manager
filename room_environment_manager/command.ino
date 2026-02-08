@@ -1,18 +1,100 @@
 #include "command.h"
+#include "memory.h"
+
+namespace {
+
+Command parse_command_text(const String &text) {
+  Command res;
+  res.cmd = "";
+  res.arg1 = "";
+  res.arg2 = "";
+  res.arg3 = "";
+  res.arg4 = "";
+  if (text.length() == 0) {
+    return res;
+  }
+
+  int index1 = text.indexOf(' ');
+  if (index1 < 0) {
+    res.cmd = text;
+    return res;
+  }
+
+  res.cmd = text.substring(0, index1);
+  int index2 = text.indexOf(' ', index1 + 1);
+  if (index2 < 0) {
+    res.arg1 = text.substring(index1 + 1);
+    return res;
+  }
+
+  res.arg1 = text.substring(index1 + 1, index2);
+  int index3 = text.indexOf(' ', index2 + 1);
+  if (index3 < 0) {
+    res.arg2 = text.substring(index2 + 1);
+    return res;
+  }
+
+  res.arg2 = text.substring(index2 + 1, index3);
+  int index4 = text.indexOf(' ', index3 + 1);
+  if (index4 < 0) {
+    res.arg3 = text.substring(index3 + 1);
+    return res;
+  }
+
+  res.arg3 = text.substring(index3 + 1, index4);
+  res.arg4 = text.substring(index4 + 1);
+  return res;
+}
+
+bool parse_date_str(const String &date_str, uint16_t &year, uint8_t &month, uint8_t &day) {
+  if (date_str.length() != 8) {
+    return false;
+  }
+  String year_str = date_str.substring(0, 4);
+  String month_str = date_str.substring(4, 6);
+  String day_str = date_str.substring(6, 8);
+  year = year_str.toInt();
+  month = month_str.toInt();
+  day = day_str.toInt();
+  if (year < 2000 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+  return true;
+}
+
+bool parse_time_str(const String &time_str, uint8_t &hour, uint8_t &minute) {
+  if (time_str.length() != 5 || time_str.charAt(2) != ':') {
+    return false;
+  }
+  hour = time_str.substring(0, 2).toInt();
+  minute = time_str.substring(3, 5).toInt();
+  if (hour > 23 || minute > 59) {
+    return false;
+  }
+  return true;
+}
+
+String format_reservation_line(const CommandReservation &res) {
+  char buf[128];
+  snprintf(buf, sizeof(buf), "[%lu] %04u/%02u/%02u %02u:%02u %s", static_cast<unsigned long>(res.id),
+           static_cast<unsigned int>(res.year), static_cast<unsigned int>(res.month), static_cast<unsigned int>(res.day),
+           static_cast<unsigned int>(res.hour), static_cast<unsigned int>(res.minute), res.command);
+  return String(buf);
+}
+
+void trim_leading_spaces(String &text) {
+  while (text.startsWith(" ")) {
+    text.remove(0, 1);
+  }
+}
+
+}
 
 
 
 struct Command command_get(){
   String slack_message = slack_get_message();
-  int index1 = slack_message.indexOf(" ", 0);
-  int index2 = slack_message.indexOf(" ", index1 + 1);
-  int index3 = slack_message.indexOf(" ", index2 + 1);
-  Command res;
-  res.cmd = slack_message.substring(0, index1);
-  res.arg1 = slack_message.substring(index1 + 1, index2);
-  res.arg2 = slack_message.substring(index2 + 1, index3);
-  res.arg3 = slack_message.substring(index3 + 1, slack_message.length());
-  return res;
+  return parse_command_text(slack_message);
 }
 
 
@@ -113,6 +195,14 @@ void command_print_command_list(Time_info &time_info){
   str += "      - mode: cool (c) / dry (d) / heat (h)\n";
   str += "    - ac auto off\n";
   str += "      - off ac auto mode\n";
+  str += "- reserve (r)\n";
+  str += "  - command reservation\n";
+  str += "  - reserve new (r n) [YYYYMMDD] [HH:MM] [command]\n";
+  str += "    - new command reservation\n";
+  str += "  - reserve check (r c)\n";
+  str += "    - check command reservation\n";
+  str += "  - reserve delete (r d) [reservation_id]\n";
+  str += "    - delete reservation\n";
   str += "- set\n";
   str += "  - set alert [on/off]\n";
   str += "    - alert on slack when very hot\n";
@@ -232,6 +322,114 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
 }
 
 
+void command_check_reserve(Command command, Time_info &time_info, Settings &settings, AC_status &ac_status) {
+  if (command.cmd != "reserve" && command.cmd != "r") {
+    return;
+  }
+  if (command.arg1 == "new" || command.arg1 == "n") {
+    uint16_t year;
+    uint8_t month;
+    uint8_t day;
+    if (!parse_date_str(command.arg2, year, month, day)) {
+      String str = String("[ERROR] invalid date: ") + command.arg2;
+      slack_send_message(time_info, str);
+      return;
+    }
+    String time_str;
+    String cmd_text;
+
+    if (command.arg4.length() > 0) {
+      time_str = command.arg3;
+      cmd_text = command.arg4;
+    } else {
+      // Backward compatibility: arg3 contains both time and command
+      String time_and_cmd = command.arg3;
+      trim_leading_spaces(time_and_cmd);
+      int split = time_and_cmd.indexOf(' ');
+      if (split < 0) {
+        slack_send_message(time_info, "[ERROR] expected time and command after date");
+        return;
+      }
+      time_str = time_and_cmd.substring(0, split);
+      cmd_text = time_and_cmd.substring(split + 1);
+      trim_leading_spaces(cmd_text);
+    }
+
+    uint8_t hour;
+    uint8_t minute;
+    if (!parse_time_str(time_str, hour, minute)) {
+      String str = String("[ERROR] invalid time: ") + time_str;
+      slack_send_message(time_info, str);
+      return;
+    }
+    if (cmd_text.length() == 0) {
+      slack_send_message(time_info, "[ERROR] command is empty");
+      return;
+    }
+
+    CommandReservation reservation;
+    reservation.year = year;
+    reservation.month = month;
+    reservation.day = day;
+    reservation.hour = hour;
+    reservation.minute = minute;
+    strncpy(reservation.command, cmd_text.c_str(), RESERVATION_COMMAND_MAX_LEN - 1);
+    reservation.command[RESERVATION_COMMAND_MAX_LEN - 1] = '\0';
+
+    uint32_t assigned_id = 0;
+    if (!reservation_add(reservation, assigned_id)) {
+      slack_send_message(time_info, "[ERROR] reservation storage is full");
+      return;
+    }
+
+    char buf[160];
+    snprintf(buf, sizeof(buf), "[INFO] reserved id:%lu %04u/%02u/%02u %02u:%02u %s",
+             static_cast<unsigned long>(assigned_id), static_cast<unsigned int>(year), static_cast<unsigned int>(month),
+             static_cast<unsigned int>(day), static_cast<unsigned int>(hour), static_cast<unsigned int>(minute),
+             reservation.command);
+    slack_send_message(time_info, String(buf));
+  } else if (command.arg1 == "check" || command.arg1 == "c") {
+    CommandReservation reservations[RESERVATION_MAX];
+    size_t count = 0;
+    reservation_list(reservations, RESERVATION_MAX, count);
+
+    String str = "<reservation list>\n";
+    if (count == 0) {
+      str += "(empty)\n";
+    } else {
+      size_t to_show = count;
+      if (to_show > RESERVATION_MAX) {
+        to_show = RESERVATION_MAX;
+      }
+      for (size_t i = 0; i < to_show; ++i) {
+        str += "- " + format_reservation_line(reservations[i]) + "\n";
+      }
+    }
+    slack_send_message(time_info, str);
+  } else if (command.arg1 == "delete" || command.arg1 == "d") {
+    if (command.arg2.length() == 0) {
+      slack_send_message(time_info, "[ERROR] reservation id is missing");
+      return;
+    }
+    uint32_t id = command.arg2.toInt();
+    if (id == 0) {
+      String str = String("[ERROR] invalid reservation id: ") + command.arg2;
+      slack_send_message(time_info, str);
+      return;
+    }
+    if (reservation_delete(id)) {
+      String str = String("[INFO] deleted reservation id: ") + String(id);
+      slack_send_message(time_info, str);
+    } else {
+      String str = String("[ERROR] reservation not found: ") + String(id);
+      slack_send_message(time_info, str);
+    }
+  } else {
+    slack_send_message(time_info, "[ERROR] reserve sub command not found");
+  }
+}
+
+
 
 
 void command_check_set(Command command, Time_info &time_info){
@@ -291,6 +489,31 @@ void command_check_reboot(Command command, Time_info &time_info) {
   Serial.println(str);
   slack_send_message(time_info, str);
   ESP.restart();
+}
+
+
+void command_process(Command command, Time_info &time_info, Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img) {
+  if (command.cmd.length() == 0) {
+    return;
+  }
+  command_check_ac(command, time_info, settings, ac_status);
+  command_check_reserve(command, time_info, settings, ac_status);
+  command_check_set(command, time_info);
+  command_check_monitor(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);
+  command_check_help(command, time_info);
+  command_check_reboot(command, time_info);
+}
+
+
+void command_execute_reservations(Time_info &time_info, Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img) {
+  CommandReservation reservation;
+  while (reservation_pop_due(time_info, reservation)) {
+    String cmd_text = String(reservation.command);
+    Command cmd = parse_command_text(cmd_text);
+    String msg = String("[INFO] execute reservation id: ") + String(reservation.id) + String(" -> ") + cmd_text;
+    slack_send_message(time_info, msg);
+    command_process(cmd, time_info, sensor_data, settings, ac_status, graph_data, graph_img);
+  }
 }
 
 
