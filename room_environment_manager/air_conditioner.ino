@@ -231,64 +231,63 @@ void ac_off(AC_status &ac_status){
 
 
 void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status, Time_info &time_info){
-  if (settings.ac_auto_mode != AC_AUTO_OFF) {
-    // hot count update
-    if (sensor_data.temperature >= settings.ac_auto_temp + AC_AUTO_THRESHOLD3){
-      ac_status.hot_count += 100;
-    } else if (sensor_data.temperature >= settings.ac_auto_temp + AC_AUTO_THRESHOLD2){
-      ac_status.hot_count += 10;
-    } else if (sensor_data.temperature >= settings.ac_auto_temp + AC_AUTO_THRESHOLD1){
-      ac_status.hot_count += 1;
-    } else {
-      ac_status.hot_count = 0;
-    }
-    // cold count update
-    if (sensor_data.temperature <= settings.ac_auto_temp - AC_AUTO_THRESHOLD3){
-      ac_status.cold_count += 100;
-    } else if (sensor_data.temperature <= settings.ac_auto_temp - AC_AUTO_THRESHOLD2){
-      ac_status.cold_count += 10;
-    } else if (sensor_data.temperature <= settings.ac_auto_temp - AC_AUTO_THRESHOLD1){
-      ac_status.cold_count += 1;
-    } else {
-      ac_status.cold_count = 0;
-    }
-
-    Serial.print(settings.ac_auto_temp);
-    Serial.print(" ");
-    Serial.print(sensor_data.temperature);
-    Serial.print("  ");
-    Serial.print(ac_status.hot_count);
-    Serial.print(" ");
-    Serial.print(ac_status.cold_count);
-    Serial.print("  ");
-    Serial.println(ac_status.temp);
-
-    // update air conditioner
-    if (ac_status.hot_count >= AC_AUTO_ENDURE || ac_status.cold_count >= AC_AUTO_ENDURE){ // too hot or too cold!!
-      int set_temp = ac_status.temp; // initial temperature
-      if (ac_status.hot_count >= AC_AUTO_ENDURE && ac_status.temp > AC_TEMP_LIMIT_MIN) { // stronger cool or dry / weaker heat
-        set_temp = ac_status.temp - 1;
-      } else if (ac_status.cold_count >= AC_AUTO_ENDURE && ac_status.temp < AC_TEMP_LIMIT_MAX) { // weaker cool or dry / stronger heat
-        set_temp = ac_status.temp + 1;
-      }
-      ac_status.hot_count = 0;
-      ac_status.cold_count = 0;
-      if (ac_status.temp != set_temp) {
-        // String str = "[INFO] AC AUTO ON temp: " + String(set_temp) + " *C";
-        // Serial.println(str);
-        // slack_send_message(time_info, str);
-        if (settings.ac_auto_mode == AC_AUTO_COOL) {
-          ac_cool_on(ac_status, set_temp);
-        } else if (settings.ac_auto_mode == AC_AUTO_DRY) {
-          ac_dry_on(ac_status, set_temp);
-        } else if (settings.ac_auto_mode == AC_AUTO_HEAT) {
-          ac_heat_on(ac_status, set_temp);
-        }
-      }
-    }
-  } else {
+  if (settings.ac_auto_mode == AC_AUTO_OFF) {
     ac_status.hot_count = 0;
     ac_status.cold_count = 0;
+    ac_status.pid_integral = 0.0;
+    ac_status.pid_prev_error = 0.0;
+    ac_status.pid_prev_millis = 0;
+    ac_status.pid_initialized = false;
+    return;
+  }
+
+  // Clamp target to the allowed AC range
+  const double target_temp = constrain(settings.ac_auto_temp, (double)AC_TEMP_LIMIT_MIN, (double)AC_TEMP_LIMIT_MAX);
+  const double current_temp = sensor_data.temperature;
+  const unsigned long now = millis();
+
+  if (!ac_status.pid_initialized) {
+    ac_status.pid_prev_millis = now;
+    ac_status.pid_prev_error = target_temp - current_temp;
+    ac_status.pid_integral = 0.0;
+    ac_status.pid_initialized = true;
+  }
+
+  const double dt = (now - ac_status.pid_prev_millis) / 1000.0;
+  if (dt <= 0.0) {
+    return; // insufficient time elapsed for a stable derivative term
+  }
+
+  const double error = target_temp - current_temp;
+  ac_status.pid_integral += error * dt;
+  ac_status.pid_integral = constrain(ac_status.pid_integral, -AC_PID_I_CLAMP, AC_PID_I_CLAMP);
+  const double derivative = (error - ac_status.pid_prev_error) / dt;
+
+  const double control = AC_PID_KP * error + AC_PID_KI * ac_status.pid_integral + AC_PID_KD * derivative;
+
+  ac_status.pid_prev_error = error;
+  ac_status.pid_prev_millis = now;
+
+  int base_set_temp = ac_status.temp;
+  if (base_set_temp < AC_TEMP_LIMIT_MIN || base_set_temp > AC_TEMP_LIMIT_MAX) {
+    base_set_temp = round(target_temp);
+  }
+
+  int set_temp = round(base_set_temp + control);
+  set_temp = constrain(set_temp, AC_TEMP_LIMIT_MIN, AC_TEMP_LIMIT_MAX);
+
+  if (set_temp != ac_status.temp) {
+    // String str = "[INFO] AC AUTO PID temp: " + String(set_temp) + " *C";
+    // Serial.println(str);
+    // slack_send_message(time_info, str);
+
+    if (settings.ac_auto_mode == AC_AUTO_COOL) {
+      ac_cool_on(ac_status, set_temp);
+    } else if (settings.ac_auto_mode == AC_AUTO_DRY) {
+      ac_dry_on(ac_status, set_temp);
+    } else if (settings.ac_auto_mode == AC_AUTO_HEAT) {
+      ac_heat_on(ac_status, set_temp);
+    }
   }
 }
 

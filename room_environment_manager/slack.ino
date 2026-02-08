@@ -8,6 +8,7 @@
 #include "token.h"
 
 #define SLACK_CONNECT_N_TRY 3
+#define SLACK_HTTP_TIMEOUT_MS 5000
 
 
 
@@ -33,11 +34,21 @@ void init_wifi(){
 
 String slack_get_message() {
   HTTPClient http;
+  http.setTimeout(SLACK_HTTP_TIMEOUT_MS);
   String res;
 
-  for (int i = 0; i < SLACK_CONNECT_N_TRY && !http.begin(SLACK_URL_RECEIVE); ++i) {
+  bool begin_ok = false;
+  for (int i = 0; i < SLACK_CONNECT_N_TRY; ++i) {
+    if (http.begin(SLACK_URL_RECEIVE)) {
+      begin_ok = true;
+      break;
+    }
     Serial.printf("[HTTPS] Unable to connect, initializing wifi...\n");
     init_wifi();
+  }
+  if (!begin_ok) {
+    Serial.println("[ERROR] Slack conversations.history begin failed");
+    return res;
   }
 
   // if (http.begin(SLACK_URL_RECEIVE)) {
@@ -69,10 +80,20 @@ char* slack_send_message(Time_info &time_info, String str){
 
   // Slack Messaging API
   HTTPClient http;
-  for (int i = 0; i < SLACK_CONNECT_N_TRY && !http.begin(SLACK_URL_SEND); ++i) {
+  http.setTimeout(SLACK_HTTP_TIMEOUT_MS);
+  bool begin_ok = false;
+  for (int i = 0; i < SLACK_CONNECT_N_TRY; ++i) {
+    if (http.begin(SLACK_URL_SEND)) {
+      begin_ok = true;
+      break;
+    }
     Serial.println(String("[ERROR] cannot begin ") + SLACK_URL_SEND + String(", initializing wifi..."));
     init_wifi();
     // return "";
+  }
+  if (!begin_ok) {
+    Serial.println("[ERROR] slack_send_message giving up after retries");
+    return ts;
   }
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
@@ -111,14 +132,24 @@ char* slack_send_message(Time_info &time_info, String str){
 
 String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_file_name){
   HTTPClient http;
+  http.setTimeout(SLACK_HTTP_TIMEOUT_MS);
   String body, received_string;
   int status_code;
 
   // files.getUploadURLExternal
-  for (int i = 0; i < SLACK_CONNECT_N_TRY && !http.begin(SLACK_URL_GET_UPLOAD_URL); ++i) {
+  bool begin_ok = false;
+  for (int i = 0; i < SLACK_CONNECT_N_TRY; ++i) {
+    if (http.begin(SLACK_URL_GET_UPLOAD_URL)) {
+      begin_ok = true;
+      break;
+    }
     Serial.println(String("[ERROR] cannot begin ") + SLACK_URL_GET_UPLOAD_URL + String(", initializing wifi..."));
     init_wifi();
     // return String("");
+  }
+  if (!begin_ok) {
+    Serial.println("[ERROR] slack_upload_img giving up after retries");
+    return String("");
   }
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
   body = String("token=") + SLACK_TOKEN + "&length=" + String(img_file_size) + "&filename=" + img_file_name;
