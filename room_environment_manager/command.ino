@@ -129,6 +129,7 @@ void command_send_reservation_list(Time_info &time_info) {
     }
   }
   slack_send_message(time_info, str);
+  }
 
 
 struct Command command_get(){
