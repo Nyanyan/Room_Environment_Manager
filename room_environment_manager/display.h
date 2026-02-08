@@ -5,6 +5,7 @@
 #include "air_conditioner.h"
 #include "sensors.h"
 #include "time_manager.h"
+#include "command.h"
 
 // display SC2004CSLB
 #define RS_PIN 4
