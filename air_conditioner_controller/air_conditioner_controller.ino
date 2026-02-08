@@ -106,7 +106,7 @@ void ac_cool_on(int set_temp){
   for (int i = 0; i < AC_N_TRY; ++i){
     ac.setModel(kPanasonicRkr);
     ac.on();
-    ac.setFan(kPanasonicAcFanAuto);
+    ac.setFan(kPanasonicAcFanHigh);
     ac.setMode(kPanasonicAcCool);
     ac.setTemp(set_temp);
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
@@ -120,7 +120,7 @@ void ac_dry_on(int set_temp){
   for (int i = 0; i < AC_N_TRY; ++i){
     ac.setModel(kPanasonicRkr);
     ac.on();
-    ac.setFan(kPanasonicAcFanAuto);
+    ac.setFan(kPanasonicAcFanHigh);
     ac.setMode(kPanasonicAcDry);
     ac.setTemp(set_temp);
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
@@ -134,7 +134,7 @@ void ac_heat_on(int set_temp){
   for (int i = 0; i < AC_N_TRY; ++i){
     ac.setModel(kPanasonicRkr);
     ac.on();
-    ac.setFan(kPanasonicAcFanAuto);
+    ac.setFan(kPanasonicAcFanHigh);
     ac.setMode(kPanasonicAcHeat);
     ac.setTemp(set_temp);
     ac.setSwingVertical(kPanasonicAcSwingVAuto);
@@ -150,7 +150,7 @@ void ac_off(){
   for (int i = 0; i < 5; ++i){
     ac.setModel(kPanasonicRkr);
     ac.off();
-    ac.setFan(kPanasonicAcFanAuto);
+    ac.setFan(kPanasonicAcFanHigh);
     ac.setMode(kPanasonicAcCool);
     ac.setTemp(20);
     ac.setSwingVertical(kPanasonicAcSwingVAuto);
