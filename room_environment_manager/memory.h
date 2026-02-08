@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "air_conditioner.h"
+#include "command.h"
 #include "time_manager.h"
 
 // Reservation capacity and limits
@@ -32,6 +33,12 @@ bool memory_save_ac_status(const AC_status &ac_status);
 
 // Load last saved AC status from EEPROM. Returns true when valid data is restored.
 bool memory_load_ac_status(AC_status &ac_status);
+
+// Save current settings into EEPROM. Returns true on success.
+bool memory_save_settings(const Settings &settings);
+
+// Load last saved settings from EEPROM. Returns true when valid data is restored.
+bool memory_load_settings(Settings &settings);
 
 // Add a new reservation to EEPROM. Returns false when storage is full.
 bool reservation_add(const CommandReservation &reservation, uint32_t &assigned_id);

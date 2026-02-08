@@ -14,13 +14,26 @@ struct AcPersisted {
 	uint32_t checksum; // simple additive checksum over preceding bytes
 };
 
-constexpr uint32_t kMagic = 0xAC5EED01; // identifies valid payload
-constexpr uint8_t kVersion = 1;
+struct SettingsPersisted {
+	uint32_t magic;
+	uint8_t version;
+	uint8_t alert_when_hot; // bool stored as byte
+	int32_t ac_auto_mode;
+	float ac_auto_temp;
+	uint8_t reserved[7]; // keep alignment / future use
+	uint32_t checksum;
+};
+
+constexpr uint32_t kMagicAc = 0xAC5EED01; // identifies valid AC payload
+constexpr uint8_t kVersionAc = 1;
+constexpr uint32_t kMagicSettings = 0x57AABBCC; // identifies valid Settings payload
+constexpr uint8_t kVersionSettings = 1;
 constexpr uint32_t kReservationMagic = 0xAC5EED02; // identifies reservation payload
 constexpr uint8_t kReservationVersion = 1;
 constexpr size_t kEepromSize = 1024; // bytes reserved for this module
 constexpr int kAcStatusAddr = 0;   // start address for AC status block
-constexpr int kReservationAddr = kAcStatusAddr + sizeof(AcPersisted);
+constexpr int kSettingsAddr = kAcStatusAddr + sizeof(AcPersisted);
+constexpr int kReservationAddr = kSettingsAddr + sizeof(SettingsPersisted);
 
 bool g_initialized = false;
 
@@ -28,6 +41,16 @@ uint32_t compute_checksum(const AcPersisted &data) {
 	uint32_t sum = 0;
 	const uint8_t *raw = reinterpret_cast<const uint8_t *>(&data);
 	const size_t checksum_offset = sizeof(AcPersisted) - sizeof(uint32_t);
+	for (size_t i = 0; i < checksum_offset; ++i) {
+		sum += raw[i];
+	}
+	return sum;
+}
+
+uint32_t compute_checksum(const SettingsPersisted &data) {
+	uint32_t sum = 0;
+	const uint8_t *raw = reinterpret_cast<const uint8_t *>(&data);
+	const size_t checksum_offset = sizeof(SettingsPersisted) - sizeof(uint32_t);
 	for (size_t i = 0; i < checksum_offset; ++i) {
 		sum += raw[i];
 	}
@@ -127,8 +150,8 @@ void memory_init() {
 bool memory_save_ac_status(const AC_status &ac_status) {
 	ensure_initialized();
 	AcPersisted payload = {};
-	payload.magic = kMagic;
-	payload.version = kVersion;
+	payload.magic = kMagicAc;
+	payload.version = kVersionAc;
 	payload.state = ac_status.state;
 	payload.temp = ac_status.temp;
 	payload.hot_count = ac_status.hot_count;
@@ -145,7 +168,7 @@ bool memory_load_ac_status(AC_status &ac_status) {
 	AcPersisted payload = {};
 	EEPROM.get(kAcStatusAddr, payload);
 
-	if (payload.magic != kMagic || payload.version != kVersion) {
+	if (payload.magic != kMagicAc || payload.version != kVersionAc) {
 		ac_status = AC_status();
 		return false;
 	}
@@ -165,6 +188,47 @@ bool memory_load_ac_status(AC_status &ac_status) {
 
 	ac_status.hot_count = payload.hot_count;
 	ac_status.cold_count = payload.cold_count;
+	return true;
+}
+
+
+bool memory_save_settings(const Settings &settings) {
+	ensure_initialized();
+	SettingsPersisted payload = {};
+	payload.magic = kMagicSettings;
+	payload.version = kVersionSettings;
+	payload.alert_when_hot = settings.alert_when_hot ? 1 : 0;
+	payload.ac_auto_mode = settings.ac_auto_mode;
+	payload.ac_auto_temp = static_cast<float>(settings.ac_auto_temp);
+	payload.checksum = compute_checksum(payload);
+
+	EEPROM.put(kSettingsAddr, payload);
+	return EEPROM.commit();
+}
+
+
+bool memory_load_settings(Settings &settings) {
+	ensure_initialized();
+	SettingsPersisted payload = {};
+	EEPROM.get(kSettingsAddr, payload);
+
+	if (payload.magic != kMagicSettings || payload.version != kVersionSettings) {
+		settings = Settings();
+		return false;
+	}
+
+	if (payload.checksum != compute_checksum(payload)) {
+		settings = Settings();
+		return false;
+	}
+
+	settings.alert_when_hot = payload.alert_when_hot != 0;
+	if (payload.ac_auto_mode < AC_AUTO_OFF || payload.ac_auto_mode > AC_AUTO_HEAT) {
+		settings.ac_auto_mode = AC_AUTO_OFF;
+	} else {
+		settings.ac_auto_mode = payload.ac_auto_mode;
+	}
+	settings.ac_auto_temp = payload.ac_auto_temp;
 	return true;
 }
 

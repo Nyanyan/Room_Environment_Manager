@@ -14,6 +14,8 @@ Settings settings;
 
 void setup() {
   Serial.begin(115200);
+  memory_init();
+  memory_load_settings(settings);
   init_display();
   display_print(0, 0, "[I] Initializing");
   init_wifi();
@@ -22,7 +24,6 @@ void setup() {
   init_ac(ac_status);  
   init_graph(graph_img);
   init_sensors();
-  memory_init();
 
   display_clear();
   display_print(0, 0, "Started");

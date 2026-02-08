@@ -227,6 +227,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
       slack_send_message(time_info, str);
     } else{ // ac cool [temp]
       settings.ac_auto_mode = AC_AUTO_OFF;
+      memory_save_settings(settings);
       String str = "[INFO] AC COOL temp: " + command.arg2 + " *C";
       Serial.println(str);
       slack_send_message(time_info, str);
@@ -240,6 +241,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
       slack_send_message(time_info, str);
     } else { // ac dry [temp]
       settings.ac_auto_mode = AC_AUTO_OFF;
+      memory_save_settings(settings);
       String str = "[INFO] AC DRY temp: " + command.arg2 + " *C";
       Serial.println(str);
       slack_send_message(time_info, str);
@@ -253,6 +255,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
       slack_send_message(time_info, str);
     } else { // ac heat [temp]
       settings.ac_auto_mode = AC_AUTO_OFF;
+      memory_save_settings(settings);
       String str = "[INFO] AC HEAT temp: " + command.arg2 + " *C";
       Serial.println(str);
       slack_send_message(time_info, str);
@@ -260,6 +263,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
     }
   } else if (command.arg1 == "off") { // ac off
     settings.ac_auto_mode = AC_AUTO_OFF;
+    memory_save_settings(settings);
     String str = "[INFO] AC OFF";
     Serial.println(str);
     slack_send_message(time_info, str);
@@ -267,6 +271,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
   } else if (command.arg1 == "auto" || command.arg1 == "a") { // ac auto [arg2] [arg3]
     if (command.arg2 == "off"){ // ac auto off
       settings.ac_auto_mode = AC_AUTO_OFF;
+      memory_save_settings(settings);
       String str = "[INFO] AC AUTO MODE OFF";
       Serial.println(str);
       slack_send_message(time_info, str);
@@ -279,6 +284,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
       }
       settings.ac_auto_mode = AC_AUTO_COOL;
       settings.ac_auto_temp = set_temp;
+      memory_save_settings(settings);
       String str = "[INFO] AC AUTO COOL temp: " + command.arg3 + " *C";
       Serial.println(str);
       slack_send_message(time_info, str);
@@ -292,6 +298,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
       }
       settings.ac_auto_mode = AC_AUTO_DRY;
       settings.ac_auto_temp = set_temp;
+      memory_save_settings(settings);
       String str = "[INFO] AC AUTO DRY temp: " + command.arg3 + " *C";
       Serial.println(str);
       slack_send_message(time_info, str);
@@ -305,6 +312,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
       }
       settings.ac_auto_mode = AC_AUTO_HEAT;
       settings.ac_auto_temp = set_temp;
+      memory_save_settings(settings);
       String str = "[INFO] AC AUTO HEAT temp: " + command.arg3 + " *C";
       Serial.println(str);
       slack_send_message(time_info, str);
@@ -442,11 +450,13 @@ void command_check_set(Command command, Time_info &time_info){
       Serial.println(str);
       slack_send_message(time_info, str);
       settings.alert_when_hot = true;
+      memory_save_settings(settings);
     } else if (command.arg2 == "off"){ // set alert off
       String str = "[INFO] SET ALERT OFF";
       Serial.println(str);
       slack_send_message(time_info, str);
       settings.alert_when_hot = false;
+      memory_save_settings(settings);
     } else{ // set alert [error]
       String str = "[ERROR] SET ALERT WHAT???";
       Serial.println(str);

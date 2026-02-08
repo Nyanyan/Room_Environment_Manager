@@ -23,6 +23,7 @@ struct Settings{
   Settings(){
     alert_when_hot = true;
     ac_auto_mode = AC_AUTO_OFF;
+    ac_auto_temp = 0.0;
   }
 };
 
