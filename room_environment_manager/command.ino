@@ -88,8 +88,47 @@ void trim_leading_spaces(String &text) {
   }
 }
 
+bool reservation_before(const CommandReservation &a, const CommandReservation &b) {
+  if (a.year != b.year) return a.year < b.year;
+  if (a.month != b.month) return a.month < b.month;
+  if (a.day != b.day) return a.day < b.day;
+  if (a.hour != b.hour) return a.hour < b.hour;
+  if (a.minute != b.minute) return a.minute < b.minute;
+  return a.id < b.id;
 }
 
+} // namespace
+
+
+void command_send_reservation_list(Time_info &time_info) {
+  CommandReservation reservations[RESERVATION_MAX];
+  size_t count = 0;
+  reservation_list(reservations, RESERVATION_MAX, count);
+
+  size_t n = count;
+  if (n > RESERVATION_MAX) {
+    n = RESERVATION_MAX;
+  }
+  for (size_t i = 0; i + 1 < n; ++i) {
+    for (size_t j = i + 1; j < n; ++j) {
+      if (!reservation_before(reservations[i], reservations[j])) {
+        CommandReservation tmp = reservations[i];
+        reservations[i] = reservations[j];
+        reservations[j] = tmp;
+      }
+    }
+  }
+
+  String str = "<reservation list>\n";
+  if (count == 0) {
+    str += "(empty)\n";
+  } else {
+    size_t to_show = n;
+    for (size_t i = 0; i < to_show; ++i) {
+      str += "- " + format_reservation_line(reservations[i]) + "\n";
+    }
+  }
+  slack_send_message(time_info, str);
 
 
 struct Command command_get(){
@@ -396,24 +435,9 @@ void command_check_reserve(Command command, Time_info &time_info, Settings &sett
              static_cast<unsigned int>(day), static_cast<unsigned int>(hour), static_cast<unsigned int>(minute),
              reservation.command);
     slack_send_message(time_info, String(buf));
+    command_send_reservation_list(time_info);
   } else if (command.arg1 == "check" || command.arg1 == "c") {
-    CommandReservation reservations[RESERVATION_MAX];
-    size_t count = 0;
-    reservation_list(reservations, RESERVATION_MAX, count);
-
-    String str = "<reservation list>\n";
-    if (count == 0) {
-      str += "(empty)\n";
-    } else {
-      size_t to_show = count;
-      if (to_show > RESERVATION_MAX) {
-        to_show = RESERVATION_MAX;
-      }
-      for (size_t i = 0; i < to_show; ++i) {
-        str += "- " + format_reservation_line(reservations[i]) + "\n";
-      }
-    }
-    slack_send_message(time_info, str);
+    command_send_reservation_list(time_info);
   } else if (command.arg1 == "delete" || command.arg1 == "d") {
     if (command.arg2.length() == 0) {
       slack_send_message(time_info, "[ERROR] reservation id is missing");
@@ -428,6 +452,7 @@ void command_check_reserve(Command command, Time_info &time_info, Settings &sett
     if (reservation_delete(id)) {
       String str = String("[INFO] deleted reservation id: ") + String(id);
       slack_send_message(time_info, str);
+      command_send_reservation_list(time_info);
     } else {
       String str = String("[ERROR] reservation not found: ") + String(id);
       slack_send_message(time_info, str);
