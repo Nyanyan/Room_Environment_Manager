@@ -5,6 +5,7 @@
 #include "command.h"
 #include "sensors.h"
 #include "time_manager.h"
+#include "memory.h"
 
 // #define AC_N_TRY 1
 
@@ -91,12 +92,23 @@ esp_now_peer_info_t slave;
 #define N_SLAVE_DATA 2
 uint8_t send_data[N_SLAVE_HEADER + N_SLAVE_DATA];
 
-void init_ac(){
+void init_ac(AC_status &ac_status){
+  memory_init();
   for (int i = 0; i < N_SLAVE_HEADER; ++i) {
     send_data[i] = slave_header[i];
   }
   for (int i = 0; i < N_SLAVE_DATA; ++i) {
     send_data[N_SLAVE_HEADER + i] = 0;
+  }
+
+  if (memory_load_ac_status(ac_status)) {
+    if (ac_status.state == AC_STATE_COOL && ac_status.temp >= AC_TEMP_LIMIT_MIN && ac_status.temp <= AC_TEMP_LIMIT_MAX) {
+      ac_cool_on(ac_status, ac_status.temp);
+    } else if (ac_status.state == AC_STATE_DRY && ac_status.temp >= AC_TEMP_LIMIT_MIN && ac_status.temp <= AC_TEMP_LIMIT_MAX) {
+      ac_dry_on(ac_status, ac_status.temp);
+    } else if (ac_status.state == AC_STATE_HEAT && ac_status.temp >= AC_TEMP_LIMIT_MIN && ac_status.temp <= AC_TEMP_LIMIT_MAX) {
+      ac_heat_on(ac_status, ac_status.temp);
+    }
   }
 }
 
@@ -185,6 +197,7 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
   send_data[N_SLAVE_HEADER] = 'C';
   send_data[N_SLAVE_HEADER + 1] = 'A' + set_temp;
   send_ac();
+  memory_save_ac_status(ac_status);
 }
 
 void ac_dry_on(AC_status &ac_status, int set_temp){
@@ -193,6 +206,7 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
   send_data[N_SLAVE_HEADER] = 'D';
   send_data[N_SLAVE_HEADER + 1] = 'A' + set_temp;
   send_ac();
+  memory_save_ac_status(ac_status);
 }
 
 void ac_heat_on(AC_status &ac_status, int set_temp){
@@ -201,6 +215,7 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
   send_data[N_SLAVE_HEADER] = 'H';
   send_data[N_SLAVE_HEADER + 1] = 'A' + set_temp;
   send_ac();
+  memory_save_ac_status(ac_status);
 }
 
 
@@ -210,6 +225,7 @@ void ac_off(AC_status &ac_status){
   send_data[N_SLAVE_HEADER] = 'F';
   send_data[N_SLAVE_HEADER + 1] = 'A';
   send_ac();
+  memory_save_ac_status(ac_status);
 }
 
 

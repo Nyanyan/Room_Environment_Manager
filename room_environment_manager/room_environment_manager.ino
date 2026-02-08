@@ -18,7 +18,7 @@ void setup() {
   init_wifi();
   Time_info time_info = time_get();
   slack_send_message(time_info, "[INFO] Starting...");
-  init_ac();  
+  init_ac(ac_status);  
   init_graph(graph_img);
   init_sensors();
 
