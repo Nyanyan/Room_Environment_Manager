@@ -5,6 +5,8 @@
 #include <float.h>
 #include "Adafruit_BME680.h"
 #include "sensors.h"
+#include "token.h"
+#include "additional_sensors.h"
 
 // Avoid rare I2C lockups by enforcing a timeout on transactions.
 constexpr uint16_t I2C_TIMEOUT_MS = 2000;
@@ -14,6 +16,9 @@ MHZ19_uart mhz19;
 
 // Pressure Sensor
 Adafruit_BME680 bme;
+
+const double sensor_weight_parent = 1.0;
+const double sensor_weights_additional[N_ADDITIONAL_SENSORS] = {1.0};
 
 
 void init_SHT31(bool show_log){
@@ -65,6 +70,7 @@ void init_sensors(){
   init_SHT31(true);
   init_BME680(true);
   init_MHZ19C(true);
+  additional_sensors_request();
 }
 
 
@@ -162,26 +168,66 @@ struct Sensor_data get_sensor_data(){
     co2_concentrations[n_co2_concentration++] = mhz19.getCO2PPM();
   }
   Serial.println("");
-  Sensor_data sensor_data;
-  sensor_data.temperature = compute_trimmed_mean(temperatures, n_temperature);
-  sensor_data.humidity = compute_trimmed_mean(humidities, n_humidity);
-  sensor_data.pressure = compute_trimmed_mean(pressures, n_pressure);
-  sensor_data.co2_concentration = compute_trimmed_mean(co2_concentrations, n_co2_concentration);
+  Sensor_data parent_sensor_data;
+  parent_sensor_data.temperature = compute_trimmed_mean(temperatures, n_temperature);
+  parent_sensor_data.humidity = compute_trimmed_mean(humidities, n_humidity);
+  parent_sensor_data.pressure = compute_trimmed_mean(pressures, n_pressure);
+  parent_sensor_data.co2_concentration = compute_trimmed_mean(co2_concentrations, n_co2_concentration);
 
+  // fetch latest additional sensor data via ESP-NOW
+  additional_sensors_request();
+
+  Sensor_data representative_sensor_data;
+  Sensor_data representative_sensor_data_weights;
+  // base with parent sensor contribution
+  representative_sensor_data.temperature = parent_sensor_data.temperature * sensor_weight_parent;
+  representative_sensor_data.humidity = parent_sensor_data.humidity * sensor_weight_parent;
+  representative_sensor_data.pressure = parent_sensor_data.pressure * sensor_weight_parent;
+  representative_sensor_data.co2_concentration = parent_sensor_data.co2_concentration * sensor_weight_parent;
+
+  representative_sensor_data_weights.temperature = sensor_weight_parent;
+  representative_sensor_data_weights.humidity = sensor_weight_parent;
+  representative_sensor_data_weights.pressure = sensor_weight_parent;
+  representative_sensor_data_weights.co2_concentration = sensor_weight_parent;
+
+  for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
+    if (additional_sensor_received(i)) {
+      Sensor_data data = additional_sensor_data_get(i);
+      representative_sensor_data.temperature += data.temperature * sensor_weights_additional[i];
+      representative_sensor_data.humidity += data.humidity * sensor_weights_additional[i];
+      representative_sensor_data_weights.temperature += sensor_weights_additional[i];
+      representative_sensor_data_weights.humidity += sensor_weights_additional[i];
+    }
+  }
+
+  if (representative_sensor_data_weights.temperature > 0) {
+    representative_sensor_data.temperature /= representative_sensor_data_weights.temperature;
+  }
+  if (representative_sensor_data_weights.humidity > 0) {
+    representative_sensor_data.humidity /= representative_sensor_data_weights.humidity;
+  }
+  if (representative_sensor_data_weights.pressure > 0) {
+    representative_sensor_data.pressure /= representative_sensor_data_weights.pressure;
+  }
+  if (representative_sensor_data_weights.co2_concentration > 0) {
+    representative_sensor_data.co2_concentration /= representative_sensor_data_weights.co2_concentration;
+  }
+
+  Serial.print("Representative data: ");
   Serial.print("Temp: ");
-  Serial.print(sensor_data.temperature);
+  Serial.print(representative_sensor_data.temperature);
   Serial.print("*C ");
   Serial.print("Hum: ");
-  Serial.print(sensor_data.humidity);
+  Serial.print(representative_sensor_data.humidity);
   Serial.print("% ");
   Serial.print("Prs: ");
-  Serial.print(sensor_data.pressure);
+  Serial.print(representative_sensor_data.pressure);
   Serial.print("hPa ");
   Serial.print("CO2: ");
-  Serial.print(sensor_data.co2_concentration);
+  Serial.print(representative_sensor_data.co2_concentration);
   Serial.print("ppm ");
   Serial.println("");
-  return sensor_data;
+  return representative_sensor_data;
 }
 
 float sensor_calc_thi(float temperature, float humidity) {
