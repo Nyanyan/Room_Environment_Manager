@@ -24,7 +24,7 @@ double latest_humidity = 0.0;
 
 bool is_correct_header(const uint8_t* data) {
   for (int i = 0; i < N_SLAVE_HEADER; ++i) {
-    if (data[i] != slave_header[i]) {
+    if (data[i] != additional_sensor_header[i]) {
       return false;
     }
   }
@@ -81,7 +81,7 @@ void setup() {
   delay(200);
 
   // Initialize I2C on ESP32-C3 with SDA=D4, SCL=D5.
-  Wire.begin(4, 5);
+  Wire.begin();
 
   if (!sht4.begin()) {
     Serial.println("Failed to find SHT4x sensor");
@@ -89,6 +89,8 @@ void setup() {
       delay(1000);
     }
   }
+
+  Serial.println("start SHT4x sensor");
 
   // Use highest precision, no heater for continuous readings.
   sht4.setPrecision(SHT4X_HIGH_PRECISION);
@@ -117,7 +119,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   Serial.println("received");
   if (is_correct_header(data)){ // check header
     SensorPacket packet;
-    memcpy(packet.header, slave_header, N_SLAVE_HEADER);
+    memcpy(packet.header, additional_sensor_header, N_SLAVE_HEADER);
     packet.temperature_c = (float)latest_temperature;
     packet.humidity_pct = (float)latest_humidity;
 
