@@ -5,6 +5,7 @@
 #include <Wire.h>
 #include <Adafruit_SHT4x.h>
 #include <cstring>
+#include <float.h>
 #include "token.h"
 
 Adafruit_SHT4x sht4;
@@ -21,6 +22,49 @@ struct SensorPacket {
 
 double latest_temperature = 0.0;
 double latest_humidity = 0.0;
+static float temperature_samples[SENSOR_N_DATA_FOR_AVERAGE];
+static float humidity_samples[SENSOR_N_DATA_FOR_AVERAGE];
+
+// Compute trimmed mean after sorting and dropping 5% high/low outliers.
+float compute_trimmed_mean(const float *samples, int count) {
+  if (count <= 0) {
+    return FLT_MAX; // signal error when no samples are available
+  }
+  float sorted[SENSOR_N_DATA_FOR_AVERAGE];
+  for (int i = 0; i < count; ++i) {
+    sorted[i] = samples[i];
+  }
+
+  // Insertion sort is efficient enough for small, fixed-size arrays.
+  for (int i = 1; i < count; ++i) {
+    float key = sorted[i];
+    int j = i - 1;
+    while (j >= 0 && sorted[j] > key) {
+      sorted[j + 1] = sorted[j];
+      --j;
+    }
+    sorted[j + 1] = key;
+  }
+
+  int trim = (count * 5) / 100; // drop 5% from each end
+  if (trim * 2 >= count) {
+    trim = max(0, count / 2 - 1); // ensure at least one sample remains
+  }
+
+  int start = trim;
+  int end = count - trim;
+  int used = end - start;
+  if (used <= 0) {
+    return sorted[count / 2]; // fallback to median if trimming leaves none
+  }
+
+  float sum = 0.0;
+  for (int i = start; i < end; ++i) {
+    sum += sorted[i];
+  }
+  return sum / used;
+}
+
 
 bool is_correct_header(const uint8_t* data) {
   for (int i = 0; i < N_SLAVE_HEADER; ++i) {
@@ -62,17 +106,31 @@ void configDeviceAP() {
 
 void get_temperature_humidity() {
   sensors_event_t humidity_event, temp_event;
-  if (sht4.getEvent(&humidity_event, &temp_event)) {
-    Serial.print("Temp: ");
-    Serial.print(temp_event.temperature);
-    Serial.print(" C, Humidity: ");
-    Serial.print(humidity_event.relative_humidity);
-    Serial.println(" %");
-    latest_temperature = temp_event.temperature;
-    latest_humidity = humidity_event.relative_humidity;
-  } else {
-    Serial.println("Failed to read from SHT4x");
+  int success_reads = 0;
+  for (int i = 0; i < SENSOR_N_DATA_FOR_AVERAGE; ++i) {
+    if (sht4.getEvent(&humidity_event, &temp_event)) {
+      temperature_samples[success_reads] = temp_event.temperature;
+      humidity_samples[success_reads] = humidity_event.relative_humidity;
+      ++success_reads;
+    }
+    delay(500);
   }
+
+  if (success_reads == 0) {
+    Serial.println("Failed to read from SHT4x");
+    return;
+  }
+
+  float temp_avg = compute_trimmed_mean(temperature_samples, success_reads);
+  float hum_avg = compute_trimmed_mean(humidity_samples, success_reads);
+  latest_temperature = temp_avg;
+  latest_humidity = hum_avg;
+
+  Serial.print("Trimmed Avg Temp: ");
+  Serial.print(latest_temperature);
+  Serial.print(" C, Humidity: ");
+  Serial.print(latest_humidity);
+  Serial.println(" %");
 }
 
 
@@ -120,8 +178,8 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   if (is_correct_header(data)){ // check header
     SensorPacket packet;
     memcpy(packet.header, additional_sensor_header, N_SLAVE_HEADER);
-    packet.temperature_c = (float)latest_temperature;
-    packet.humidity_pct = (float)latest_humidity;
+    packet.temperature_c = (float)latest_temperature; // already trimmed mean
+    packet.humidity_pct = (float)latest_humidity;     // already trimmed mean
 
     // ensure the sender is added as peer so we can reply
     if (!esp_now_is_peer_exist(mac_addr)) {
@@ -143,5 +201,4 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
 
 void loop() {
   get_temperature_humidity();
-  delay(2000);
 }
