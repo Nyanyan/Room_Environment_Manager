@@ -20,10 +20,10 @@
 #define AC_AUTO_THRESHOLD3 2.5 // weight = 100
 #define AC_AUTO_ENDURE 50 // about 10 minutes
 
-// PID constants (tuned for ~10s sensor interval)
-#define AC_PID_KP 1.0
-#define AC_PID_KI 0.003
-#define AC_PID_KD 0.05
+// PID constants
+#define AC_PID_KP 0.5
+#define AC_PID_KI 0.05
+#define AC_PID_KD 0.1
 #define AC_PID_I_CLAMP 30.0
 
 // PID history buffer
