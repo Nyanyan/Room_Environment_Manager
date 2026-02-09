@@ -93,8 +93,8 @@ void InitESPNow() {
 
 // config AP SSID
 void configDeviceAP() {
-  const char *SSID = "Slave_1";
-  bool result = WiFi.softAP(SSID, "Slave_1_Password", CHANNEL, 0);
+  const char *SSID = "additional_sensor";
+  bool result = WiFi.softAP(SSID, "additional_sensor_password", CHANNEL, 0);
   if (!result) {
     Serial.println("AP Config failed.");
   } else {
@@ -108,16 +108,19 @@ void get_temperature_humidity() {
   sensors_event_t humidity_event, temp_event;
   int success_reads = 0;
   for (int i = 0; i < SENSOR_N_DATA_FOR_AVERAGE; ++i) {
+    Serial.print('=');
     if (sht4.getEvent(&humidity_event, &temp_event)) {
       temperature_samples[success_reads] = temp_event.temperature;
       humidity_samples[success_reads] = humidity_event.relative_humidity;
       ++success_reads;
+    } else {
+      Serial.println("Failed to read from SHT4x, continue...");
     }
     delay(500);
   }
 
   if (success_reads == 0) {
-    Serial.println("Failed to read from SHT4x");
+    Serial.println("Conpletely Failed to read from SHT4x");
     return;
   }
 
@@ -138,7 +141,7 @@ void setup() {
   Serial.begin(115200);
   delay(200);
 
-  // Initialize I2C on ESP32-C3 with SDA=D4, SCL=D5.
+  // Initialize I2C on ESP32-C3 (default: SDA=D4, SCL=D5)
   Wire.begin();
 
   if (!sht4.begin()) {
@@ -186,8 +189,12 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
       esp_now_peer_info_t peerInfo = {};
       memcpy(peerInfo.peer_addr, mac_addr, 6);
       peerInfo.channel = CHANNEL;
+      peerInfo.ifidx = WIFI_IF_AP; // we are in AP mode
       peerInfo.encrypt = false;
-      esp_now_add_peer(&peerInfo);
+      esp_err_t addStatus = esp_now_add_peer(&peerInfo);
+      if (addStatus != ESP_OK) {
+        Serial.printf("Add peer failed: %d\n", addStatus);
+      }
     }
 
     esp_err_t result = esp_now_send(mac_addr, reinterpret_cast<uint8_t*>(&packet), sizeof(packet));

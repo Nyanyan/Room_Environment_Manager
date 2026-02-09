@@ -37,8 +37,22 @@ static bool begin_espnow_for_additional() {
   esp_now_peer_info_t peerInfo = {};
   memset(peerInfo.peer_addr, 0xFF, 6);
   peerInfo.channel = ESPNOW_CHANNEL;
+   peerInfo.ifidx = WIFI_IF_STA; // parent is STA when requesting
   peerInfo.encrypt = false;
   esp_now_add_peer(&peerInfo);
+
+  // add explicit peers for each additional sensor
+  for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
+    esp_now_peer_info_t peer = {};
+    memcpy(peer.peer_addr, additional_sensor_mac_addrs[i], 6);
+    peer.channel = ESPNOW_CHANNEL;
+    peer.ifidx = WIFI_IF_STA;
+    peer.encrypt = false;
+    esp_err_t add_res = esp_now_add_peer(&peer);
+    if (add_res != ESP_OK && add_res != ESP_ERR_ESPNOW_EXIST) {
+      Serial.printf("[ERROR] add_peer failed (%d) for sensor %d\n", add_res, i);
+    }
+  }
   return true;
 }
 
@@ -61,6 +75,14 @@ static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, i
       g_additional_sensor_data[i].pressure = 0.0f;
       g_additional_sensor_data[i].co2_concentration = 0.0f;
       g_additional_sensor_received[i] = true;
+      Serial.print("additional sensor ");
+      Serial.print(i);
+      Serial.print(" received: ");
+      Serial.print("Temp: ");
+      Serial.print(packet->temperature_c);
+      Serial.print(" C, Humidity: ");
+      Serial.print(packet->humidity_pct);
+      Serial.println(" %");
     }
   }
 }
@@ -82,13 +104,17 @@ void additional_sensors_request() {
 
   esp_now_register_recv_cb(OnAdditionalDataRecv);
 
-  const uint8_t broadcast_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
-    esp_now_send(broadcast_addr, (uint8_t *)additional_sensor_headers[i], N_SLAVE_HEADER);
+    Serial.print("request data to additional sensor ");
+    Serial.println(i);
+    esp_err_t send_res = esp_now_send(additional_sensor_mac_addrs[i], (uint8_t *)additional_sensor_headers[i], N_SLAVE_HEADER);
+    if (send_res != ESP_OK) {
+      Serial.printf("[WARN] esp_now_send failed (%d) to sensor %d\n", send_res, i);
+    }
   }
 
   unsigned long start = millis();
-  while (millis() - start < 500) {
+  while (millis() - start < 1500) {
     delay(10);
   }
 
