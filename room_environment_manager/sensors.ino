@@ -2,6 +2,7 @@
 #include <MHZ19_uart.h> // https://github.com/nara256/mhz19_uart
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
+#include <float.h>
 #include "Adafruit_BME680.h"
 #include "sensors.h"
 
@@ -102,55 +103,70 @@ float get_data_BME680() {
 }
 
 
+// Compute trimmed mean after sorting and dropping 5% high/low outliers.
+float compute_trimmed_mean(const float *samples, int count) {
+  if (count <= 0) {
+    return FLT_MAX; // signal error when no samples are available
+  }
+  float sorted[SENSOR_N_DATA_FOR_AVERAGE];
+  for (int i = 0; i < count; ++i) {
+    sorted[i] = samples[i];
+  }
+
+  // Insertion sort is efficient enough for small, fixed-size arrays.
+  for (int i = 1; i < count; ++i) {
+    float key = sorted[i];
+    int j = i - 1;
+    while (j >= 0 && sorted[j] > key) {
+      sorted[j + 1] = sorted[j];
+      --j;
+    }
+    sorted[j + 1] = key;
+  }
+
+  int trim = (count * 5) / 100; // drop 5% from each end
+  if (trim * 2 >= count) {
+    trim = max(0, count / 2 - 1); // ensure at least one sample remains
+  }
+
+  int start = trim;
+  int end = count - trim;
+  int used = end - start;
+  if (used <= 0) {
+    return sorted[count / 2]; // fallback to median if trimming leaves none
+  }
+
+  float sum = 0.0;
+  for (int i = start; i < end; ++i) {
+    sum += sorted[i];
+  }
+  return sum / used;
+}
+
+
 
 struct Sensor_data get_sensor_data(){
   float temperatures[SENSOR_N_DATA_FOR_AVERAGE], humidities[SENSOR_N_DATA_FOR_AVERAGE], pressures[SENSOR_N_DATA_FOR_AVERAGE], co2_concentrations[SENSOR_N_DATA_FOR_AVERAGE];
-  float min_temperature = 10000.0, min_humidity = 10000.0, min_pressure = 10000.0, min_co2_concentration = 10000.0;
-  float max_temperature = -10000.0, max_humidity = -10000.0, max_pressure = -10000.0, max_co2_concentration = -10000.0;
-  static float last_temperature = 25.0;
-  static float last_humidity = 50.0;
+  int n_temperature = 0;
+  int n_humidity = 0;
+  int n_pressure = 0;
+  int n_co2_concentration = 0;
   for (int i = 0; i < SENSOR_N_DATA_FOR_AVERAGE; ++i){
     Serial.print("=");
-    bool ok_sht31 = get_data_SHT31(&temperatures[i], &humidities[i]);
-    if (!ok_sht31) {
-      // Reuse last known good data to avoid blocking the loop forever.
-      temperatures[i] = last_temperature;
-      humidities[i] = last_humidity;
-    } else {
-      last_temperature = temperatures[i];
-      last_humidity = humidities[i];
+    bool ok_sht31 = get_data_SHT31(&temperatures[n_temperature], &humidities[n_humidity]);
+    if (ok_sht31) {
+      ++n_temperature;
+      ++n_humidity;
     }
-    pressures[i] = get_data_BME680();
-    co2_concentrations[i] = mhz19.getCO2PPM();
-    min_temperature = min(min_temperature, temperatures[i]);
-    min_humidity = min(min_humidity, humidities[i]);
-    min_pressure = min(min_pressure, pressures[i]);
-    min_co2_concentration = min(min_co2_concentration, co2_concentrations[i]);
-    max_temperature = max(max_temperature, temperatures[i]);
-    max_humidity = max(max_humidity, humidities[i]);
-    max_pressure = max(max_pressure, pressures[i]);
-    max_co2_concentration = max(max_co2_concentration, co2_concentrations[i]);
+    pressures[n_pressure++] = get_data_BME680();
+    co2_concentrations[n_co2_concentration++] = mhz19.getCO2PPM();
   }
   Serial.println("");
   Sensor_data sensor_data;
-  sensor_data.temperature = 0.0;
-  sensor_data.humidity = 0.0;
-  sensor_data.pressure = 0.0;
-  sensor_data.co2_concentration = 0.0;
-  for (int i = 0; i < SENSOR_N_DATA_FOR_AVERAGE; ++i){
-    sensor_data.temperature += temperatures[i];
-    sensor_data.humidity += humidities[i];
-    sensor_data.pressure += pressures[i];
-    sensor_data.co2_concentration += co2_concentrations[i];
-  }
-  sensor_data.temperature -= min_temperature + max_temperature;
-  sensor_data.humidity -= min_humidity + max_humidity;
-  sensor_data.pressure -= min_pressure + max_pressure;
-  sensor_data.co2_concentration -= min_co2_concentration + max_co2_concentration;
-  sensor_data.temperature /= SENSOR_N_DATA_FOR_AVERAGE - 2;
-  sensor_data.humidity /= SENSOR_N_DATA_FOR_AVERAGE - 2;
-  sensor_data.pressure /= SENSOR_N_DATA_FOR_AVERAGE - 2;
-  sensor_data.co2_concentration /= SENSOR_N_DATA_FOR_AVERAGE - 2;
+  sensor_data.temperature = compute_trimmed_mean(temperatures, n_temperature);
+  sensor_data.humidity = compute_trimmed_mean(humidities, n_humidity);
+  sensor_data.pressure = compute_trimmed_mean(pressures, n_pressure);
+  sensor_data.co2_concentration = compute_trimmed_mean(co2_concentrations, n_co2_concentration);
 
   Serial.print("Temp: ");
   Serial.print(sensor_data.temperature);
