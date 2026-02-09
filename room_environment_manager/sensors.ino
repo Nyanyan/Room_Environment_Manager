@@ -6,7 +6,7 @@
 #include "sensors.h"
 
 // Avoid rare I2C lockups by enforcing a timeout on transactions.
-constexpr uint16_t I2C_TIMEOUT_MS = 1500;
+constexpr uint16_t I2C_TIMEOUT_MS = 2000;
 
 // CO2 sensor
 MHZ19_uart mhz19;
@@ -80,6 +80,7 @@ bool get_data_SHT31(float *temperature, float *humidity) {
   if (n_bytes != 6) {
     Serial.println("[WARN] SHT31 read timed out");
     init_SHT31(false);
+    delay(1000);
     return false;
   }
   for (int i = 0; i < 6; ++i){
