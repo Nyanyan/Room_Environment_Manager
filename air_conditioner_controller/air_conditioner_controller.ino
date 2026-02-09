@@ -1,3 +1,5 @@
+// Air Conditioner Controller using ESP32C3
+
 #include <esp_now.h>
 #include <WiFi.h>
 #include <IRremoteESP8266.h>
