@@ -152,6 +152,9 @@ float compute_trimmed_mean(const float *samples, int count) {
 
 
 struct Sensor_data get_sensor_data(){
+  // fetch latest additional sensor data via ESP-NOW
+  additional_sensors_request();
+
   Sensor_data sensor_data; // initialized with FLT_MAX sentinels
 
   float temperatures[SENSOR_N_DATA_FOR_AVERAGE], humidities[SENSOR_N_DATA_FOR_AVERAGE], pressures[SENSOR_N_DATA_FOR_AVERAGE], co2_concentrations[SENSOR_N_DATA_FOR_AVERAGE];
@@ -176,9 +179,6 @@ struct Sensor_data get_sensor_data(){
   sensor_data.parent.humidity = compute_trimmed_mean(humidities, n_humidity);
   sensor_data.parent.pressure = compute_trimmed_mean(pressures, n_pressure);
   sensor_data.parent.co2_concentration = compute_trimmed_mean(co2_concentrations, n_co2_concentration);
-
-  // fetch latest additional sensor data via ESP-NOW
-  additional_sensors_request();
 
   // Representative (weighted) data for control/graphs
   SensorReading representative_sum;
