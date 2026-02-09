@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <cstring>
+#include <float.h>
 #include "additional_sensors.h"
 
 // Forward declaration from slack.ino
@@ -16,7 +17,7 @@ struct AdditionalSensorPacket {
   float humidity_pct;
 };
 
-static Sensor_data g_additional_sensor_data[N_ADDITIONAL_SENSORS];
+static SensorReading g_additional_sensor_data[N_ADDITIONAL_SENSORS];
 static bool g_additional_sensor_received[N_ADDITIONAL_SENSORS];
 
 static void reset_wifi_for_espnow() {
@@ -72,8 +73,8 @@ static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, i
     if (memcmp(packet->header, additional_sensor_headers[i], N_SLAVE_HEADER) == 0) {
       g_additional_sensor_data[i].temperature = packet->temperature_c;
       g_additional_sensor_data[i].humidity = packet->humidity_pct;
-      g_additional_sensor_data[i].pressure = 0.0f;
-      g_additional_sensor_data[i].co2_concentration = 0.0f;
+      g_additional_sensor_data[i].pressure = FLT_MAX;
+      g_additional_sensor_data[i].co2_concentration = FLT_MAX;
       g_additional_sensor_received[i] = true;
       Serial.print("additional sensor ");
       Serial.print(i);
@@ -90,10 +91,7 @@ static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, i
 void additional_sensors_request() {
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     g_additional_sensor_received[i] = false;
-    g_additional_sensor_data[i].temperature = 0.0f;
-    g_additional_sensor_data[i].humidity = 0.0f;
-    g_additional_sensor_data[i].pressure = 0.0f;
-    g_additional_sensor_data[i].co2_concentration = 0.0f;
+    g_additional_sensor_data[i] = SensorReading();
   }
 
   reset_wifi_for_espnow();
@@ -128,8 +126,8 @@ bool additional_sensor_received(int idx) {
   return g_additional_sensor_received[idx];
 }
 
-Sensor_data additional_sensor_data_get(int idx) {
-  Sensor_data empty = {0, 0, 0, 0};
+SensorReading additional_sensor_data_get(int idx) {
+  SensorReading empty;
   if (idx < 0 || idx >= N_ADDITIONAL_SENSORS) {
     return empty;
   }

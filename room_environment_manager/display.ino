@@ -25,10 +25,18 @@ void display_print(int x, int y, const char *str) {
 
 
 void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Time_info &time_info){
-  display_print(0, 0, String(sensor_data.temperature, 1) + " *C ");
-  display_print(11, 0, String(sensor_data.humidity, 0) + " %  ");
-  display_print(0, 1, String(sensor_data.pressure, 1) + " hPa ");
-  display_print(11, 1, String(sensor_data.co2_concentration, 0) + " ppm  ");
+  const SensorReading &parent = sensor_data.parent;
+  auto fmt_or_placeholder = [](float value, int decimals, const char *suffix, const char *placeholder) {
+    if (value == FLT_MAX) {
+      return String(placeholder);
+    }
+    return String(String(value, decimals) + String(suffix));
+  };
+
+  display_print(0, 0, fmt_or_placeholder(parent.temperature, 1, " *C ", "---- *C "));
+  display_print(11, 0, fmt_or_placeholder(parent.humidity, 0, " %  ", "---- %  "));
+  display_print(0, 1, fmt_or_placeholder(parent.pressure, 1, " hPa ", "---- hPa"));
+  display_print(11, 1, fmt_or_placeholder(parent.co2_concentration, 0, " ppm  ", "---- ppm "));
 
   if (settings.ac_auto_mode == AC_AUTO_OFF){
     display_print(0, 2, "MANUAL   ");

@@ -152,6 +152,8 @@ float compute_trimmed_mean(const float *samples, int count) {
 
 
 struct Sensor_data get_sensor_data(){
+  Sensor_data sensor_data; // initialized with FLT_MAX sentinels
+
   float temperatures[SENSOR_N_DATA_FOR_AVERAGE], humidities[SENSOR_N_DATA_FOR_AVERAGE], pressures[SENSOR_N_DATA_FOR_AVERAGE], co2_concentrations[SENSOR_N_DATA_FOR_AVERAGE];
   int n_temperature = 0;
   int n_humidity = 0;
@@ -168,66 +170,70 @@ struct Sensor_data get_sensor_data(){
     co2_concentrations[n_co2_concentration++] = mhz19.getCO2PPM();
   }
   Serial.println("");
-  Sensor_data parent_sensor_data;
-  parent_sensor_data.temperature = compute_trimmed_mean(temperatures, n_temperature);
-  parent_sensor_data.humidity = compute_trimmed_mean(humidities, n_humidity);
-  parent_sensor_data.pressure = compute_trimmed_mean(pressures, n_pressure);
-  parent_sensor_data.co2_concentration = compute_trimmed_mean(co2_concentrations, n_co2_concentration);
+
+  // Parent (local) sensor data
+  sensor_data.parent.temperature = compute_trimmed_mean(temperatures, n_temperature);
+  sensor_data.parent.humidity = compute_trimmed_mean(humidities, n_humidity);
+  sensor_data.parent.pressure = compute_trimmed_mean(pressures, n_pressure);
+  sensor_data.parent.co2_concentration = compute_trimmed_mean(co2_concentrations, n_co2_concentration);
 
   // fetch latest additional sensor data via ESP-NOW
   additional_sensors_request();
 
-  Sensor_data representative_sensor_data;
-  Sensor_data representative_sensor_data_weights;
-  // base with parent sensor contribution
-  representative_sensor_data.temperature = parent_sensor_data.temperature * sensor_weight_parent;
-  representative_sensor_data.humidity = parent_sensor_data.humidity * sensor_weight_parent;
-  representative_sensor_data.pressure = parent_sensor_data.pressure * sensor_weight_parent;
-  representative_sensor_data.co2_concentration = parent_sensor_data.co2_concentration * sensor_weight_parent;
+  // Representative (weighted) data for control/graphs
+  SensorReading representative_sum;
+  SensorReading weight_sum;
+  representative_sum.temperature = 0.0f;
+  representative_sum.humidity = 0.0f;
+  representative_sum.pressure = 0.0f;
+  representative_sum.co2_concentration = 0.0f;
+  weight_sum.temperature = 0.0f;
+  weight_sum.humidity = 0.0f;
+  weight_sum.pressure = 0.0f;
+  weight_sum.co2_concentration = 0.0f;
 
-  representative_sensor_data_weights.temperature = sensor_weight_parent;
-  representative_sensor_data_weights.humidity = sensor_weight_parent;
-  representative_sensor_data_weights.pressure = sensor_weight_parent;
-  representative_sensor_data_weights.co2_concentration = sensor_weight_parent;
+  auto accumulate_if_valid = [&](float value, float weight, float &acc, float &w_acc) {
+    if (value != FLT_MAX) {
+      acc += value * weight;
+      w_acc += weight;
+    }
+  };
+
+  // base with parent sensor contribution
+  accumulate_if_valid(sensor_data.parent.temperature, sensor_weight_parent, representative_sum.temperature, weight_sum.temperature);
+  accumulate_if_valid(sensor_data.parent.humidity, sensor_weight_parent, representative_sum.humidity, weight_sum.humidity);
+  accumulate_if_valid(sensor_data.parent.pressure, sensor_weight_parent, representative_sum.pressure, weight_sum.pressure);
+  accumulate_if_valid(sensor_data.parent.co2_concentration, sensor_weight_parent, representative_sum.co2_concentration, weight_sum.co2_concentration);
 
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     if (additional_sensor_received(i)) {
-      Sensor_data data = additional_sensor_data_get(i);
-      representative_sensor_data.temperature += data.temperature * sensor_weights_additional[i];
-      representative_sensor_data.humidity += data.humidity * sensor_weights_additional[i];
-      representative_sensor_data_weights.temperature += sensor_weights_additional[i];
-      representative_sensor_data_weights.humidity += sensor_weights_additional[i];
+      SensorReading data = additional_sensor_data_get(i);
+      sensor_data.additional[i] = data;
+      accumulate_if_valid(data.temperature, sensor_weights_additional[i], representative_sum.temperature, weight_sum.temperature);
+      accumulate_if_valid(data.humidity, sensor_weights_additional[i], representative_sum.humidity, weight_sum.humidity);
     }
   }
 
-  if (representative_sensor_data_weights.temperature > 0) {
-    representative_sensor_data.temperature /= representative_sensor_data_weights.temperature;
-  }
-  if (representative_sensor_data_weights.humidity > 0) {
-    representative_sensor_data.humidity /= representative_sensor_data_weights.humidity;
-  }
-  if (representative_sensor_data_weights.pressure > 0) {
-    representative_sensor_data.pressure /= representative_sensor_data_weights.pressure;
-  }
-  if (representative_sensor_data_weights.co2_concentration > 0) {
-    representative_sensor_data.co2_concentration /= representative_sensor_data_weights.co2_concentration;
-  }
+  sensor_data.representative.temperature = (weight_sum.temperature > 0.0f) ? representative_sum.temperature / weight_sum.temperature : FLT_MAX;
+  sensor_data.representative.humidity = (weight_sum.humidity > 0.0f) ? representative_sum.humidity / weight_sum.humidity : FLT_MAX;
+  sensor_data.representative.pressure = (weight_sum.pressure > 0.0f) ? representative_sum.pressure / weight_sum.pressure : FLT_MAX;
+  sensor_data.representative.co2_concentration = (weight_sum.co2_concentration > 0.0f) ? representative_sum.co2_concentration / weight_sum.co2_concentration : FLT_MAX;
 
   Serial.print("Representative data: ");
   Serial.print("Temp: ");
-  Serial.print(representative_sensor_data.temperature);
+  Serial.print(sensor_data.representative.temperature);
   Serial.print("*C ");
   Serial.print("Hum: ");
-  Serial.print(representative_sensor_data.humidity);
+  Serial.print(sensor_data.representative.humidity);
   Serial.print("% ");
   Serial.print("Prs: ");
-  Serial.print(representative_sensor_data.pressure);
+  Serial.print(sensor_data.representative.pressure);
   Serial.print("hPa ");
   Serial.print("CO2: ");
-  Serial.print(representative_sensor_data.co2_concentration);
+  Serial.print(sensor_data.representative.co2_concentration);
   Serial.print("ppm ");
   Serial.println("");
-  return representative_sensor_data;
+  return sensor_data;
 }
 
 float sensor_calc_thi(float temperature, float humidity) {

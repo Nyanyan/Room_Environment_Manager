@@ -11,6 +11,6 @@ void additional_sensors_request();
 bool additional_sensor_received(int idx);
 
 // Get the last received data for the idx-th additional sensor.
-Sensor_data additional_sensor_data_get(int idx);
+SensorReading additional_sensor_data_get(int idx);
 
 #endif

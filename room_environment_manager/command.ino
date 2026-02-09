@@ -1,5 +1,7 @@
+#include <float.h>
 #include "command.h"
 #include "memory.h"
+#include "sensors.h"
 
 namespace {
 
@@ -97,6 +99,33 @@ bool reservation_before(const CommandReservation &a, const CommandReservation &b
   return a.id < b.id;
 }
 
+bool is_valid_sensor_value(float v) {
+  return v != FLT_MAX;
+}
+
+String format_sensor_value(float v, int decimals, const char *unit) {
+  if (!is_valid_sensor_value(v)) {
+    return String("N/A");
+  }
+  return String(v, decimals) + String(" ") + String(unit);
+}
+
+String format_sensor_thi(const SensorReading &reading) {
+  if (!is_valid_sensor_value(reading.temperature) || !is_valid_sensor_value(reading.humidity)) {
+    return String("N/A");
+  }
+  return String(sensor_calc_thi(reading.temperature, reading.humidity));
+}
+
+void append_sensor_block(String &str, const char *title, const SensorReading &reading) {
+  str += String("[") + title + String("]\n");
+  str += "- Temp : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
+  str += "- Hum : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
+  str += "- Pres : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
+  str += "- CO2 : " + format_sensor_value(reading.co2_concentration, 0, "ppm") + "\n";
+  str += "- THI : " + format_sensor_thi(reading) + "\n";
+}
+
 } // namespace
 
 
@@ -141,17 +170,21 @@ struct Command command_get(){
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
   String str = "<room environment>\n";
-  if (sensor_data.temperature >= 31.0){
+  const SensorReading &heat_src = is_valid_sensor_value(sensor_data.representative.temperature) ? sensor_data.representative : sensor_data.parent;
+  if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= 31.0){
     if (settings.alert_when_hot){
       str += "<!channel>\n";
     }
     str += "!!!!!HEAT!!!!!\n";
   }
-  str += "Temp : " + String(sensor_data.temperature) + " *C\n";
-  str += "Hum : " + String(sensor_data.humidity) + " pct.\n";
-  str += "Pres : " + String(sensor_data.pressure) + " hPa\n";
-  str += "CO2 : " + String(sensor_data.co2_concentration) + " ppm\n";
-  str += "THI : " + String(sensor_calc_thi(sensor_data.temperature, sensor_data.humidity)) + "\n";
+
+  append_sensor_block(str, "parent", sensor_data.parent);
+  for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
+    String title = String("additional ") + String(i + 1);
+    append_sensor_block(str, title.c_str(), sensor_data.additional[i]);
+  }
+  append_sensor_block(str, "representative", sensor_data.representative);
+
   str += "AC auto : ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";

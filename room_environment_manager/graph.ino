@@ -1,4 +1,5 @@
 #include "graph.h"
+#include "sensors.h"
 #include "character.h"
 
 const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
@@ -455,11 +456,17 @@ void graph_add_data(Graph_data &graph_data, Sensor_data &sensor_data){
     graph_data.co2_concentration[i] = graph_data.co2_concentration[i + 1];
     graph_data.thi[i] = graph_data.thi[i + 1];
   }
-  graph_data.temperature[GRAPH_DATA_N - 1] = sensor_data.temperature;
-  graph_data.humidity[GRAPH_DATA_N - 1] = sensor_data.humidity;
-  graph_data.pressure[GRAPH_DATA_N - 1] = sensor_data.pressure;
-  graph_data.co2_concentration[GRAPH_DATA_N - 1] = sensor_data.co2_concentration;
-  graph_data.thi[GRAPH_DATA_N - 1] = sensor_calc_thi(sensor_data.temperature, sensor_data.humidity);
+
+  const SensorReading &reading = sensor_data.representative;
+  graph_data.temperature[GRAPH_DATA_N - 1] = (reading.temperature == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.temperature;
+  graph_data.humidity[GRAPH_DATA_N - 1] = (reading.humidity == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.humidity;
+  graph_data.pressure[GRAPH_DATA_N - 1] = (reading.pressure == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.pressure;
+  graph_data.co2_concentration[GRAPH_DATA_N - 1] = (reading.co2_concentration == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.co2_concentration;
+  if (reading.temperature == FLT_MAX || reading.humidity == FLT_MAX) {
+    graph_data.thi[GRAPH_DATA_N - 1] = GRAPH_DATA_UNDEFINED;
+  } else {
+    graph_data.thi[GRAPH_DATA_N - 1] = sensor_calc_thi(reading.temperature, reading.humidity);
+  }
 }
 
 
