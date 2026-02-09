@@ -1,1 +1,2 @@
-*token.h
+# Ignore all token.h files in any folder
+**/token.h
