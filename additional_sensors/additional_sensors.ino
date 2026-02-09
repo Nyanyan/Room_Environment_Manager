@@ -1,3 +1,5 @@
+// additional temperature & humidity sensor SHT40I using ESP32C3
+
 #include <Wire.h>
 #include <Adafruit_SHT4x.h>
 
