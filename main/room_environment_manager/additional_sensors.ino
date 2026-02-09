@@ -10,6 +10,7 @@ void init_wifi();
 
 // ESP-NOW channel shared with the additional sensor nodes.
 static const uint8_t ESPNOW_CHANNEL = 1;
+static const unsigned long ADDITIONAL_SENSOR_MAX_AGE_MS = 5UL * 60UL * 1000UL; // 5 minutes
 
 struct AdditionalSensorPacket {
   char header[N_SLAVE_HEADER];
@@ -19,6 +20,8 @@ struct AdditionalSensorPacket {
 
 static SensorReading g_additional_sensor_data[N_ADDITIONAL_SENSORS];
 static bool g_additional_sensor_received[N_ADDITIONAL_SENSORS];
+static SensorReading g_additional_sensor_last_data[N_ADDITIONAL_SENSORS];
+static unsigned long g_additional_sensor_last_ms[N_ADDITIONAL_SENSORS];
 
 static void reset_wifi_for_espnow() {
   WiFi.persistent(false);
@@ -76,6 +79,8 @@ static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, i
       g_additional_sensor_data[i].pressure = FLT_MAX;
       g_additional_sensor_data[i].co2_concentration = FLT_MAX;
       g_additional_sensor_received[i] = true;
+      g_additional_sensor_last_data[i] = g_additional_sensor_data[i];
+      g_additional_sensor_last_ms[i] = millis();
       Serial.print("additional sensor ");
       Serial.print(i);
       Serial.print(" received: ");
@@ -123,7 +128,17 @@ bool additional_sensor_received(int idx) {
   if (idx < 0 || idx >= N_ADDITIONAL_SENSORS) {
     return false;
   }
-  return g_additional_sensor_received[idx];
+  if (g_additional_sensor_received[idx]) {
+    return true;
+  }
+
+  unsigned long last = g_additional_sensor_last_ms[idx];
+  if (last == 0) {
+    return false; // never received
+  }
+
+  unsigned long now = millis();
+  return (now - last) <= ADDITIONAL_SENSOR_MAX_AGE_MS;
 }
 
 SensorReading additional_sensor_data_get(int idx) {
@@ -131,5 +146,24 @@ SensorReading additional_sensor_data_get(int idx) {
   if (idx < 0 || idx >= N_ADDITIONAL_SENSORS) {
     return empty;
   }
-  return g_additional_sensor_data[idx];
+  if (g_additional_sensor_received[idx]) {
+    return g_additional_sensor_data[idx];
+  }
+
+  unsigned long last = g_additional_sensor_last_ms[idx];
+  if (last == 0) {
+    return empty;
+  }
+
+  unsigned long now = millis();
+  if ((now - last) <= ADDITIONAL_SENSOR_MAX_AGE_MS) {
+    Serial.print("[INFO] using cached additional sensor ");
+    Serial.print(idx);
+    Serial.print(" data from ");
+    Serial.print((now - last) / 1000UL);
+    Serial.println("s ago");
+    return g_additional_sensor_last_data[idx];
+  }
+
+  return empty;
 }
