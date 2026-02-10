@@ -1,35 +1,36 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <float.h>
-#include "Adafruit_BME680.h"
+#include "Adafruit_BME280.h"
 #include "sensors.h"
 #include "token.h"
 
 // Avoid rare I2C lockups by enforcing a timeout on transactions.
 constexpr uint16_t I2C_TIMEOUT_MS = 2000;
-constexpr uint8_t BME680_I2C_ADDR = 0x76;
+constexpr uint8_t BME280_I2C_ADDR = 0x76;
 
 // Pressure Sensor
-Adafruit_BME680 bme;
+Adafruit_BME280 bme;
 bool bme_ready = false;
 
 
-void init_BME680(bool show_log){
-  if (!bme.begin(BME680_I2C_ADDR)) {
+void init_BME280(bool show_log){
+  if (!bme.begin(BME280_I2C_ADDR)) {
     if (show_log) {
-      display_print(0, 2, "[WARN] BME680 init failed");
+      display_print(0, 2, "[WARN] BME280 init failed");
     }
     bme_ready = false;
     return;
   }
   bme_ready = true;
-  bme.setTemperatureOversampling(BME680_OS_8X);
-  bme.setHumidityOversampling(BME680_OS_2X);
-  bme.setPressureOversampling(BME680_OS_4X);
-  bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
-  bme.setGasHeater(320, 150);
+  // Force a fresh sample on each read; modest oversampling for stability.
+  bme.setSampling(Adafruit_BME280::MODE_FORCED,
+                  Adafruit_BME280::SAMPLING_X4,   // temperature
+                  Adafruit_BME280::SAMPLING_X4,   // pressure
+                  Adafruit_BME280::SAMPLING_X4,   // humidity
+                  Adafruit_BME280::FILTER_X4);
   if (show_log) {
-    display_print(0, 2, "[I] BME680 initialized");
+    display_print(0, 2, "[I] BME280 initialized");
   }
 }
 
@@ -37,24 +38,24 @@ void init_BME680(bool show_log){
 void init_sensors(){
   Wire.begin();
   Wire.setTimeout(I2C_TIMEOUT_MS);
-  init_BME680(true);
+  init_BME280(true);
 }
 
 
 
-// Temperature / Humidity / Pressure (BME680)
-bool get_data_BME680(float *temperature, float *humidity, float *pressure) {
+// Temperature / Humidity / Pressure (BME280)
+bool get_data_BME280(float *temperature, float *humidity, float *pressure) {
   if (!bme_ready) {
-    Serial.println("[WARN] BME680 not ready");
+    Serial.println("[WARN] BME280 not ready");
     return false;
   }
-  if (!bme.performReading()) {
-    Serial.println("[WARN] BME680 read failed");
+  if (!bme.takeForcedMeasurement()) {
+    Serial.println("[WARN] BME280 read failed");
     return false;
   }
-  *temperature = bme.temperature;
-  *humidity = bme.humidity;
-  *pressure = bme.pressure / 100.0;
+  *temperature = bme.readTemperature();
+  *humidity = bme.readHumidity();
+  *pressure = bme.readPressure() / 100.0; // Pa -> hPa
   return true;
 }
 
@@ -111,8 +112,8 @@ struct Sensor_data get_sensor_data(){
   int n_co2_concentration = 0;
   for (int i = 0; i < SENSOR_N_DATA_FOR_AVERAGE; ++i){
     Serial.print("=");
-    bool ok_bme680 = get_data_BME680(&temperatures[n_temperature], &humidities[n_humidity], &pressures[n_pressure]);
-    if (ok_bme680) {
+    bool ok_bme280 = get_data_BME280(&temperatures[n_temperature], &humidities[n_humidity], &pressures[n_pressure]);
+    if (ok_bme280) {
       ++n_temperature;
       ++n_humidity;
       ++n_pressure;
@@ -126,7 +127,7 @@ struct Sensor_data get_sensor_data(){
       Serial.print(pressures[n_pressure - 1]);
       Serial.print("hPa]");
     } else {
-      Serial.println("BME680 failed");
+      Serial.println("BME280 failed");
     }
     // ここで得た値を表示して
     delay(600);
