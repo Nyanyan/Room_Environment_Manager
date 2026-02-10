@@ -1,6 +1,12 @@
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
+#define AC_USE_MITSUBISHI false // set to 0 for Panasonic
+
+#if AC_USE_MITSUBISHI
 #include <ir_Mitsubishi.h>
+#else
+#include <ir_Panasonic.h>
+#endif
 #include "air_conditioner.h"
 #include "command.h"
 #include "sensors.h"
@@ -9,8 +15,13 @@
 
 #define AC_N_TRY 1
 
-// IR transmitter on AC_LED_PIN controls the Mitsubishi air conditioner directly
+#if AC_USE_MITSUBISHI
+// IR transmitter controls Mitsubishi A/C
 IRMitsubishiAC ac(AC_LED_PIN);
+#else
+// IR transmitter controls Panasonic A/C
+IRPanasonicAc ac(AC_LED_PIN);
+#endif
 
 void init_ac(AC_status &ac_status){
   ac.begin();
@@ -31,6 +42,7 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
   ac_status.state = AC_STATE_COOL;
   ac_status.temp = set_temp;
   for (int i = 0; i < AC_N_TRY; ++i){
+    #if AC_USE_MITSUBISHI
     ac.on();
     ac.setFan(kMitsubishiAcFanAuto);
     ac.setMode(kMitsubishiAcCool);
@@ -38,6 +50,15 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
     ac.setVane(kMitsubishiAcVaneAuto);      // vertical auto
     ac.setVaneLeft(kMitsubishiAcVaneAuto);  // keep left vane in sync
     ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    #else
+    ac.setModel(kPanasonicRkr);
+    ac.on();
+    ac.setFan(kPanasonicAcFanAuto);
+    ac.setMode(kPanasonicAcCool);
+    ac.setTemp(set_temp);
+    ac.setSwingVertical(kPanasonicAcSwingVHighest);
+    ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #endif
     ac.send();
     delay(1000);
   }
@@ -48,6 +69,7 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
   ac_status.state = AC_STATE_DRY;
   ac_status.temp = set_temp;
   for (int i = 0; i < AC_N_TRY; ++i){
+    #if AC_USE_MITSUBISHI
     ac.on();
     ac.setFan(kMitsubishiAcFanAuto);
     ac.setMode(kMitsubishiAcDry);
@@ -55,6 +77,15 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
     ac.setVane(kMitsubishiAcVaneAuto);
     ac.setVaneLeft(kMitsubishiAcVaneAuto);
     ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    #else
+    ac.setModel(kPanasonicRkr);
+    ac.on();
+    ac.setFan(kPanasonicAcFanAuto);
+    ac.setMode(kPanasonicAcDry);
+    ac.setTemp(set_temp);
+    ac.setSwingVertical(kPanasonicAcSwingVHighest);
+    ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #endif
     ac.send();
     delay(1000);
   }
@@ -65,6 +96,7 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
   ac_status.state = AC_STATE_HEAT;
   ac_status.temp = set_temp;
   for (int i = 0; i < AC_N_TRY; ++i){
+    #if AC_USE_MITSUBISHI
     ac.on();
     ac.setFan(kMitsubishiAcFanAuto);
     ac.setMode(kMitsubishiAcHeat);
@@ -72,6 +104,15 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
     ac.setVane(kMitsubishiAcVaneAuto);
     ac.setVaneLeft(kMitsubishiAcVaneAuto);
     ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    #else
+    ac.setModel(kPanasonicRkr);
+    ac.on();
+    ac.setFan(kPanasonicAcFanAuto);
+    ac.setMode(kPanasonicAcHeat);
+    ac.setTemp(set_temp);
+    ac.setSwingVertical(kPanasonicAcSwingVHighest);
+    ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #endif
     ac.send();
     delay(1000);
   }
@@ -83,7 +124,12 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
 void ac_off(AC_status &ac_status){
   ac_status.state = AC_STATE_OFF;
   for (int i = 0; i < 5; ++i){
+    #if AC_USE_MITSUBISHI
     ac.off();
+    #else
+    ac.setModel(kPanasonicRkr);
+    ac.off();
+    #endif
     ac.send();
     delay(1000);
   }
