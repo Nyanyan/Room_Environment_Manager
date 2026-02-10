@@ -58,7 +58,7 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
       ac_auto_str += "H ";
     }
     ac_auto_str += String((int)settings.ac_auto_temp) + "." + String((int)(settings.ac_auto_temp * 10) - ((int)settings.ac_auto_temp * 10));
-    display_print(11, 2, ac_auto_str);
+    display_print(9, 2, ac_auto_str);
   }
 
   // 4th line
@@ -72,8 +72,8 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
     } else if (ac_status.state == AC_STATE_HEAT) {
       ac_mode = "\xc0\xde\xdd\xce\xde\xb3"; // ﾀﾞﾝﾎﾞｳ
     }
-    display_print(11, 3, String(ac_mode + " ") + String(ac_status.temp));
+    display_print(9, 3, String(ac_mode + " ") + String(ac_status.temp));
   } else{
-    display_print(11, 3, "OFF");
+    display_print(9, 3, "OFF");
   }
 }
