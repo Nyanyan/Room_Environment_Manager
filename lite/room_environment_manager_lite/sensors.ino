@@ -1,6 +1,4 @@
 #include <Wire.h>
-#include <MHZ19_uart.h> // https://github.com/nara256/mhz19_uart
-#include <SPI.h>
 #include <Adafruit_Sensor.h>
 #include <float.h>
 #include "Adafruit_BME680.h"
@@ -9,16 +7,22 @@
 
 // Avoid rare I2C lockups by enforcing a timeout on transactions.
 constexpr uint16_t I2C_TIMEOUT_MS = 2000;
-
-// CO2 sensor
-MHZ19_uart mhz19;
+constexpr uint8_t BME680_I2C_ADDR = 0x76;
 
 // Pressure Sensor
 Adafruit_BME680 bme;
+bool bme_ready = false;
 
 
 void init_BME680(bool show_log){
-  bme.begin();
+  if (!bme.begin(BME680_I2C_ADDR)) {
+    if (show_log) {
+      display_print(0, 2, "[WARN] BME680 init failed");
+    }
+    bme_ready = false;
+    return;
+  }
+  bme_ready = true;
   bme.setTemperatureOversampling(BME680_OS_8X);
   bme.setHumidityOversampling(BME680_OS_2X);
   bme.setPressureOversampling(BME680_OS_4X);
@@ -40,6 +44,10 @@ void init_sensors(){
 
 // Temperature / Humidity / Pressure (BME680)
 bool get_data_BME680(float *temperature, float *humidity, float *pressure) {
+  if (!bme_ready) {
+    Serial.println("[WARN] BME680 not ready");
+    return false;
+  }
   if (!bme.performReading()) {
     Serial.println("[WARN] BME680 read failed");
     return false;
@@ -108,8 +116,20 @@ struct Sensor_data get_sensor_data(){
       ++n_temperature;
       ++n_humidity;
       ++n_pressure;
+      Serial.print(" [sample");
+      Serial.print(i + 1);
+      Serial.print(": T=");
+      Serial.print(temperatures[n_temperature - 1]);
+      Serial.print("C H=");
+      Serial.print(humidities[n_humidity - 1]);
+      Serial.print("% P=");
+      Serial.print(pressures[n_pressure - 1]);
+      Serial.print("hPa]");
+    } else {
+      Serial.println("BME680 failed");
     }
-    co2_concentrations[n_co2_concentration++] = mhz19.getCO2PPM();
+    // ここで得た値を表示して
+    delay(600);
   }
   Serial.println("");
 
