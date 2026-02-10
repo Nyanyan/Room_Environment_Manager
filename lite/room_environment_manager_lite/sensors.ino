@@ -54,7 +54,6 @@ void init_sensors(){
   Wire.setTimeout(I2C_TIMEOUT_MS);
   init_SHT31(true);
   init_BME680(true);
-  init_MHZ19C(true);
 }
 
 
