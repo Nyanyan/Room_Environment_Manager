@@ -110,11 +110,10 @@ String format_sensor_value(float v, int decimals, const char *unit) {
   return String(v, decimals) + String(" ") + String(unit);
 }
 
-void append_sensor_block(String &str, const char *title, const SensorReading &reading) {
-  str += String("[") + title + String("]\n");
-  str += "- Temp : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
-  str += "- Hum : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
-  str += "- Pres : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
+void append_sensor_block(String &str, const SensorReading &reading) {
+  str += "- 温度 : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
+  str += "- 湿度 : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
+  str += "- 気圧 : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
 }
 
 } // namespace
@@ -160,7 +159,7 @@ struct Command command_get(){
 
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
-  String str = "<room environment>\n";
+  String str = "<部屋の環境>\n";
   const SensorReading &heat_src = sensor_data.parent;
   if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= 31.0){
     if (settings.alert_when_hot){
@@ -169,7 +168,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     str += "!!!!!HEAT!!!!!\n";
   }
 
-  append_sensor_block(str, "parent", sensor_data.parent);
+  append_sensor_block(str, sensor_data.parent);
 
   str += "AC auto : ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
