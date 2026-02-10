@@ -29,9 +29,7 @@ struct SensorReading{
 };
 
 struct Sensor_data{
-  SensorReading parent;                           // values measured by the parent device
-  // SensorReading additional[N_ADDITIONAL_SENSORS]; // cached values for each additional sensor
-  SensorReading representative;                   // weighted representative value used for control/graphs
+  SensorReading parent;                           // values measured by the single sensor
 };
 
 Sensor_data get_sensor_data();

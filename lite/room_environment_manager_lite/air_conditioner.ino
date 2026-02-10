@@ -106,7 +106,7 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
 
   // Clamp target to the allowed AC range
   const double target_temp = constrain(settings.ac_auto_temp, (double)AC_TEMP_LIMIT_MIN, (double)AC_TEMP_LIMIT_MAX);
-  const double current_temp = sensor_data.representative.temperature;
+  const double current_temp = sensor_data.parent.temperature;
   if (current_temp == FLT_MAX) {
     return; // skip control when no valid temperature
   }

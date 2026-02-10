@@ -407,7 +407,7 @@ void graph_add_data(Graph_data &graph_data, Sensor_data &sensor_data){
     graph_data.pressure[i] = graph_data.pressure[i + 1];
   }
 
-  const SensorReading &reading = sensor_data.representative;
+  const SensorReading &reading = sensor_data.parent;
   graph_data.temperature[GRAPH_DATA_N - 1] = (reading.temperature == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.temperature;
   graph_data.humidity[GRAPH_DATA_N - 1] = (reading.humidity == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.humidity;
   graph_data.pressure[GRAPH_DATA_N - 1] = (reading.pressure == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.pressure;

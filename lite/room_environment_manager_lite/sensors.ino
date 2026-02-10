@@ -161,48 +161,18 @@ struct Sensor_data get_sensor_data(){
   sensor_data.parent.pressure = compute_trimmed_mean(pressures, n_pressure);
   sensor_data.parent.co2_concentration = compute_trimmed_mean(co2_concentrations, n_co2_concentration);
 
-  // Representative (weighted) data for control/graphs
-  SensorReading representative_sum;
-  SensorReading weight_sum;
-  representative_sum.temperature = 0.0f;
-  representative_sum.humidity = 0.0f;
-  representative_sum.pressure = 0.0f;
-  representative_sum.co2_concentration = 0.0f;
-  weight_sum.temperature = 0.0f;
-  weight_sum.humidity = 0.0f;
-  weight_sum.pressure = 0.0f;
-  weight_sum.co2_concentration = 0.0f;
-
-  auto accumulate_if_valid = [&](float value, float weight, float &acc, float &w_acc) {
-    if (value != FLT_MAX) {
-      acc += value * weight;
-      w_acc += weight;
-    }
-  };
-
-  // base with parent sensor contribution
-  accumulate_if_valid(sensor_data.parent.temperature, sensor_weight_parent, representative_sum.temperature, weight_sum.temperature);
-  accumulate_if_valid(sensor_data.parent.humidity, sensor_weight_parent, representative_sum.humidity, weight_sum.humidity);
-  accumulate_if_valid(sensor_data.parent.pressure, sensor_weight_parent, representative_sum.pressure, weight_sum.pressure);
-  accumulate_if_valid(sensor_data.parent.co2_concentration, sensor_weight_parent, representative_sum.co2_concentration, weight_sum.co2_concentration);
-
-  sensor_data.representative.temperature = (weight_sum.temperature > 0.0f) ? representative_sum.temperature / weight_sum.temperature : FLT_MAX;
-  sensor_data.representative.humidity = (weight_sum.humidity > 0.0f) ? representative_sum.humidity / weight_sum.humidity : FLT_MAX;
-  sensor_data.representative.pressure = (weight_sum.pressure > 0.0f) ? representative_sum.pressure / weight_sum.pressure : FLT_MAX;
-  sensor_data.representative.co2_concentration = (weight_sum.co2_concentration > 0.0f) ? representative_sum.co2_concentration / weight_sum.co2_concentration : FLT_MAX;
-
-  Serial.print("Representative data: ");
+  Serial.print("Sensor data: ");
   Serial.print("Temp: ");
-  Serial.print(sensor_data.representative.temperature);
+  Serial.print(sensor_data.parent.temperature);
   Serial.print("*C ");
   Serial.print("Hum: ");
-  Serial.print(sensor_data.representative.humidity);
+  Serial.print(sensor_data.parent.humidity);
   Serial.print("% ");
   Serial.print("Prs: ");
-  Serial.print(sensor_data.representative.pressure);
+  Serial.print(sensor_data.parent.pressure);
   Serial.print("hPa ");
   Serial.print("CO2: ");
-  Serial.print(sensor_data.representative.co2_concentration);
+  Serial.print(sensor_data.parent.co2_concentration);
   Serial.print("ppm ");
   Serial.println("");
   return sensor_data;

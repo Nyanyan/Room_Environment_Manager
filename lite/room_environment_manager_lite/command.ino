@@ -110,20 +110,11 @@ String format_sensor_value(float v, int decimals, const char *unit) {
   return String(v, decimals) + String(" ") + String(unit);
 }
 
-String format_sensor_thi(const SensorReading &reading) {
-  if (!is_valid_sensor_value(reading.temperature) || !is_valid_sensor_value(reading.humidity)) {
-    return String("N/A");
-  }
-  return String(sensor_calc_thi(reading.temperature, reading.humidity));
-}
-
 void append_sensor_block(String &str, const char *title, const SensorReading &reading) {
   str += String("[") + title + String("]\n");
   str += "- Temp : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
   str += "- Hum : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
   str += "- Pres : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
-  str += "- CO2 : " + format_sensor_value(reading.co2_concentration, 0, "ppm") + "\n";
-  str += "- THI : " + format_sensor_thi(reading) + "\n";
 }
 
 } // namespace
@@ -170,7 +161,7 @@ struct Command command_get(){
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
   String str = "<room environment>\n";
-  const SensorReading &heat_src = is_valid_sensor_value(sensor_data.representative.temperature) ? sensor_data.representative : sensor_data.parent;
+  const SensorReading &heat_src = sensor_data.parent;
   if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= 31.0){
     if (settings.alert_when_hot){
       str += "<!channel>\n";
@@ -179,11 +170,6 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   }
 
   append_sensor_block(str, "parent", sensor_data.parent);
-  for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
-    String title = String("additional ") + String(i + 1);
-    append_sensor_block(str, title.c_str(), sensor_data.additional[i]);
-  }
-  append_sensor_block(str, "representative", sensor_data.representative);
 
   str += "AC auto : ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
@@ -235,20 +221,10 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
   graph_encode_bmp(graph_img);
   String graph_pressure = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_PRESSURE);
 
-  graph_draw_co2_concentration(graph_data, graph_img, time_info);
-  graph_encode_bmp(graph_img);
-  String graph_co2 = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_CO2_CONCENTRATION);
-
-  graph_draw_thi(graph_data, graph_img, time_info);
-  graph_encode_bmp(graph_img);
-  String graph_thi = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_THI);
-
   String str = 
     String("<") + graph_temperature + String("| >") + 
     String("<") + graph_humidity + String("| >") + 
-    String("<") + graph_pressure + String("| >") + 
-    String("<") + graph_co2 + String("| >") + 
-    String("<") + graph_thi + String("| >");
+    String("<") + graph_pressure + String("| >");
   return str;
 }
 
