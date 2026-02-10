@@ -17,25 +17,6 @@ MHZ19_uart mhz19;
 Adafruit_BME680 bme;
 
 
-
-void init_SHT31(bool show_log){
-  Wire.beginTransmission(SHT31_ADDR);
-  Wire.write(SHT31_SOFT_RESET_MSB);
-  Wire.write(SHT31_SOFT_RESET_LSB);
-  Wire.endTransmission();
-  delay(500);
-  Wire.beginTransmission(SHT31_ADDR);
-  Wire.write(SHT31_CLEAR_STATUS_REGISTER_MSB);
-  Wire.write(SHT31_CLEAR_STATUS_REGISTER_LSB);
-  Wire.endTransmission();
-  delay(500);
-  Serial.println("Temperature & Humidity Sensor Initialized");
-  if (show_log) {
-    display_print(0, 1, "[I] SHT31 TH");
-  }
-}
-
-
 void init_BME680(bool show_log){
   bme.begin();
   bme.setTemperatureOversampling(BME680_OS_8X);
@@ -52,43 +33,21 @@ void init_BME680(bool show_log){
 void init_sensors(){
   Wire.begin();
   Wire.setTimeout(I2C_TIMEOUT_MS);
-  init_SHT31(true);
   init_BME680(true);
 }
 
 
 
-// temperature & humidity
-bool get_data_SHT31(float *temperature, float *humidity) {
-  unsigned int buf[6];
-  Wire.beginTransmission(SHT31_ADDR);
-  Wire.write(SHT31_SINGLE_SHOT_HIGH_MSB);
-  Wire.write(SHT31_SINGLE_SHOT_HIGH_LSB);
-  Wire.endTransmission();
-  delay(300);
-  int n_bytes = Wire.requestFrom(SHT31_ADDR, 6);
-  if (n_bytes != 6) {
-    Serial.println("[WARN] SHT31 read timed out");
-    init_SHT31(false);
-    delay(1000);
+// Temperature / Humidity / Pressure (BME680)
+bool get_data_BME680(float *temperature, float *humidity, float *pressure) {
+  if (!bme.performReading()) {
+    Serial.println("[WARN] BME680 read failed");
     return false;
   }
-  for (int i = 0; i < 6; ++i){
-    buf[i] = Wire.read();
-  }
-  uint32_t t = (buf[0] << 8) | buf[1];
-  *temperature = (float)t * 175 / 65535.0 - 45.0;
-  uint32_t h = (buf[3] << 8) | buf[4];
-  *humidity = (float)(h) / 65535.0 * 100.0;
+  *temperature = bme.temperature;
+  *humidity = bme.humidity;
+  *pressure = bme.pressure / 100.0;
   return true;
-}
-
-
-
-// Pressure
-float get_data_BME680() {
-  bme.performReading();
-  return bme.pressure / 100.0;
 }
 
 
@@ -144,12 +103,12 @@ struct Sensor_data get_sensor_data(){
   int n_co2_concentration = 0;
   for (int i = 0; i < SENSOR_N_DATA_FOR_AVERAGE; ++i){
     Serial.print("=");
-    bool ok_sht31 = get_data_SHT31(&temperatures[n_temperature], &humidities[n_humidity]);
-    if (ok_sht31) {
+    bool ok_bme680 = get_data_BME680(&temperatures[n_temperature], &humidities[n_humidity], &pressures[n_pressure]);
+    if (ok_bme680) {
       ++n_temperature;
       ++n_humidity;
+      ++n_pressure;
     }
-    pressures[n_pressure++] = get_data_BME680();
     co2_concentrations[n_co2_concentration++] = mhz19.getCO2PPM();
   }
   Serial.println("");
