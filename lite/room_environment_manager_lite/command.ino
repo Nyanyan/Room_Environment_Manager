@@ -160,46 +160,34 @@ struct Command command_get(){
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
   String str = "<部屋の環境>\n";
-  const SensorReading &heat_src = sensor_data.parent;
-  if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= 31.0){
-    if (settings.alert_when_hot){
-      str += "<!channel>\n";
-    }
-    str += "!!!!!HEAT!!!!!\n";
-  }
 
   append_sensor_block(str, sensor_data.parent);
 
-  str += "AC auto : ";
+  str += "エアコン自動制御: ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";
   } else {
     if (settings.ac_auto_mode == AC_AUTO_COOL){
-      str += "Cool ";
+      str += "冷房 ";
     } else if (settings.ac_auto_mode == AC_AUTO_DRY){
-      str += "Dry ";
+      str += "ドライ ";
     } else if (settings.ac_auto_mode == AC_AUTO_HEAT){
-      str += "Heat ";
+      str += "暖房 ";
     }
-    str += String(settings.ac_auto_temp) + "\n";
+    str += String(settings.ac_auto_temp) + " *C\n";
   }
   if (ac_status.state != AC_STATE_OFF){
     String ac_mode = "?";
     if (ac_status.state == AC_STATE_COOL) {
-      ac_mode = "Cool";
+      ac_mode = "冷房";
     } else if (ac_status.state == AC_STATE_DRY) {
-      ac_mode = "Dry";
+      ac_mode = "ドライ";
     } else if (ac_status.state == AC_STATE_HEAT) {
-      ac_mode = "Heat";
+      ac_mode = "暖房";
     }
-    str += "AC status : " + ac_mode + " " + String(ac_status.temp) + " *C\n";
+    str += "エアコン状態: " + ac_mode + " " + String(ac_status.temp) + " *C\n";
   } else {
     str += "AC status : OFF\n";
-  }
-  if (settings.alert_when_hot){
-    str += "Alert when hot : ON\n";
-  } else{
-    str += "Alert when hot : OFF\n";
   }
   // str += get_graph_urls(graph_data, graph_img, time_info);
   slack_send_message(time_info, str);
@@ -232,35 +220,27 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
 void command_print_command_list(Time_info &time_info){
   String str = "<command list>\n";
   str += "- ac\n";
-  str += "  - ac [mode] [temp]\n";
-  str += "    - on air conditioner\n";
-  str += "    - mode: cool (c) / dry (d) / heat (h)\n";
-  str += "    - temp must be in [16,30]\n";
-  str += "  - ac off\n";
-  str += "    - off air conditioner\n";
+  str += "  - ac [モード] [温度]\n";
+  str += "    - エアコンを起動する\n";
+  str += "    - モード: cool (c) / dry (d) / heat (h)\n";
+  str += "    - 設定温度は16度から30度まで\n";
+  str += "    - 例: `ac c 28`: 冷房を28度設定でつける\n";
   str += "  - ac auto (a)\n";
-  str += "    - ac auto [mode] [temp]\n";
-  str += "      - mode: cool (c) / dry (d) / heat (h)\n";
-  str += "    - ac auto off\n";
-  str += "      - off ac auto mode\n";
-  str += "- reserve (r)\n";
-  str += "  - command reservation\n";
-  str += "  - reserve new (r n) [YYYYMMDD] [hhmm] [command]\n";
-  str += "    - new command reservation\n";
-  str += "  - reserve check (r c)\n";
-  str += "    - check command reservation\n";
-  str += "  - reserve delete (r d) [reservation_id]\n";
-  str += "    - delete reservation\n";
-  str += "- set\n";
-  str += "  - set alert [on/off]\n";
-  str += "    - alert on slack when very hot\n";
+  str += "    - 部屋の温度を一定に保つようにエアコンを制御する\n";
+  str += "    - ac auto [モード] [温度]\n";
+  str += "      - モード: cool (c) / dry (d) / heat (h)\n";
+  str += "      - 例: `ac a c 28`: 部屋の温度が28度になるようにエアコンを制御する\n";
+  str += "  - ac off\n";
+  str += "    - エアコンを切る\n";
+  str += "    - エアコン自動制御も切れる\n";
   str += "- monitor\n";
-  str += "  - check environment\n";
+  str += "  - 部屋の環境やエアコンの設定を見る\n";
   str += "- help\n";
+  str += "  - これを表示する\n";
   str += "- reboot\n";
+  str += "  - 再起動する\n";
   slack_send_message(time_info, str);
 }
-
 
 
 void command_check_ac(Command command, Time_info &time_info, Settings &settings, AC_status &ac_status){
@@ -541,8 +521,8 @@ void command_process(Command command, Time_info &time_info, Sensor_data &sensor_
     return;
   }
   command_check_ac(command, time_info, settings, ac_status);
-  command_check_reserve(command, time_info, settings, ac_status);
-  command_check_set(command, time_info);
+  // command_check_reserve(command, time_info, settings, ac_status);
+  // command_check_set(command, time_info);
   command_check_monitor(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);
   command_check_help(command, time_info);
   command_check_reboot(command, time_info);
