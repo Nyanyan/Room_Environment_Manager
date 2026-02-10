@@ -6,10 +6,6 @@
 
 #define SENSOR_N_DATA_FOR_AVERAGE 25
 
-// CO2 MH-Z19C
-#define MHZ19C_RX_PIN 16
-#define MHZ19C_TX_PIN 17
-
 struct SensorReading{
   float temperature;
   float humidity;

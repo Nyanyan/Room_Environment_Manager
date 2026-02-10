@@ -25,6 +25,7 @@ void display_print(int x, int y, const char *str) {
 
 
 void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Time_info &time_info){
+  display_clear();
   const SensorReading &parent = sensor_data.parent;
   auto fmt_or_placeholder = [](float value, int decimals, const char *suffix, const char *placeholder) {
     if (value == FLT_MAX) {
@@ -33,43 +34,45 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
     return String(String(value, decimals) + String(suffix));
   };
 
+  // 1st line
   display_print(0, 0, fmt_or_placeholder(parent.temperature, 1, " *C ", "---- *C "));
-  display_print(11, 0, fmt_or_placeholder(parent.humidity, 0, " %  ", "---- %  "));
-  display_print(0, 1, fmt_or_placeholder(parent.pressure, 1, " hPa ", "---- hPa"));
-  display_print(11, 1, fmt_or_placeholder(parent.co2_concentration, 0, " ppm  ", "---- ppm "));
+  display_print(11, 0, String(time_info.time_str));
+  
+  // 2nd line
+  display_print(0, 1, fmt_or_placeholder(parent.humidity, 0, " %  ", "---- %  "));
+  display_print(11, 1, fmt_or_placeholder(parent.pressure, 0, " hPa ", "---- hPa"));
+  
 
+  // 3rd line
+  display_print(0, 2, "\xb4\xb1\xba\xdd"" ""\xbf\xb3\xbb"":"); // ｴｱｺﾝ ｿｳｻ:
   if (settings.ac_auto_mode == AC_AUTO_OFF){
-    display_print(0, 2, "MANUAL   ");
+    display_print(11, 2, "\xbc\xad\xc4\xde\xb3"); // ｼｭﾄﾞｳ
   } else {
-    String ac_auto_str = "AUTO ";
+    String ac_auto_str = "\xb5\xb0\xc4"" "; // ｵｰﾄ 
     if (settings.ac_auto_mode == AC_AUTO_COOL) {
-      ac_auto_str += "C";
+      ac_auto_str += "C ";
     } else if (settings.ac_auto_mode == AC_AUTO_DRY) {
-      ac_auto_str += "D";
+      ac_auto_str += "D ";
     } else if (settings.ac_auto_mode == AC_AUTO_HEAT) {
-      ac_auto_str += "H";
+      ac_auto_str += "H ";
     }
     ac_auto_str += String((int)settings.ac_auto_temp) + "." + String((int)(settings.ac_auto_temp * 10) - ((int)settings.ac_auto_temp * 10));
-    display_print(0, 2, ac_auto_str);
+    display_print(11, 2, ac_auto_str);
   }
+
+  // 4th line
+  display_print(0, 3, "\xbc\xde\xae\xb3\xc0\xb2"":"); // ｼﾞｮｳﾀｲ:
   if (ac_status.state != AC_STATE_OFF){
     String ac_mode = "?";
     if (ac_status.state == AC_STATE_COOL) {
-      ac_mode = "C";
+      ac_mode = "\xda\xb2\xce\xde\xb3"; // ﾚｲﾎﾞｳ
     } else if (ac_status.state == AC_STATE_DRY) {
-      ac_mode = "D";
+      ac_mode = "\xc4\xde\xd7\xb2"; // ﾄﾞﾗｲ
     } else if (ac_status.state == AC_STATE_HEAT) {
-      ac_mode = "H";
+      ac_mode = "\xc0\xde\xdd\xce\xde\xb3"; // ﾀﾞﾝﾎﾞｳ
     }
-    display_print(11, 2, String("AC " + ac_mode + " ") + String(ac_status.temp));
+    display_print(11, 3, String(ac_mode + " ") + String(ac_status.temp));
   } else{
-    display_print(11, 2, "AC OFF  ");
+    display_print(11, 3, "OFF");
   }
-
-  if (settings.alert_when_hot){
-    display_print(0, 3, "ALERT ON ");
-  } else{
-    display_print(0, 3, "ALERT OFF");
-  }
-  display_print(11, 3, String(time_info.time_str));
 }

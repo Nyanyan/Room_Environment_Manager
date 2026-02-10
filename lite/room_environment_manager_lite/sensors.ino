@@ -117,19 +117,9 @@ struct Sensor_data get_sensor_data(){
       ++n_temperature;
       ++n_humidity;
       ++n_pressure;
-      // Serial.print(" [sample");
-      // Serial.print(i + 1);
-      // Serial.print(": T=");
-      // Serial.print(temperatures[n_temperature - 1]);
-      // Serial.print("C H=");
-      // Serial.print(humidities[n_humidity - 1]);
-      // Serial.print("% P=");
-      // Serial.print(pressures[n_pressure - 1]);
-      // Serial.print("hPa]");
     } else {
       Serial.println("BME280 failed");
     }
-    // ここで得た値を表示して
     delay(600);
   }
   Serial.println("");

@@ -29,6 +29,7 @@ void setup() {
 
   display_clear();
   display_print(0, 0, "Started");
+  display_print(0, 1, "please wait a minute");
   time_info = time_get_local();
   slack_send_message(time_info, "[INFO] Started");
 }
