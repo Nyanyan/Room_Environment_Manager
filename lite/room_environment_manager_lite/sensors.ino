@@ -30,7 +30,7 @@ void init_BME280(bool show_log){
                   Adafruit_BME280::SAMPLING_X4,   // humidity
                   Adafruit_BME280::FILTER_X4);
   if (show_log) {
-    display_print(0, 2, "[I] BME280 initialized");
+    display_print(0, 1, "[I] BME280 init");
   }
 }
 

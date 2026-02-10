@@ -24,7 +24,8 @@ void display_print(int x, int y, const char *str) {
 }
 
 
-void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Time_info &time_info){
+void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status){
+  Time_info time_info = time_get_local();
   display_clear();
   const SensorReading &parent = sensor_data.parent;
   auto fmt_or_placeholder = [](float value, int decimals, const char *suffix, const char *placeholder) {
