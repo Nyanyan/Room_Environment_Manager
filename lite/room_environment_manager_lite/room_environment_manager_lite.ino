@@ -49,7 +49,7 @@ void setup() {
   display_print(0, 0, "[I] Initializing");
   init_wifi();
   Time_info time_info = time_get();
-  slack_send_message(time_info, "[INFO] Starting...");
+  slack_send_message(time_info, "[INFO] 起動中...");
   init_ac(ac_status);  
   init_graph(graph_img);
   init_sensors();
@@ -59,7 +59,7 @@ void setup() {
   display_print(0, 0, "Started");
   display_print(0, 1, "please wait a minute");
   time_info = time_get_local();
-  slack_send_message(time_info, "[INFO] Started");
+  slack_send_message(time_info, "[INFO] 起動しました");
 
   display_sem = xSemaphoreCreateBinary();
   xTaskCreatePinnedToCore(display_task, "display_task", 4096, nullptr, 2, &display_task_handle, 0);

@@ -163,7 +163,8 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
 
   append_sensor_block(str, sensor_data.parent);
 
-  str += "エアコン自動制御: ";
+  str += "<エアコンの状態>\n";
+  str += "- エアコン自動制御: ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";
   } else {
@@ -185,7 +186,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     } else if (ac_status.state == AC_STATE_HEAT) {
       ac_mode = "暖房";
     }
-    str += "エアコン状態: " + ac_mode + " " + String(ac_status.temp) + " *C\n";
+    str += "- エアコン状態: " + ac_mode + " " + String(ac_status.temp) + " *C\n";
   } else {
     str += "AC status : OFF\n";
   }
@@ -218,26 +219,25 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
 
 
 void command_print_command_list(Time_info &time_info){
-  String str = "<command list>\n";
-  str += "- ac\n";
-  str += "  - ac [モード] [温度]\n";
+  String str = "<使えるコマンド>\n";
+  str += "- `ac`\n";
+  str += "  - `ac [モード] [温度]`\n";
   str += "    - エアコンを起動する\n";
-  str += "    - モード: cool (c) / dry (d) / heat (h)\n";
+  str += "    - モード: `cool` (`c`) / `dry` (`d`) / `heat` (`h`)\n";
   str += "    - 設定温度は16度から30度まで\n";
   str += "    - 例: `ac c 28`: 冷房を28度設定でつける\n";
-  str += "  - ac auto (a)\n";
+  str += "  - `ac auto [モード] [温度]` (`auto`は`a`と省略可能)\n";
   str += "    - 部屋の温度を一定に保つようにエアコンを制御する\n";
-  str += "    - ac auto [モード] [温度]\n";
-  str += "      - モード: cool (c) / dry (d) / heat (h)\n";
-  str += "      - 例: `ac a c 28`: 部屋の温度が28度になるようにエアコンを制御する\n";
-  str += "  - ac off\n";
+  str += "    - モード: `cool` (`c`) / `dry` (`d`) / `heat` (`h`)\n";
+  str += "    - 例: `ac a c 28`: 部屋の温度が28度になるようにエアコンを制御する\n";
+  str += "  - `ac off`\n";
   str += "    - エアコンを切る\n";
   str += "    - エアコン自動制御も切れる\n";
-  str += "- monitor\n";
+  str += "- `monitor`\n";
   str += "  - 部屋の環境やエアコンの設定を見る\n";
-  str += "- help\n";
+  str += "- `help`\n";
   str += "  - これを表示する\n";
-  str += "- reboot\n";
+  str += "- `reboot`\n";
   str += "  - 再起動する\n";
   slack_send_message(time_info, str);
 }
@@ -250,13 +250,13 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
   if (command.arg1 == "cool" || command.arg1 == "c"){ // ac cool [arg2]
     int set_temp = command.arg2.toInt();
     if (set_temp < AC_TEMP_LIMIT_MIN || AC_TEMP_LIMIT_MAX < set_temp){ // ac cool [error]
-      String str = "[ERROR] AC temp error expected [16,30] got: " + command.arg2;
+      String str = "[ERROR] 設定温度は16度から30度にしてください。取得した温度: " + command.arg2;
       Serial.println(str);
       slack_send_message(time_info, str);
     } else{ // ac cool [temp]
       settings.ac_auto_mode = AC_AUTO_OFF;
       memory_save_settings(settings);
-      String str = "[INFO] AC COOL temp: " + command.arg2 + " *C";
+      String str = "[INFO] 冷房を設定温度" + command.arg2 + " *Cでつけました";
       Serial.println(str);
       slack_send_message(time_info, str);
       ac_cool_on(ac_status, set_temp);
@@ -264,13 +264,13 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
   } else if (command.arg1 == "dry" || command.arg1 == "d"){ // ac dry [arg2]
     int set_temp = command.arg2.toInt();
     if (set_temp < AC_TEMP_LIMIT_MIN || AC_TEMP_LIMIT_MAX < set_temp){ // ac dry [error]
-      String str = "[ERROR] AC temp error expected [16,30] got: " + command.arg2;
+      String str = "[ERROR] 設定温度は16度から30度にしてください。取得した温度: " + command.arg2;
       Serial.println(str);
       slack_send_message(time_info, str);
     } else { // ac dry [temp]
       settings.ac_auto_mode = AC_AUTO_OFF;
       memory_save_settings(settings);
-      String str = "[INFO] AC DRY temp: " + command.arg2 + " *C";
+      String str = "[INFO] ドライを設定温度" + command.arg2 + " *Cでつけました";
       Serial.println(str);
       slack_send_message(time_info, str);
       ac_dry_on(ac_status, set_temp);
@@ -278,13 +278,13 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
   } else if (command.arg1 == "heat" || command.arg1 == "h") { // ac heat [arg2]
     int set_temp = command.arg2.toInt();
     if (set_temp < AC_TEMP_LIMIT_MIN || AC_TEMP_LIMIT_MAX < set_temp){ // ac heat [error]
-      String str = "[ERROR] AC temp error expected [16,30] got: " + command.arg2;
+      String str = "[ERROR] 設定温度は16度から30度にしてください。取得した温度: " + command.arg2;
       Serial.println(str);
       slack_send_message(time_info, str);
     } else { // ac heat [temp]
       settings.ac_auto_mode = AC_AUTO_OFF;
       memory_save_settings(settings);
-      String str = "[INFO] AC HEAT temp: " + command.arg2 + " *C";
+      String str = "[INFO] 暖房を設定温度" + command.arg2 + " *Cでつけました";
       Serial.println(str);
       slack_send_message(time_info, str);
       ac_heat_on(ac_status, set_temp);
@@ -292,66 +292,60 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
   } else if (command.arg1 == "off") { // ac off
     settings.ac_auto_mode = AC_AUTO_OFF;
     memory_save_settings(settings);
-    String str = "[INFO] AC OFF";
+    String str = "[INFO] エアコンを切りました";
     Serial.println(str);
     slack_send_message(time_info, str);
     ac_off(ac_status);
   } else if (command.arg1 == "auto" || command.arg1 == "a") { // ac auto [arg2] [arg3]
-    if (command.arg2 == "off"){ // ac auto off
-      settings.ac_auto_mode = AC_AUTO_OFF;
-      memory_save_settings(settings);
-      String str = "[INFO] AC AUTO MODE OFF";
-      Serial.println(str);
-      slack_send_message(time_info, str);
-    } else if (command.arg2 == "cool" || command.arg2 == "c") { // ac auto cool [temp]
+    if (command.arg2 == "cool" || command.arg2 == "c") { // ac auto cool [temp]
       double set_temp = command.arg3.toDouble();
       if (set_temp == 0.0) {
-        String str = "[ERROR] AC AUTO COOL temp error, got: " + command.arg3;
+        String str = "[ERROR] 設定温度を取得できませんでした。取得したもの: " + command.arg3;
         Serial.println(str);
         slack_send_message(time_info, str);
       }
       settings.ac_auto_mode = AC_AUTO_COOL;
       settings.ac_auto_temp = set_temp;
       memory_save_settings(settings);
-      String str = "[INFO] AC AUTO COOL temp: " + command.arg3 + " *C";
+      String str = "[INFO] 部屋の温度が" + command.arg3 + " *Cとなるように冷房を制御します";
       Serial.println(str);
       slack_send_message(time_info, str);
       ac_cool_on(ac_status, round(set_temp));
     } else if (command.arg2 == "dry" || command.arg2 == "d") { // ac auto dry [temp]
       double set_temp = command.arg3.toDouble();
       if (set_temp == 0.0) {
-        String str = "[ERROR] AC AUTO DRY temp error, got: " + command.arg3;
+        String str = "[ERROR] 設定温度を取得できませんでした。取得したもの: " + command.arg3;
         Serial.println(str);
         slack_send_message(time_info, str);
       }
       settings.ac_auto_mode = AC_AUTO_DRY;
       settings.ac_auto_temp = set_temp;
       memory_save_settings(settings);
-      String str = "[INFO] AC AUTO DRY temp: " + command.arg3 + " *C";
+      String str = "[INFO] 部屋の温度が" + command.arg3 + " *Cとなるようにドライを制御します";
       Serial.println(str);
       slack_send_message(time_info, str);
       ac_dry_on(ac_status, round(set_temp));
     } else if (command.arg2 == "heat" || command.arg2 == "h") { // ac auto heat [temp]
       double set_temp = command.arg3.toDouble();
       if (set_temp == 0.0) {
-        String str = "[ERROR] AC AUTO HEAT temp error, got: " + command.arg3;
+        String str = "[ERROR] 設定温度を取得できませんでした。取得したもの: " + command.arg3;
         Serial.println(str);
         slack_send_message(time_info, str);
       }
       settings.ac_auto_mode = AC_AUTO_HEAT;
       settings.ac_auto_temp = set_temp;
       memory_save_settings(settings);
-      String str = "[INFO] AC AUTO HEAT temp: " + command.arg3 + " *C";
+      String str = "[INFO] 部屋の温度が" + command.arg3 + " *Cとなるように暖房を制御します";
       Serial.println(str);
       slack_send_message(time_info, str);
       ac_heat_on(ac_status, round(set_temp));
     } else { // ac auto [error]
-      String str = "[ERROR] AC AUTO WHAT???";
+      String str = "[ERROR] 構文が違います。`ac auto [モード] [温度]`と入力してください。helpと打つと詳細を確認できます。";
       Serial.println(str);
       slack_send_message(time_info, str);
     }
   } else { // ac [error]
-    String str = "[ERROR] AC COMMAND NOT FOUND";
+    String str = "[ERROR] 構文が違います。helpと打つと詳細を確認できます。";
     Serial.println(str);
     slack_send_message(time_info, str);
   }
@@ -509,7 +503,7 @@ void command_check_reboot(Command command, Time_info &time_info) {
   if (command.cmd != "reboot") {
     return;
   }
-  String str = "[INFO] REBOOT";
+  String str = "[INFO] 再起動します";
   Serial.println(str);
   slack_send_message(time_info, str);
   ESP.restart();
