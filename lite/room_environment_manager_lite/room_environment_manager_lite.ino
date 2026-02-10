@@ -1,3 +1,5 @@
+// controller: ESP32C3
+
 #include "air_conditioner.h"
 #include "display.h"
 #include "graph.h"

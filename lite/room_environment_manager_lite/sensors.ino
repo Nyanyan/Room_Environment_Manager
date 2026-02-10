@@ -25,7 +25,7 @@ void init_BME680(bool show_log){
   bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
   bme.setGasHeater(320, 150);
   if (show_log) {
-    display_print(0, 2, "[I] BME680 Pressure");
+    display_print(0, 2, "[I] BME680 initialized");
   }
 }
 

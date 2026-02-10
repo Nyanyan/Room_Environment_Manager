@@ -2,7 +2,7 @@
 #define AIR_CONDIRIONER_H
 
 // air conditioner auto controller
-#define AC_LED_PIN 15
+#define AC_LED_PIN D2
 
 // state
 #define AC_STATE_OFF 0
