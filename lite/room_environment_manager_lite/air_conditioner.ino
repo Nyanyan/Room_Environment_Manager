@@ -1,6 +1,6 @@
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
-#define AC_USE_MITSUBISHI false // set to 0 for Panasonic
+#define AC_USE_MITSUBISHI true // set to 0 for Panasonic
 
 #if AC_USE_MITSUBISHI
 #include <ir_Mitsubishi.h>
