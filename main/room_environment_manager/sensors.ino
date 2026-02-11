@@ -18,7 +18,7 @@ MHZ19_uart mhz19;
 Adafruit_BME680 bme;
 
 const double sensor_weight_parent = 1.0;
-const double sensor_weights_additional[N_ADDITIONAL_SENSORS] = {1.0};
+const double sensor_weights_additional[N_ADDITIONAL_SENSORS] = {1.0, 1.0};
 
 
 void init_SHT31(bool show_log){
@@ -211,6 +211,8 @@ struct Sensor_data get_sensor_data(){
       sensor_data.additional[i] = data;
       accumulate_if_valid(data.temperature, sensor_weights_additional[i], representative_sum.temperature, weight_sum.temperature);
       accumulate_if_valid(data.humidity, sensor_weights_additional[i], representative_sum.humidity, weight_sum.humidity);
+      accumulate_if_valid(data.pressure, sensor_weights_additional[i], representative_sum.pressure, weight_sum.pressure);
+      accumulate_if_valid(data.co2_concentration, sensor_weights_additional[i], representative_sum.co2_concentration, weight_sum.co2_concentration);
     }
   }
 

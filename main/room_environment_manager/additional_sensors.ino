@@ -17,6 +17,7 @@ struct AdditionalSensorPacket {
   char header[N_SLAVE_HEADER];
   float temperature_c;
   float humidity_pct;
+  float pressure_hpa;
 };
 
 static SensorReading g_additional_sensor_data[N_ADDITIONAL_SENSORS];
@@ -70,15 +71,25 @@ static void end_espnow_for_additional() {
 }
 
 static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-  if (data_len < (int)sizeof(AdditionalSensorPacket)) {
+  const int min_payload_bytes = N_SLAVE_HEADER + static_cast<int>(sizeof(float) * 2); // header + temp + humidity
+  if (data_len < min_payload_bytes) {
     return;
   }
-  const AdditionalSensorPacket *packet = reinterpret_cast<const AdditionalSensorPacket *>(data);
+
+  float temperature_c = 0.0f;
+  float humidity_pct = 0.0f;
+  float pressure_hpa = FLT_MAX;
+  memcpy(&temperature_c, data + N_SLAVE_HEADER, sizeof(float));
+  memcpy(&humidity_pct, data + N_SLAVE_HEADER + sizeof(float), sizeof(float));
+  if (data_len >= (int)sizeof(AdditionalSensorPacket)) {
+    memcpy(&pressure_hpa, data + N_SLAVE_HEADER + sizeof(float) * 2, sizeof(float));
+  }
+
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
-    if (memcmp(packet->header, additional_sensor_headers[i], N_SLAVE_HEADER) == 0) {
-      g_additional_sensor_data[i].temperature = packet->temperature_c;
-      g_additional_sensor_data[i].humidity = packet->humidity_pct;
-      g_additional_sensor_data[i].pressure = FLT_MAX;
+    if (memcmp(data, additional_sensor_headers[i], N_SLAVE_HEADER) == 0) {
+      g_additional_sensor_data[i].temperature = additional_sensor_available[i].temperature ? temperature_c : FLT_MAX;
+      g_additional_sensor_data[i].humidity = additional_sensor_available[i].humidity ? humidity_pct : FLT_MAX;
+      g_additional_sensor_data[i].pressure = (additional_sensor_available[i].pressure && data_len >= (int)sizeof(AdditionalSensorPacket)) ? pressure_hpa : FLT_MAX;
       g_additional_sensor_data[i].co2_concentration = FLT_MAX;
       g_additional_sensor_received[i] = true;
       g_additional_sensor_last_data[i] = g_additional_sensor_data[i];
@@ -87,9 +98,14 @@ static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, i
       Serial.print(i);
       Serial.print(" received: ");
       Serial.print("Temp: ");
-      Serial.print(packet->temperature_c);
+      Serial.print(g_additional_sensor_data[i].temperature);
       Serial.print(" C, Humidity: ");
-      Serial.print(packet->humidity_pct);
+      Serial.print(g_additional_sensor_data[i].humidity);
+      if (g_additional_sensor_data[i].pressure != FLT_MAX) {
+        Serial.print(", Pressure: ");
+        Serial.print(g_additional_sensor_data[i].pressure);
+        Serial.print(" hPa");
+      }
       Serial.println(" %");
     }
   }
