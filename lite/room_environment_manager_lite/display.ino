@@ -45,9 +45,9 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
   
 
   // 3rd line
-  display_print(0, 2, "\xb4\xb1\xba\xdd"" ""\xbf\xb3\xbb"":"); // ｴｱｺﾝ ｿｳｻ:
+  String third_line = "\xb4\xb1\xba\xdd"" ""\xbf\xb3\xbb"":"; // ｴｱｺﾝ ｿｳｻ:
   if (settings.ac_auto_mode == AC_AUTO_OFF){
-    display_print(11, 2, "\xbc\xad\xc4\xde\xb3"); // ｼｭﾄﾞｳ
+    third_line += "\xbc\xad\xc4\xde\xb3"; // ｼｭﾄﾞｳ
   } else {
     String ac_auto_str = "\xb5\xb0\xc4"" "; // ｵｰﾄ 
     if (settings.ac_auto_mode == AC_AUTO_COOL) {
@@ -57,12 +57,12 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
     } else if (settings.ac_auto_mode == AC_AUTO_HEAT) {
       ac_auto_str += "H ";
     }
-    ac_auto_str += String((int)settings.ac_auto_temp) + "." + String((int)(settings.ac_auto_temp * 10) - ((int)settings.ac_auto_temp * 10));
-    display_print(9, 2, ac_auto_str);
+    third_line += ac_auto_str + String((int)settings.ac_auto_temp) + "." + String((int)(settings.ac_auto_temp * 10) - ((int)settings.ac_auto_temp * 10));
   }
+  display_print(0, 2, third_line);
 
   // 4th line
-  display_print(0, 3, "\xbc\xde\xae\xb3\xc0\xb2"":"); // ｼﾞｮｳﾀｲ:
+  String fourth_line = "\xb4\xb1\xba\xdd"" ""\xbc\xde\xae\xb3\xc0\xb2"":"; // ｴｱｺﾝ ｼﾞｮｳﾀｲ:
   if (ac_status.state != AC_STATE_OFF){
     String ac_mode = "?";
     if (ac_status.state == AC_STATE_COOL) {
@@ -72,8 +72,9 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
     } else if (ac_status.state == AC_STATE_HEAT) {
       ac_mode = "\xc0\xde\xdd\xce\xde\xb3"; // ﾀﾞﾝﾎﾞｳ
     }
-    display_print(7, 3, String(ac_mode + " ") + String(ac_status.temp));
+    fourth_line += String(ac_mode + " ") + String(ac_status.temp);
   } else{
-    display_print(7, 3, "OFF");
+    fourth_line += "OFF";
   }
+  display_print(0, 3, fourth_line);
 }
