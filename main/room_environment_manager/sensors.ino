@@ -17,7 +17,7 @@ MHZ19_uart mhz19;
 // Pressure Sensor
 Adafruit_BME680 bme;
 
-const double sensor_weight_parent = 1.0;
+const double sensor_weight_parent = 0.5;
 const double sensor_weights_additional[N_ADDITIONAL_SENSORS] = {1.0, 1.0};
 
 

@@ -13,6 +13,20 @@ static const uint8_t ESPNOW_CHANNEL = 1;
 static const unsigned long ADDITIONAL_SENSOR_MAX_AGE_MS = 5UL * 60UL * 1000UL; // 5 minutes
 static const unsigned long ADDITIONAL_SENSOR_REQUEST_INTERVAL_MS = 60UL * 1000UL; // limit WiFi tear-down to at most once per minute
 
+
+struct Additional_sensor_available {
+    bool temperature;
+    bool humidity;
+    bool pressure;
+    bool co2_concentration;
+};
+
+const Additional_sensor_available additional_sensor_available[N_ADDITIONAL_SENSORS] = {
+    {true, true, false, false},
+    {true, true, true, false},
+};
+
+
 struct AdditionalSensorPacket {
   char header[N_SLAVE_HEADER];
   float temperature_c;
