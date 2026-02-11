@@ -10,7 +10,7 @@
 
 #define SLACK_CONNECT_N_TRY 3
 #define SLACK_HTTP_TIMEOUT_MS 5000
-
+#define WIFI_CONNECT_MAX_TRY 3
 
 
 // json
