@@ -92,6 +92,19 @@ esp_now_peer_info_t slave;
 #define N_SLAVE_DATA 2
 uint8_t send_data[N_SLAVE_HEADER + N_SLAVE_DATA];
 
+// Track the latest ESP-NOW delivery status when pinging the AC controller.
+static volatile bool g_ac_send_cb_called = false;
+static volatile bool g_ac_send_cb_success = false;
+static unsigned long g_last_ac_ping_ms = 0;
+static bool g_last_ac_ping_ok = false;
+constexpr unsigned long AC_PING_TIMEOUT_MS = 300;
+constexpr unsigned long AC_PING_CACHE_MS = 30000; // reuse ping result for 30s to avoid WiFi flapping
+
+static void on_ac_ping_send(const uint8_t *, esp_now_send_status_t status) {
+  g_ac_send_cb_called = true;
+  g_ac_send_cb_success = (status == ESP_NOW_SEND_SUCCESS);
+}
+
 void init_ac(AC_status &ac_status){
   memory_init();
   for (int i = 0; i < N_SLAVE_HEADER; ++i) {
@@ -226,6 +239,49 @@ void ac_off(AC_status &ac_status){
   send_data[N_SLAVE_HEADER + 1] = 'A';
   send_ac();
   memory_save_ac_status(ac_status);
+}
+
+
+
+bool ac_controller_check_connection() {
+  unsigned long now = millis();
+  if (g_last_ac_ping_ms != 0 && (now - g_last_ac_ping_ms) < AC_PING_CACHE_MS) {
+    return g_last_ac_ping_ok;
+  }
+
+  reset_wifi();
+  espnow_init();
+
+  g_ac_send_cb_called = false;
+  g_ac_send_cb_success = false;
+  esp_now_register_send_cb(on_ac_ping_send);
+
+  uint8_t ping_payload[N_SLAVE_HEADER + N_SLAVE_DATA];
+  for (int i = 0; i < N_SLAVE_HEADER; ++i) {
+    ping_payload[i] = slave_header[i];
+  }
+  ping_payload[N_SLAVE_HEADER] = 'P';
+  ping_payload[N_SLAVE_HEADER + 1] = 'A';
+
+  esp_err_t result = esp_now_send(slave.peer_addr, ping_payload, sizeof(ping_payload));
+  bool ok = false;
+  if (result == ESP_OK) {
+    unsigned long start = millis();
+    while (!g_ac_send_cb_called && (millis() - start) < AC_PING_TIMEOUT_MS) {
+      delay(10);
+    }
+    ok = g_ac_send_cb_called && g_ac_send_cb_success;
+  } else {
+    Serial.printf("[WARN] esp_now_send ping failed (%d)\n", result);
+  }
+
+  esp_now_register_send_cb(nullptr);
+  reset_wifi();
+  init_wifi();
+
+  g_last_ac_ping_ms = millis();
+  g_last_ac_ping_ok = ok;
+  return ok;
 }
 
 

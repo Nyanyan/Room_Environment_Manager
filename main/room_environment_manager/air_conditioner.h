@@ -63,4 +63,8 @@ struct AC_status{
   }
 };
 
+// Perform a lightweight reachability check to the AC controller via ESP-NOW.
+// Returns true when the last ping was acknowledged at the 802.11 level.
+bool ac_controller_check_connection();
+
 #endif

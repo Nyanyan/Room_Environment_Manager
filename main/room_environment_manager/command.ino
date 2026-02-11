@@ -112,10 +112,10 @@ String format_sensor_value(float v, int decimals, const char *unit) {
 
 void append_sensor_block(String &str, const char *title, const SensorReading &reading) {
   str += String("[") + title + String("]\n");
-  str += "- Temp : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
-  str += "- Hum : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
-  str += "- Pres : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
-  str += "- CO2 : " + format_sensor_value(reading.co2_concentration, 0, "ppm") + "\n";
+  str += "* Temp : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
+  str += "* Hum : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
+  str += "* Pres : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
+  str += "* CO2 : " + format_sensor_value(reading.co2_concentration, 0, "ppm") + "\n";
 }
 
 } // namespace
@@ -146,7 +146,7 @@ void command_send_reservation_list(Time_info &time_info) {
   } else {
     size_t to_show = n;
     for (size_t i = 0; i < to_show; ++i) {
-      str += "- " + format_reservation_line(reservations[i]) + "\n";
+      str += "* " + format_reservation_line(reservations[i]) + "\n";
     }
   }
   slack_send_message(time_info, str);
