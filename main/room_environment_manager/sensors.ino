@@ -102,10 +102,16 @@ bool get_data_SHT31(float *temperature, float *humidity) {
 
 
 
-// Pressure
-float get_data_BME680() {
-  bme.performReading();
-  return bme.pressure / 100.0;
+// Temperature / Humidity / Pressure (BME680)
+bool get_data_BME680(float *temperature, float *humidity, float *pressure) {
+  if (!bme.performReading()) {
+    Serial.println("[WARN] BME680 read failed");
+    return false;
+  }
+  *temperature = bme.temperature;
+  *humidity = bme.humidity;
+  *pressure = bme.pressure / 100.0; // Pa -> hPa
+  return true;
 }
 
 
@@ -157,27 +163,51 @@ struct Sensor_data get_sensor_data(){
 
   Sensor_data sensor_data; // initialized with FLT_MAX sentinels
 
-  float temperatures[SENSOR_N_DATA_FOR_AVERAGE], humidities[SENSOR_N_DATA_FOR_AVERAGE], pressures[SENSOR_N_DATA_FOR_AVERAGE], co2_concentrations[SENSOR_N_DATA_FOR_AVERAGE];
-  int n_temperature = 0;
-  int n_humidity = 0;
-  int n_pressure = 0;
+  float temperatures_sht[SENSOR_N_DATA_FOR_AVERAGE], humidities_sht[SENSOR_N_DATA_FOR_AVERAGE];
+  float temperatures_bme[SENSOR_N_DATA_FOR_AVERAGE], humidities_bme[SENSOR_N_DATA_FOR_AVERAGE], pressures_bme[SENSOR_N_DATA_FOR_AVERAGE];
+  float co2_concentrations[SENSOR_N_DATA_FOR_AVERAGE];
+  int n_temperature_sht = 0;
+  int n_humidity_sht = 0;
+  int n_temperature_bme = 0;
+  int n_humidity_bme = 0;
+  int n_pressure_bme = 0;
   int n_co2_concentration = 0;
   for (int i = 0; i < SENSOR_N_DATA_FOR_AVERAGE; ++i){
     Serial.print("=");
-    bool ok_sht31 = get_data_SHT31(&temperatures[n_temperature], &humidities[n_humidity]);
+    bool ok_sht31 = get_data_SHT31(&temperatures_sht[n_temperature_sht], &humidities_sht[n_humidity_sht]);
     if (ok_sht31) {
-      ++n_temperature;
-      ++n_humidity;
+      ++n_temperature_sht;
+      ++n_humidity_sht;
     }
-    pressures[n_pressure++] = get_data_BME680();
+
+    float t_bme = 0.0f, h_bme = 0.0f, p_bme = 0.0f;
+    bool ok_bme680 = get_data_BME680(&t_bme, &h_bme, &p_bme);
+    if (ok_bme680) {
+      temperatures_bme[n_temperature_bme++] = t_bme;
+      humidities_bme[n_humidity_bme++] = h_bme;
+      pressures_bme[n_pressure_bme++] = p_bme;
+    }
     co2_concentrations[n_co2_concentration++] = mhz19.getCO2PPM();
   }
   Serial.println("");
 
   // Parent (local) sensor data
-  sensor_data.parent.temperature = compute_trimmed_mean(temperatures, n_temperature);
-  sensor_data.parent.humidity = compute_trimmed_mean(humidities, n_humidity);
-  sensor_data.parent.pressure = compute_trimmed_mean(pressures, n_pressure);
+  auto average_two = [](float a, float b) {
+    int count = 0;
+    float sum = 0.0f;
+    if (a != FLT_MAX) { sum += a; ++count; }
+    if (b != FLT_MAX) { sum += b; ++count; }
+    return (count > 0) ? sum / count : FLT_MAX;
+  };
+
+  float temp_sht = compute_trimmed_mean(temperatures_sht, n_temperature_sht);
+  float hum_sht = compute_trimmed_mean(humidities_sht, n_humidity_sht);
+  float temp_bme = compute_trimmed_mean(temperatures_bme, n_temperature_bme);
+  float hum_bme = compute_trimmed_mean(humidities_bme, n_humidity_bme);
+
+  sensor_data.parent.temperature = average_two(temp_sht, temp_bme);
+  sensor_data.parent.humidity = average_two(hum_sht, hum_bme);
+  sensor_data.parent.pressure = compute_trimmed_mean(pressures_bme, n_pressure_bme);
   sensor_data.parent.co2_concentration = compute_trimmed_mean(co2_concentrations, n_co2_concentration);
 
   // Representative (weighted) data for control/graphs
