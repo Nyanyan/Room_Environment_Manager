@@ -165,6 +165,27 @@ float compute_trimmed_mean(const float *samples, int count) {
 }
 
 
+// Helper to log sensor readings with graceful handling for missing values
+void print_sensor_values(float temperature, float humidity, float pressure, float co2_concentration) {
+  auto print_value = [](const char *name, float value) {
+    Serial.print(name);
+    Serial.print(": ");
+    if (value == FLT_MAX) {
+      Serial.print("N/A");
+    } else {
+      Serial.print(value);
+    }
+    Serial.print(" ");
+  };
+
+  print_value("Temp", temperature);
+  print_value("Hum", humidity);
+  print_value("Prs", pressure);
+  print_value("CO2", co2_concentration);
+  Serial.println("");
+}
+
+
 
 struct Sensor_data get_sensor_data(){
   // fetch latest additional sensor data via ESP-NOW
@@ -259,6 +280,16 @@ struct Sensor_data get_sensor_data(){
   sensor_data.representative.humidity = (weight_sum.humidity > 0.0f) ? representative_sum.humidity / weight_sum.humidity : FLT_MAX;
   sensor_data.representative.pressure = (weight_sum.pressure > 0.0f) ? representative_sum.pressure / weight_sum.pressure : FLT_MAX;
   sensor_data.representative.co2_concentration = (weight_sum.co2_concentration > 0.0f) ? representative_sum.co2_concentration / weight_sum.co2_concentration : FLT_MAX;
+
+  Serial.println("Parent and additional sensor data:");
+  Serial.print("Parent ");
+  print_sensor_values(sensor_data.parent.temperature, sensor_data.parent.humidity, sensor_data.parent.pressure, sensor_data.parent.co2_concentration);
+  for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
+    Serial.print("Child");
+    Serial.print(i);
+    Serial.print(" ");
+    print_sensor_values(sensor_data.additional[i].temperature, sensor_data.additional[i].humidity, sensor_data.additional[i].pressure, sensor_data.additional[i].co2_concentration);
+  }
 
   Serial.print("Representative data: ");
   Serial.print("Temp: ");
