@@ -18,7 +18,7 @@ MHZ19_uart mhz19;
 Adafruit_BME680 bme;
 
 const double sensor_weight_parent = 0.5;
-const double sensor_weights_additional[N_ADDITIONAL_SENSORS] = {1.0, 1.0};
+const double sensor_weights_additional[N_ADDITIONAL_SENSORS] = {1.0, 1.5};
 
 
 void init_SHT31(bool show_log){
