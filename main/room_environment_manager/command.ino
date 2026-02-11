@@ -205,7 +205,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     str += "AC status : OFF\n";
   }
 
-  str += "<Alert>\n"
+  str += "<Alert>\n";
   str += "Alert when hot : ";
   if (settings.alert_when_hot){
     str += "ON\n";
