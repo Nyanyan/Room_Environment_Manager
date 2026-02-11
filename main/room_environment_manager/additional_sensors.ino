@@ -11,6 +11,7 @@ void init_wifi();
 // ESP-NOW channel shared with the additional sensor nodes.
 static const uint8_t ESPNOW_CHANNEL = 1;
 static const unsigned long ADDITIONAL_SENSOR_MAX_AGE_MS = 5UL * 60UL * 1000UL; // 5 minutes
+static const unsigned long ADDITIONAL_SENSOR_REQUEST_INTERVAL_MS = 60UL * 1000UL; // limit WiFi tear-down to at most once per minute
 
 struct AdditionalSensorPacket {
   char header[N_SLAVE_HEADER];
@@ -22,6 +23,7 @@ static SensorReading g_additional_sensor_data[N_ADDITIONAL_SENSORS];
 static bool g_additional_sensor_received[N_ADDITIONAL_SENSORS];
 static SensorReading g_additional_sensor_last_data[N_ADDITIONAL_SENSORS];
 static unsigned long g_additional_sensor_last_ms[N_ADDITIONAL_SENSORS];
+static unsigned long g_last_additional_request_ms = 0;
 
 static void reset_wifi_for_espnow() {
   WiFi.persistent(false);
@@ -94,6 +96,12 @@ static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, i
 }
 
 void additional_sensors_request() {
+  unsigned long now = millis();
+  if (g_last_additional_request_ms != 0 && (now - g_last_additional_request_ms) < ADDITIONAL_SENSOR_REQUEST_INTERVAL_MS) {
+    // recent data is still considered fresh; avoid WiFi reset thrash
+    return;
+  }
+
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     g_additional_sensor_received[i] = false;
     g_additional_sensor_data[i] = SensorReading();
@@ -122,6 +130,7 @@ void additional_sensors_request() {
   }
 
   end_espnow_for_additional();
+  g_last_additional_request_ms = millis();
 }
 
 bool additional_sensor_received(int idx) {

@@ -15,6 +15,7 @@
 
 // json
 StaticJsonDocument<1024> doc;
+static unsigned long g_last_wifi_connect_ms = 0; // track last successful WiFi association
 
 void init_wifi(){
   while (true) {
@@ -26,9 +27,25 @@ void init_wifi(){
     }
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println("WiFi connected");
+      g_last_wifi_connect_ms = millis();
       break;
     }
   }
+}
+
+static bool ensure_wifi_connected_and_settled() {
+  if (WiFi.status() != WL_CONNECTED) {
+    init_wifi();
+  }
+  if (g_last_wifi_connect_ms == 0) {
+    return WiFi.status() == WL_CONNECTED;
+  }
+  const unsigned long grace_ms = 1500; // allow link/DHCP to stabilize before HTTPS
+  unsigned long elapsed = millis() - g_last_wifi_connect_ms;
+  if (elapsed < grace_ms) {
+    delay(grace_ms - elapsed);
+  }
+  return WiFi.status() == WL_CONNECTED;
 }
 
 
@@ -38,6 +55,11 @@ String slack_get_message() {
   http.setTimeout(SLACK_HTTP_TIMEOUT_MS);
   String res;
 
+  if (!ensure_wifi_connected_and_settled()) {
+    Serial.println("[ERROR] WiFi not connected; skip slack_get_message");
+    return res;
+  }
+
   bool begin_ok = false;
   for (int i = 0; i < SLACK_CONNECT_N_TRY; ++i) {
     if (http.begin(SLACK_URL_RECEIVE)) {
@@ -46,6 +68,7 @@ String slack_get_message() {
     }
     Serial.printf("[HTTPS] Unable to connect, initializing wifi...\n");
     init_wifi();
+    ensure_wifi_connected_and_settled();
   }
   if (!begin_ok) {
     Serial.println("[ERROR] Slack conversations.history begin failed");
@@ -83,6 +106,12 @@ char* slack_send_message(Time_info &time_info, String str){
   HTTPClient http;
   http.setTimeout(SLACK_HTTP_TIMEOUT_MS);
   bool begin_ok = false;
+
+  if (!ensure_wifi_connected_and_settled()) {
+    Serial.println("[ERROR] WiFi not connected; skip slack_send_message");
+    return ts;
+  }
+
   for (int i = 0; i < SLACK_CONNECT_N_TRY; ++i) {
     if (http.begin(SLACK_URL_SEND)) {
       begin_ok = true;
@@ -90,6 +119,7 @@ char* slack_send_message(Time_info &time_info, String str){
     }
     Serial.println(String("[ERROR] cannot begin ") + SLACK_URL_SEND + String(", initializing wifi..."));
     init_wifi();
+    ensure_wifi_connected_and_settled();
     // return "";
   }
   if (!begin_ok) {
@@ -137,6 +167,11 @@ String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_fi
   String body, received_string;
   int status_code;
 
+  if (!ensure_wifi_connected_and_settled()) {
+    Serial.println("[ERROR] WiFi not connected; skip slack_upload_img");
+    return String("");
+  }
+
   // files.getUploadURLExternal
   bool begin_ok = false;
   for (int i = 0; i < SLACK_CONNECT_N_TRY; ++i) {
@@ -146,6 +181,7 @@ String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_fi
     }
     Serial.println(String("[ERROR] cannot begin ") + SLACK_URL_GET_UPLOAD_URL + String(", initializing wifi..."));
     init_wifi();
+    ensure_wifi_connected_and_settled();
     // return String("");
   }
   if (!begin_ok) {
