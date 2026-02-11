@@ -308,9 +308,14 @@ struct Sensor_data get_sensor_data(){
   return sensor_data;
 }
 
-float sensor_calc_thi(float temperature, float humidity) {
-  return 0.81 * temperature + 0.01 * humidity * (0.99 * temperature - 14.3) + 46.3;
-}
+
+
+
+
+
+
+
+
 
 
 

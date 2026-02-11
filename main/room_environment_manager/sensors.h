@@ -35,6 +35,5 @@ struct Sensor_data{
 };
 
 Sensor_data get_sensor_data();
-float sensor_calc_thi(float temperature, float humidity);
 
 #endif
