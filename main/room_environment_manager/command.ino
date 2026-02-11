@@ -177,7 +177,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   }
   append_sensor_block(str, "representative", sensor_data.representative);
 
-  str += "<Air Conditioner>\n"
+  str += "<Air Conditioner>\n";
   str += "AC auto : ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";
