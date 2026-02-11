@@ -18,8 +18,8 @@ MHZ19_uart mhz19;
 Adafruit_BME680 bme;
 
 // Per-metric weights for parent sensor
-const double sensor_weight_parent_temperature = 0.2;
-const double sensor_weight_parent_humidity =    0.2;
+const double sensor_weight_parent_temperature = 0.3;
+const double sensor_weight_parent_humidity =    0.3;
 const double sensor_weight_parent_pressure =    1.0;
 const double sensor_weight_parent_co2 =         1.0;
 
