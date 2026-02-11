@@ -41,6 +41,7 @@ void init_wifi(){
     display_print(0, 1, "to WiFi");
     display_print(0, 2, WIFI_SSID);
     display_print(0, 3, WIFI_PASS);
+    Serial.println("[ERROR] Cannot Connect to WiFi");
   }
 }
 

@@ -19,17 +19,27 @@ static unsigned long g_last_wifi_connect_ms = 0; // track last successful WiFi a
 
 void init_wifi(){
   while (true) {
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-    unsigned long long strt = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - strt < 10000) {
-      Serial.print(".");
-      delay(100);
+    for (int attempt = 0; attempt < WIFI_CONNECT_MAX_TRY; ++attempt) {
+      WiFi.begin(WIFI_SSID, WIFI_PASS);
+      unsigned long long strt = millis();
+      while (WiFi.status() != WL_CONNECTED && millis() - strt < 10000) {
+        Serial.print(".");
+        delay(100);
+      }
+      if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("WiFi connected");
+        g_last_wifi_connect_ms = millis();
+        return;
+      }
     }
-    if (WiFi.status() == WL_CONNECTED) {
-      Serial.println("WiFi connected");
-      g_last_wifi_connect_ms = millis();
-      break;
-    }
+
+    // Show failure on LCD after repeated attempts
+    display_clear();
+    display_print(0, 0, "Cannot Connect");
+    display_print(0, 1, "to WiFi");
+    display_print(0, 2, WIFI_SSID);
+    display_print(0, 3, WIFI_PASS);
+    Serial.println("[ERROR] Cannot Connect to WiFi");
   }
 }
 
