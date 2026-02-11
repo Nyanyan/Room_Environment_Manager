@@ -8,12 +8,12 @@
 #include "command.h"
 
 // display SC2004CSLB
-#define RS_PIN D0
-#define E_PIN D1
-#define DB4_PIN D10
-#define DB5_PIN D9
-#define DB6_PIN D8
-#define DB7_PIN D7
+#define RS_PIN D2
+#define E_PIN D6
+#define DB4_PIN D1
+#define DB5_PIN D10
+#define DB6_PIN D0
+#define DB7_PIN D9
 
 void init_display();
 void display_clear();
