@@ -159,11 +159,11 @@ struct Command command_get(){
 
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
-  String str = "<*部屋の環境*>\n";
+  String str = "< *部屋の環境* >\n";
 
   append_sensor_block(str, sensor_data.parent);
 
-  str += "<*エアコンの状態*>\n";
+  str += "< *エアコンの状態* >\n";
   str += "- エアコン自動制御: ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";
@@ -219,7 +219,7 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
 
 
 void command_print_command_list(Time_info &time_info){
-  String str = "<*使えるコマンド*>\n";
+  String str = "< *使えるコマンド* >\n";
   str += "- `ac`\n";
   str += "  - `ac [モード] [温度]`\n";
   str += "    - エアコンを起動する\n";
