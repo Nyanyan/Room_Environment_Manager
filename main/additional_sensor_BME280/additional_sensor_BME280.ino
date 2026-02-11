@@ -16,7 +16,7 @@ bool bme_ready = false;
 
 #define SENSOR_N_DATA_FOR_AVERAGE 25
 
-struct SensorPacket {
+struct __attribute__((packed)) SensorPacket {
   char header[N_SLAVE_HEADER];
   float temperature_c;
   float humidity_pct;
@@ -205,7 +205,7 @@ void setup() {
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   Serial.println("received");
   if (is_correct_header(data)){ // check header
-    SensorPacket packet;
+    SensorPacket packet = {};
     memcpy(packet.header, additional_sensor_header, N_SLAVE_HEADER);
     packet.temperature_c = (float)latest_temperature; // already trimmed mean
     packet.humidity_pct = (float)latest_humidity;     // already trimmed mean

@@ -27,7 +27,7 @@ const Additional_sensor_available additional_sensor_available[N_ADDITIONAL_SENSO
 };
 
 
-struct AdditionalSensorPacket {
+struct __attribute__((packed)) AdditionalSensorPacket {
   char header[N_SLAVE_HEADER];
   float temperature_c;
   float humidity_pct;
@@ -115,12 +115,13 @@ static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, i
       Serial.print(g_additional_sensor_data[i].temperature);
       Serial.print(" C, Humidity: ");
       Serial.print(g_additional_sensor_data[i].humidity);
+      Serial.print(" %");
       if (g_additional_sensor_data[i].pressure != FLT_MAX) {
         Serial.print(", Pressure: ");
         Serial.print(g_additional_sensor_data[i].pressure);
         Serial.print(" hPa");
       }
-      Serial.println(" %");
+      Serial.print("\n");
     }
   }
 }
