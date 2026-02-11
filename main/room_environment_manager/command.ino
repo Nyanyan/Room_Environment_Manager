@@ -169,7 +169,7 @@ struct Command command_get(){
 
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
-  String str = "<room environment>\n";
+  String str = "<Room Environment>\n";
   const SensorReading &heat_src = is_valid_sensor_value(sensor_data.representative.temperature) ? sensor_data.representative : sensor_data.parent;
   if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= 31.0){
     if (settings.alert_when_hot){
@@ -185,6 +185,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   }
   append_sensor_block(str, "representative", sensor_data.representative);
 
+  str += "<Air Conditioner>\n"
   str += "AC auto : ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";
@@ -211,11 +212,15 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   } else {
     str += "AC status : OFF\n";
   }
+
+  str += "<Alert>\n"
+  str += "Alert when hot : ";
   if (settings.alert_when_hot){
-    str += "Alert when hot : ON\n";
+    str += "ON\n";
   } else{
-    str += "Alert when hot : OFF\n";
+    str += "OFF\n";
   }
+
   str += get_graph_urls(graph_data, graph_img, time_info);
   slack_send_message(time_info, str);
 }
@@ -256,33 +261,33 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
 
 void command_print_command_list(Time_info &time_info){
   String str = "<command list>\n";
-  str += "- ac\n";
-  str += "  - ac [mode] [temp]\n";
+  str += "- `ac`\n";
+  str += "  - `ac [mode] [temp]`\n";
   str += "    - on air conditioner\n";
   str += "    - mode: cool (c) / dry (d) / heat (h)\n";
   str += "    - temp must be in [16,30]\n";
-  str += "  - ac off\n";
+  str += "  - `ac off`\n";
   str += "    - off air conditioner\n";
-  str += "  - ac auto (a)\n";
-  str += "    - ac auto [mode] [temp]\n";
+  str += "  - `ac auto` (a)\n";
+  str += "    - `ac auto [mode] [temp]`\n";
   str += "      - mode: cool (c) / dry (d) / heat (h)\n";
-  str += "    - ac auto off\n";
+  str += "    - `ac auto off`\n";
   str += "      - off ac auto mode\n";
-  str += "- reserve (r)\n";
+  str += "- `reserve` (r)\n";
   str += "  - command reservation\n";
-  str += "  - reserve new (r n) [YYYYMMDD] [hhmm] [command]\n";
+  str += "  - `reserve new (r n) [YYYYMMDD] [hhmm] [command]`\n";
   str += "    - new command reservation\n";
-  str += "  - reserve check (r c)\n";
+  str += "  - `reserve check (r c)`\n";
   str += "    - check command reservation\n";
-  str += "  - reserve delete (r d) [reservation_id]\n";
+  str += "  - `reserve delete (r d) [reservation_id]`\n";
   str += "    - delete reservation\n";
-  str += "- set\n";
-  str += "  - set alert [on/off]\n";
+  str += "- `set`\n";
+  str += "  - `set alert [on/off]`\n";
   str += "    - alert on slack when very hot\n";
-  str += "- monitor\n";
+  str += "- `monitor`\n";
   str += "  - check environment\n";
-  str += "- help\n";
-  str += "- reboot\n";
+  str += "- `help`\n";
+  str += "- `reboot`\n";
   slack_send_message(time_info, str);
 }
 
