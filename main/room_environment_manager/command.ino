@@ -213,6 +213,9 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     str += "OFF\n";
   }
 
+  str += "<**Connection**>\n";
+  // エアコン制御器、各additional_sensorに接続できるかチェックして、表示する
+
   str += get_graph_urls(graph_data, graph_img, time_info);
   slack_send_message(time_info, str);
 }
@@ -247,34 +250,34 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
 
 
 void command_print_command_list(Time_info &time_info){
-  String str = "<command list>\n";
-  str += "- `ac`\n";
-  str += "  - `ac [mode] [temp]`\n";
-  str += "    - on air conditioner\n";
-  str += "    - mode: cool (c) / dry (d) / heat (h)\n";
-  str += "    - temp must be in [16,30]\n";
-  str += "  - `ac off`\n";
-  str += "    - off air conditioner\n";
-  str += "  - `ac auto` (a)\n";
-  str += "    - `ac auto [mode] [temp]`\n";
-  str += "      - mode: cool (c) / dry (d) / heat (h)\n";
-  str += "    - `ac auto off`\n";
-  str += "      - off ac auto mode\n";
-  str += "- `reserve` (r)\n";
-  str += "  - command reservation\n";
-  str += "  - `reserve new (r n) [YYYYMMDD] [hhmm] [command]`\n";
-  str += "    - new command reservation\n";
-  str += "  - `reserve check (r c)`\n";
-  str += "    - check command reservation\n";
-  str += "  - `reserve delete (r d) [reservation_id]`\n";
-  str += "    - delete reservation\n";
-  str += "- `set`\n";
-  str += "  - `set alert [on/off]`\n";
-  str += "    - alert on slack when very hot\n";
-  str += "- `monitor`\n";
-  str += "  - check environment\n";
-  str += "- `help`\n";
-  str += "- `reboot`\n";
+  String str = "<**Command List**>\n";
+  str += "* `ac`\n";
+  str += "  * `ac [mode] [temp]`\n";
+  str += "    * on air conditioner\n";
+  str += "    * mode: cool (c) / dry (d) / heat (h)\n";
+  str += "    * temp must be in [16,30]\n";
+  str += "  * `ac off`\n";
+  str += "    * off air conditioner\n";
+  str += "  * `ac auto` (a)\n";
+  str += "    * `ac auto [mode] [temp]`\n";
+  str += "      * mode: cool (c) / dry (d) / heat (h)\n";
+  str += "    * `ac auto off`\n";
+  str += "      * off ac auto mode\n";
+  str += "* `reserve` (r)\n";
+  str += "  * command reservation\n";
+  str += "  * `reserve new (r n) [YYYYMMDD] [hhmm] [command]`\n";
+  str += "    * new command reservation\n";
+  str += "  * `reserve check (r c)`\n";
+  str += "    * check command reservation\n";
+  str += "  * `reserve delete (r d) [reservation_id]`\n";
+  str += "    * delete reservation\n";
+  str += "* `set`\n";
+  str += "  * `set alert [on/off]`\n";
+  str += "    * alert on slack when very hot\n";
+  str += "* `monitor`\n";
+  str += "  * check environment\n";
+  str += "* `help`\n";
+  str += "* `reboot`\n";
   slack_send_message(time_info, str);
 }
 
