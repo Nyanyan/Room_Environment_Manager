@@ -11,7 +11,7 @@ void init_wifi();
 // ESP-NOW channel shared with the additional sensor nodes.
 static const uint8_t ESPNOW_CHANNEL = 1;
 static const unsigned long ADDITIONAL_SENSOR_MAX_AGE_MS = 5UL * 60UL * 1000UL; // 5 minutes
-static const unsigned long ADDITIONAL_SENSOR_REQUEST_INTERVAL_MS = 10UL * 1000UL; // limit WiFi tear-down to at most once per minute
+static const unsigned long ADDITIONAL_SENSOR_REQUEST_INTERVAL_MS = 60UL * 1000UL; // limit WiFi tear-down to at most once per minute
 
 
 struct Additional_sensor_available {
