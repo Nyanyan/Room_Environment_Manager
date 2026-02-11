@@ -161,7 +161,7 @@ struct Command command_get(){
 
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
-  String str = "<Room Environment>\n";
+  String str = "<**Room Environment**>\n";
   const SensorReading &heat_src = is_valid_sensor_value(sensor_data.representative.temperature) ? sensor_data.representative : sensor_data.parent;
   if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= 31.0){
     if (settings.alert_when_hot){
@@ -177,7 +177,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   }
   append_sensor_block(str, "representative", sensor_data.representative);
 
-  str += "<Air Conditioner>\n";
+  str += "<**Air Conditioner**>\n";
   str += "AC auto : ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";
@@ -205,7 +205,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     str += "AC status : OFF\n";
   }
 
-  str += "<Alert>\n";
+  str += "<**Alert**>\n";
   str += "Alert when hot : ";
   if (settings.alert_when_hot){
     str += "ON\n";
