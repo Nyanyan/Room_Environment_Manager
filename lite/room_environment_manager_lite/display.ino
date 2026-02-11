@@ -45,7 +45,7 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
   
 
   // 3rd line
-  String third_line = "\xb4\xb1\xba\xdd"" ""\xbf\xb3\xbb"":"; // ｴｱｺﾝ ｿｳｻ:
+  String third_line = "\xb4\xb1\xba\xdd"" ""\xbf\xb3\xbb"": "; // ｴｱｺﾝ ｿｳｻ:
   if (settings.ac_auto_mode == AC_AUTO_OFF){
     third_line += "\xbc\xad\xc4\xde\xb3"; // ｼｭﾄﾞｳ
   } else {
@@ -62,7 +62,7 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
   display_print(0, 2, third_line);
 
   // 4th line
-  String fourth_line = "\xb4\xb1\xba\xdd"" ""\xbc\xde\xae\xb3\xc0\xb2"":"; // ｴｱｺﾝ ｼﾞｮｳﾀｲ:
+  String fourth_line = "\xb4\xb1\xba\xdd"" ""\xbc\xde\xae\xb3\xc0\xb2"": "; // ｴｱｺﾝ ｼﾞｮｳﾀｲ:
   if (ac_status.state != AC_STATE_OFF){
     String ac_mode = "?";
     if (ac_status.state == AC_STATE_COOL) {
