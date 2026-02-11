@@ -91,7 +91,7 @@ bool get_data_SHT31(float *temperature, float *humidity) {
   Wire.write(SHT31_SINGLE_SHOT_HIGH_MSB);
   Wire.write(SHT31_SINGLE_SHOT_HIGH_LSB);
   Wire.endTransmission();
-  delay(300);
+  delay(100);
   int n_bytes = Wire.requestFrom(SHT31_ADDR, 6);
   if (n_bytes != 6) {
     Serial.println("[WARN] SHT31 read timed out");

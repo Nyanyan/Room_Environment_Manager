@@ -111,9 +111,9 @@ String format_sensor_value(float v, int decimals, const char *unit) {
 }
 
 void append_sensor_block(String &str, const SensorReading &reading) {
-  str += "* 温度 : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
-  str += "* 湿度 : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
-  str += "* 気圧 : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
+  str += "- 温度 : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
+  str += "- 湿度 : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
+  str += "- 気圧 : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
 }
 
 } // namespace
@@ -159,12 +159,12 @@ struct Command command_get(){
 
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
-  String str = "<**部屋の環境**>\n";
+  String str = "<*部屋の環境*>\n";
 
   append_sensor_block(str, sensor_data.parent);
 
-  str += "<**エアコンの状態**>\n";
-  str += "* エアコン自動制御: ";
+  str += "<*エアコンの状態*>\n";
+  str += "- エアコン自動制御: ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";
   } else {
@@ -186,9 +186,9 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     } else if (ac_status.state == AC_STATE_HEAT) {
       ac_mode = "暖房";
     }
-    str += "* エアコン状態: " + ac_mode + " " + String(ac_status.temp) + " *C\n";
+    str += "- エアコン状態: " + ac_mode + " " + String(ac_status.temp) + " *C\n";
   } else {
-    str += "* エアコン状態: OFF\n";
+    str += "- エアコン状態: OFF\n";
   }
   // str += get_graph_urls(graph_data, graph_img, time_info);
   slack_send_message(time_info, str);
@@ -219,26 +219,26 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
 
 
 void command_print_command_list(Time_info &time_info){
-  String str = "<使えるコマンド>\n";
-  str += "* `ac`\n";
-  str += "  * `ac [モード] [温度]`\n";
-  str += "    * エアコンを起動する\n";
-  str += "    * モード: `cool` (`c`) / `dry` (`d`) / `heat` (`h`)\n";
-  str += "    * 設定温度は16度から30度まで\n";
-  str += "    * 例: `ac c 28`: 冷房を28度設定でつける\n";
-  str += "  * `ac auto [モード] [温度]` (`auto`は`a`と省略可能)\n";
-  str += "    * 部屋の温度を一定に保つようにエアコンを制御する\n";
-  str += "    * モード: `cool` (`c`) / `dry` (`d`) / `heat` (`h`)\n";
-  str += "    * 例: `ac a c 28`: 部屋の温度が28度になるようにエアコンを制御する\n";
-  str += "  * `ac off`\n";
-  str += "    * エアコンを切る\n";
-  str += "    * エアコン自動制御も切れる\n";
-  str += "* `monitor`\n";
-  str += "  * 部屋の環境やエアコンの設定を見る\n";
-  str += "* `help`\n";
-  str += "  * これを表示する\n";
-  str += "* `reboot`\n";
-  str += "  * 再起動する\n";
+  String str = "<*使えるコマンド*>\n";
+  str += "- `ac`\n";
+  str += "  - `ac [モード] [温度]`\n";
+  str += "    - エアコンを起動する\n";
+  str += "    - モード: `cool` (`c`) / `dry` (`d`) / `heat` (`h`)\n";
+  str += "    - 設定温度は16度から30度まで\n";
+  str += "    - 例: `ac c 28`: 冷房を28度設定でつける\n";
+  str += "  - `ac auto [モード] [温度]` (`auto`は`a`と省略可能)\n";
+  str += "    - 部屋の温度を一定に保つようにエアコンを制御する\n";
+  str += "    - モード: `cool` (`c`) / `dry` (`d`) / `heat` (`h`)\n";
+  str += "    - 例: `ac a c 28`: 部屋の温度が28度になるようにエアコンを制御する\n";
+  str += "  - `ac off`\n";
+  str += "    - エアコンを切る\n";
+  str += "    - エアコン自動制御も切れる\n";
+  str += "- `monitor`\n";
+  str += "  - 部屋の環境やエアコンの設定を見る\n";
+  str += "- `help`\n";
+  str += "  - これを表示する\n";
+  str += "- `reboot`\n";
+  str += "  - 再起動する\n";
   slack_send_message(time_info, str);
 }
 

@@ -113,10 +113,10 @@ String format_sensor_value(float v, int decimals, const char *unit) {
 
 void append_sensor_block(String &str, const char *title, const SensorReading &reading) {
   str += String("[") + title + String("]\n");
-  str += "* Temp : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
-  str += "* Hum : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
-  str += "* Pres : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
-  str += "* CO2 : " + format_sensor_value(reading.co2_concentration, 0, "ppm") + "\n";
+  str += "- Temp : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
+  str += "- Hum : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
+  str += "- Pres : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
+  str += "- CO2 : " + format_sensor_value(reading.co2_concentration, 0, "ppm") + "\n";
 }
 
 } // namespace
@@ -147,7 +147,7 @@ void command_send_reservation_list(Time_info &time_info) {
   } else {
     size_t to_show = n;
     for (size_t i = 0; i < to_show; ++i) {
-      str += "* " + format_reservation_line(reservations[i]) + "\n";
+      str += "- " + format_reservation_line(reservations[i]) + "\n";
     }
   }
   slack_send_message(time_info, str);
@@ -162,7 +162,7 @@ struct Command command_get(){
 
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
-  String str = "<**Room Environment**>\n";
+  String str = "<*Room Environment*>\n";
   const SensorReading &heat_src = is_valid_sensor_value(sensor_data.representative.temperature) ? sensor_data.representative : sensor_data.parent;
   if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= 31.0){
     if (settings.alert_when_hot){
@@ -178,8 +178,8 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   }
   append_sensor_block(str, "representative", sensor_data.representative);
 
-  str += "<**Air Conditioner**>\n";
-  str += "AC auto : ";
+  str += "<*Air Conditioner*>\n";
+  str += "- AC auto : ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";
   } else {
@@ -201,12 +201,12 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     } else if (ac_status.state == AC_STATE_HEAT) {
       ac_mode = "Heat";
     }
-    str += "AC status : " + ac_mode + " " + String(ac_status.temp) + " *C\n";
+    str += "- AC status : " + ac_mode + " " + String(ac_status.temp) + " *C\n";
   } else {
-    str += "AC status : OFF\n";
+    str += "- AC status : OFF\n";
   }
 
-  str += "<**Alert**>\n";
+  str += "<*Alert*>\n";
   str += "Alert when hot : ";
   if (settings.alert_when_hot){
     str += "ON\n";
@@ -214,13 +214,13 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     str += "OFF\n";
   }
 
-  str += "<**Connection**>\n";
+  str += "<*Connection*>\n";
   bool ac_connected = ac_controller_check_connection();
-  str += "AC controller : ";
+  str += "- AC controller : ";
   str += ac_connected ? "OK\n" : "NG\n";
 
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
-    str += "Additional ";
+    str += "- Additional ";
     str += String(i + 1);
     str += " : ";
     str += additional_sensor_received(i) ? "OK\n" : "NG\n";
@@ -260,34 +260,34 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
 
 
 void command_print_command_list(Time_info &time_info){
-  String str = "<**Command List**>\n";
-  str += "* `ac`\n";
-  str += "  * `ac [mode] [temp]`\n";
-  str += "    * on air conditioner\n";
-  str += "    * mode: cool (c) / dry (d) / heat (h)\n";
-  str += "    * temp must be in [16,30]\n";
-  str += "  * `ac off`\n";
-  str += "    * off air conditioner\n";
-  str += "  * `ac auto` (a)\n";
-  str += "    * `ac auto [mode] [temp]`\n";
-  str += "      * mode: cool (c) / dry (d) / heat (h)\n";
-  str += "    * `ac auto off`\n";
-  str += "      * off ac auto mode\n";
-  str += "* `reserve` (r)\n";
-  str += "  * command reservation\n";
-  str += "  * `reserve new (r n) [YYYYMMDD] [hhmm] [command]`\n";
-  str += "    * new command reservation\n";
-  str += "  * `reserve check (r c)`\n";
-  str += "    * check command reservation\n";
-  str += "  * `reserve delete (r d) [reservation_id]`\n";
-  str += "    * delete reservation\n";
-  str += "* `set`\n";
-  str += "  * `set alert [on/off]`\n";
-  str += "    * alert on slack when very hot\n";
-  str += "* `monitor`\n";
-  str += "  * check environment\n";
-  str += "* `help`\n";
-  str += "* `reboot`\n";
+  String str = "<*Command List*>\n";
+  str += "- `ac`\n";
+  str += "  - `ac [mode] [temp]`\n";
+  str += "    - on air conditioner\n";
+  str += "    - mode: cool (c) / dry (d) / heat (h)\n";
+  str += "    - temp must be in [16,30]\n";
+  str += "  - `ac off`\n";
+  str += "    - off air conditioner\n";
+  str += "  - `ac auto` (a)\n";
+  str += "    - `ac auto [mode] [temp]`\n";
+  str += "      - mode: cool (c) / dry (d) / heat (h)\n";
+  str += "    - `ac auto off`\n";
+  str += "      - off ac auto mode\n";
+  str += "- `reserve` (r)\n";
+  str += "  - command reservation\n";
+  str += "  - `reserve new (r n) [YYYYMMDD] [hhmm] [command]`\n";
+  str += "    - new command reservation\n";
+  str += "  - `reserve check (r c)`\n";
+  str += "    - check command reservation\n";
+  str += "  - `reserve delete (r d) [reservation_id]`\n";
+  str += "    - delete reservation\n";
+  str += "- `set`\n";
+  str += "  - `set alert [on/off]`\n";
+  str += "    - alert on slack when very hot\n";
+  str += "- `monitor`\n";
+  str += "  - check environment\n";
+  str += "- `help`\n";
+  str += "- `reboot`\n";
   slack_send_message(time_info, str);
 }
 

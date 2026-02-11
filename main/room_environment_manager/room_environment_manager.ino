@@ -1,3 +1,6 @@
+#include <esp_now.h>
+#include <WiFi.h>
+#include <esp_wifi.h>
 #include "air_conditioner.h"
 #include "display.h"
 #include "graph.h"
