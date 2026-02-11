@@ -21,4 +21,8 @@ void display_print(int x, int y, String str);
 void display_print(int x, int y, const char *str);
 void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Time_info &time_info);
 
+// pause/resume periodic LCD updates (used to avoid timing interference during IR send)
+void suspend_display_updates();
+void resume_display_updates();
+
 #endif

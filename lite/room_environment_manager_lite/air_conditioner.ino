@@ -9,6 +9,7 @@
 #endif
 #include "air_conditioner.h"
 #include "command.h"
+#include "display.h"
 #include "sensors.h"
 #include "time_manager.h"
 #include "memory.h"
@@ -22,6 +23,14 @@ IRMitsubishiAC ac(AC_LED_PIN);
 // IR transmitter controls Panasonic A/C
 IRPanasonicAc ac(AC_LED_PIN);
 #endif
+
+// Guard IR transmission from timer-driven display updates to keep waveforms stable
+static void ac_send_with_guard() {
+  suspend_display_updates();
+  ac.send();
+  resume_display_updates();
+  delay(1000);
+}
 
 void init_ac(AC_status &ac_status){
   ac.begin();
@@ -59,8 +68,7 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
     #endif
-    ac.send();
-    delay(1000);
+    ac_send_with_guard();
   }
   memory_save_ac_status(ac_status);
 }
@@ -86,8 +94,7 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
     #endif
-    ac.send();
-    delay(1000);
+    ac_send_with_guard();
   }
   memory_save_ac_status(ac_status);
 }
@@ -113,8 +120,7 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
     #endif
-    ac.send();
-    delay(1000);
+    ac_send_with_guard();
   }
   memory_save_ac_status(ac_status);
 }
@@ -141,8 +147,7 @@ void ac_off(AC_status &ac_status){
     ac.setSwingVertical(kPanasonicAcSwingVAuto);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
     #endif
-    ac.send();
-    delay(1000);
+    ac_send_with_guard();
   }
   memory_save_ac_status(ac_status);
 }

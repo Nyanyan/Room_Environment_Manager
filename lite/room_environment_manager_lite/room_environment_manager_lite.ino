@@ -23,6 +23,26 @@ portMUX_TYPE display_timer_mux = portMUX_INITIALIZER_UNLOCKED;
 SemaphoreHandle_t display_sem = nullptr;
 TaskHandle_t display_task_handle = nullptr;
 
+void suspend_display_updates() {
+  portENTER_CRITICAL(&display_timer_mux);
+  if (display_timer != nullptr) {
+    timerAlarmDisable(display_timer);
+  }
+  portEXIT_CRITICAL(&display_timer_mux);
+  if (display_sem != nullptr) {
+    xSemaphoreTake(display_sem, 0); // clear pending signals to avoid burst updates on resume
+  }
+}
+
+void resume_display_updates() {
+  portENTER_CRITICAL(&display_timer_mux);
+  if (display_timer != nullptr) {
+    timerWrite(display_timer, 0);   // restart counter so we do not fire immediately
+    timerAlarmEnable(display_timer);
+  }
+  portEXIT_CRITICAL(&display_timer_mux);
+}
+
 void IRAM_ATTR on_display_timer() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   if (display_sem != nullptr) {
