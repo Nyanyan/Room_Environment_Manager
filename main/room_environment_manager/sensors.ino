@@ -17,8 +17,17 @@ MHZ19_uart mhz19;
 // Pressure Sensor
 Adafruit_BME680 bme;
 
-const double sensor_weight_parent = 0.5;
-const double sensor_weights_additional[N_ADDITIONAL_SENSORS] = {1.0, 1.5};
+// Per-metric weights for parent sensor
+const double sensor_weight_parent_temperature = 0.5;
+const double sensor_weight_parent_humidity =    0.5;
+const double sensor_weight_parent_pressure =    1.0;
+const double sensor_weight_parent_co2 =         1.0;
+
+// Per-metric weights for each additional sensor (index-aligned to token.h entries)
+const double sensor_weights_additional_temperature[N_ADDITIONAL_SENSORS] =  {1.0, 1.5};
+const double sensor_weights_additional_humidity[N_ADDITIONAL_SENSORS] =     {1.0, 1.5};
+const double sensor_weights_additional_pressure[N_ADDITIONAL_SENSORS] =     {0.0, 1.0};
+const double sensor_weights_additional_co2[N_ADDITIONAL_SENSORS] =          {0.0, 0.0};
 
 
 void init_SHT31(bool show_log){
@@ -230,19 +239,19 @@ struct Sensor_data get_sensor_data(){
   };
 
   // base with parent sensor contribution
-  accumulate_if_valid(sensor_data.parent.temperature, sensor_weight_parent, representative_sum.temperature, weight_sum.temperature);
-  accumulate_if_valid(sensor_data.parent.humidity, sensor_weight_parent, representative_sum.humidity, weight_sum.humidity);
-  accumulate_if_valid(sensor_data.parent.pressure, sensor_weight_parent, representative_sum.pressure, weight_sum.pressure);
-  accumulate_if_valid(sensor_data.parent.co2_concentration, sensor_weight_parent, representative_sum.co2_concentration, weight_sum.co2_concentration);
+  accumulate_if_valid(sensor_data.parent.temperature, sensor_weight_parent_temperature, representative_sum.temperature, weight_sum.temperature);
+  accumulate_if_valid(sensor_data.parent.humidity, sensor_weight_parent_humidity, representative_sum.humidity, weight_sum.humidity);
+  accumulate_if_valid(sensor_data.parent.pressure, sensor_weight_parent_pressure, representative_sum.pressure, weight_sum.pressure);
+  accumulate_if_valid(sensor_data.parent.co2_concentration, sensor_weight_parent_co2, representative_sum.co2_concentration, weight_sum.co2_concentration);
 
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     if (additional_sensor_received(i)) {
       SensorReading data = additional_sensor_data_get(i);
       sensor_data.additional[i] = data;
-      accumulate_if_valid(data.temperature, sensor_weights_additional[i], representative_sum.temperature, weight_sum.temperature);
-      accumulate_if_valid(data.humidity, sensor_weights_additional[i], representative_sum.humidity, weight_sum.humidity);
-      accumulate_if_valid(data.pressure, sensor_weights_additional[i], representative_sum.pressure, weight_sum.pressure);
-      accumulate_if_valid(data.co2_concentration, sensor_weights_additional[i], representative_sum.co2_concentration, weight_sum.co2_concentration);
+      accumulate_if_valid(data.temperature, sensor_weights_additional_temperature[i], representative_sum.temperature, weight_sum.temperature);
+      accumulate_if_valid(data.humidity, sensor_weights_additional_humidity[i], representative_sum.humidity, weight_sum.humidity);
+      accumulate_if_valid(data.pressure, sensor_weights_additional_pressure[i], representative_sum.pressure, weight_sum.pressure);
+      accumulate_if_valid(data.co2_concentration, sensor_weights_additional_co2[i], representative_sum.co2_concentration, weight_sum.co2_concentration);
     }
   }
 
