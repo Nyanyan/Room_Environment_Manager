@@ -2,6 +2,7 @@
 #include "command.h"
 #include "memory.h"
 #include "sensors.h"
+#include "additional_sensors.h"
 
 namespace {
 
@@ -214,7 +215,16 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   }
 
   str += "<**Connection**>\n";
-  // エアコン制御器、各additional_sensorに接続できるかチェックして、表示する
+  bool ac_connected = ac_controller_check_connection();
+  str += "AC controller : ";
+  str += ac_connected ? "OK\n" : "NG\n";
+
+  for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
+    str += "Additional ";
+    str += String(i + 1);
+    str += " : ";
+    str += additional_sensor_received(i) ? "OK\n" : "NG\n";
+  }
 
   str += get_graph_urls(graph_data, graph_img, time_info);
   slack_send_message(time_info, str);
