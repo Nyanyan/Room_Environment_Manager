@@ -123,12 +123,23 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
 
 void ac_off(AC_status &ac_status){
   ac_status.state = AC_STATE_OFF;
-  for (int i = 0; i < 5; ++i){
+  for (int i = 0; i < AC_N_TRY; ++i){
     #if AC_USE_MITSUBISHI
     ac.off();
+    ac.setFan(kMitsubishiAcFanAuto);
+    ac.setMode(kMitsubishiAcHeat);
+    ac.setTemp(20);
+    ac.setVane(kMitsubishiAcVaneAuto);
+    ac.setVaneLeft(kMitsubishiAcVaneAuto);
+    ac.setWideVane(kMitsubishiAcWideVaneAuto);
     #else
     ac.setModel(kPanasonicRkr);
     ac.off();
+    ac.setFan(kPanasonicAcFanHigh);
+    ac.setMode(kPanasonicAcCool);
+    ac.setTemp(20);
+    ac.setSwingVertical(kPanasonicAcSwingVAuto);
+    ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
     #endif
     ac.send();
     delay(1000);
