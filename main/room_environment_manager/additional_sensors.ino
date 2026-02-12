@@ -22,8 +22,9 @@ struct Additional_sensor_available {
 };
 
 const Additional_sensor_available additional_sensor_available[N_ADDITIONAL_SENSORS] = {
-    {true, true, false, false},
-    {true, true, true, false},
+  {true, true, false, false}, // Child0: temp/humidity only
+  {true, true, true,  false}, // Child1: temp/humidity/pressure
+  {true, true, false, false}, // Child2: temp/humidity only
 };
 
 
