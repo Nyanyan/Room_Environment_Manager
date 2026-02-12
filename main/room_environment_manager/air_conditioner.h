@@ -25,7 +25,7 @@
 #define AC_AUTO_ENDURE 50 // about 10 minutes
 
 // PID constants
-#define AC_PID_KP 0.5
+#define AC_PID_KP 0.8
 #define AC_PID_KI 0.05
 #define AC_PID_KD 0.1
 #define AC_PID_I_CLAMP 30.0
