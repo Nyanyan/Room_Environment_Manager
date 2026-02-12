@@ -207,6 +207,7 @@ void send_ac() {
 void ac_cool_on(AC_status &ac_status, int set_temp){
   ac_status.state = AC_STATE_COOL;
   ac_status.temp = set_temp;
+  ac_status.last_set_temp_change_ms = millis();
   send_data[N_SLAVE_HEADER] = 'C';
   send_data[N_SLAVE_HEADER + 1] = 'A' + set_temp;
   send_ac();
@@ -216,6 +217,7 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
 void ac_dry_on(AC_status &ac_status, int set_temp){
   ac_status.state = AC_STATE_DRY;
   ac_status.temp = set_temp;
+  ac_status.last_set_temp_change_ms = millis();
   send_data[N_SLAVE_HEADER] = 'D';
   send_data[N_SLAVE_HEADER + 1] = 'A' + set_temp;
   send_ac();
@@ -225,6 +227,7 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
 void ac_heat_on(AC_status &ac_status, int set_temp){
   ac_status.state = AC_STATE_HEAT;
   ac_status.temp = set_temp;
+  ac_status.last_set_temp_change_ms = millis();
   send_data[N_SLAVE_HEADER] = 'H';
   send_data[N_SLAVE_HEADER + 1] = 'A' + set_temp;
   send_ac();
@@ -235,6 +238,7 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
 
 void ac_off(AC_status &ac_status){
   ac_status.state = AC_STATE_OFF;
+  ac_status.last_set_temp_change_ms = millis();
   send_data[N_SLAVE_HEADER] = 'F';
   send_data[N_SLAVE_HEADER + 1] = 'A';
   send_ac();
@@ -322,7 +326,12 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
     ac_status.pid_prev_error = target_temp - current_temp;
     ac_status.pid_integral = 0.0;
     ac_status.pid_initialized = true;
+    ac_status.last_pid_sample_ms = 0;
     push_history(ac_status.pid_prev_error, now);
+  }
+
+  if (ac_status.last_pid_sample_ms != 0 && (now - ac_status.last_pid_sample_ms) < AC_PID_SAMPLE_INTERVAL_MS) {
+    return; // respect PID sampling cadence
   }
 
   const double dt = (now - ac_status.pid_prev_millis) / 1000.0;
@@ -352,6 +361,7 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
 
   ac_status.pid_prev_error = error;
   ac_status.pid_prev_millis = now;
+  ac_status.last_pid_sample_ms = now;
 
   int base_set_temp = ac_status.temp;
   if (base_set_temp < AC_TEMP_LIMIT_MIN || base_set_temp > AC_TEMP_LIMIT_MAX) {
@@ -360,6 +370,12 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
 
   int set_temp = round(base_set_temp + control);
   set_temp = constrain(set_temp, AC_TEMP_LIMIT_MIN, AC_TEMP_LIMIT_MAX);
+
+  const bool can_change_setpoint = ac_status.last_set_temp_change_ms == 0 || (now - ac_status.last_set_temp_change_ms) >= AC_SET_TEMP_MIN_INTERVAL_MS;
+
+  if (!can_change_setpoint || set_temp == ac_status.temp) {
+    return; // either rate-limited or no effective change
+  }
 
   if (set_temp != ac_status.temp) {
     // String str = "[INFO] AC AUTO PID temp: " + String(set_temp) + " *C";
