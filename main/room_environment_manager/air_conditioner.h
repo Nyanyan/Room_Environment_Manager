@@ -18,16 +18,10 @@
 #define AC_SET_TEMP_MIN_INTERVAL_MS 60000UL // limit AC setpoint changes to once every 1 minutes
 #define AC_PID_SAMPLE_INTERVAL_MS   30000UL // PID sampling cadence (30 seconds)
 
-// auto
-#define AC_AUTO_THRESHOLD1 0.5 // weight = 1
-#define AC_AUTO_THRESHOLD2 1.2 // weight = 10
-#define AC_AUTO_THRESHOLD3 2.5 // weight = 100
-#define AC_AUTO_ENDURE 50 // about 10 minutes
-
 // PID constants
 #define AC_PID_KP 0.8
 #define AC_PID_KI 0.05
-#define AC_PID_KD 0.1
+#define AC_PID_KD 0.4
 #define AC_PID_I_CLAMP 30.0
 
 // PID history buffer
