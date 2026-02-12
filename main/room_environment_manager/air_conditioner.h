@@ -15,8 +15,8 @@
 #define AC_TEMP_LIMIT_MAX 30
 
 // rate limiting
-#define AC_SET_TEMP_MIN_INTERVAL_MS 120000UL // limit AC setpoint changes to once every 2 minutes
-#define AC_PID_SAMPLE_INTERVAL_MS   120000UL // PID sampling cadence (2 minutes)
+#define AC_SET_TEMP_MIN_INTERVAL_MS 60000UL // limit AC setpoint changes to once every 1 minutes
+#define AC_PID_SAMPLE_INTERVAL_MS   30000UL // PID sampling cadence (30 seconds)
 
 // auto
 #define AC_AUTO_THRESHOLD1 0.5 // weight = 1
