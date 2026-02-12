@@ -22,9 +22,9 @@ struct Additional_sensor_available {
 };
 
 const Additional_sensor_available additional_sensor_available[N_ADDITIONAL_SENSORS] = {
-  {true, true, false, false}, // Child0: temp/humidity only
-  {true, true, true,  false}, // Child1: temp/humidity/pressure
-  {true, true, false, false}, // Child2: temp/humidity only
+  {true, true, false, false}, // Child1: temp/humidity
+  {true, true, true,  false}, // Child2: temp/humidity/pressure
+  {true, true, false, false}, // Child3: temp/humidity
 };
 
 
@@ -110,7 +110,7 @@ static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, i
       g_additional_sensor_last_data[i] = g_additional_sensor_data[i];
       g_additional_sensor_last_ms[i] = millis();
       Serial.print("additional sensor ");
-      Serial.print(i);
+      Serial.print(i + 1);
       Serial.print(" received: ");
       Serial.print("Temp: ");
       Serial.print(g_additional_sensor_data[i].temperature);
@@ -149,7 +149,7 @@ void additional_sensors_request() {
 
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     Serial.print("request data to additional sensor ");
-    Serial.println(i);
+    Serial.println(i + 1);
     esp_err_t send_res = esp_now_send(additional_sensor_mac_addrs[i], (uint8_t *)additional_sensor_headers[i], N_SLAVE_HEADER);
     if (send_res != ESP_OK) {
       Serial.printf("[WARN] esp_now_send failed (%d) to sensor %d\n", send_res, i);
@@ -199,7 +199,7 @@ SensorReading additional_sensor_data_get(int idx) {
   unsigned long now = millis();
   if ((now - last) <= ADDITIONAL_SENSOR_MAX_AGE_MS) {
     Serial.print("[INFO] using cached additional sensor ");
-    Serial.print(idx);
+    Serial.print(idx + 1);
     Serial.print(" data from ");
     Serial.print((now - last) / 1000UL);
     Serial.println("s ago");

@@ -219,7 +219,7 @@ struct Sensor_data get_sensor_data(){
   print_sensor_values(sensor_data.parent.temperature, sensor_data.parent.humidity, sensor_data.parent.pressure, sensor_data.parent.co2_concentration);
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     Serial.print("Child");
-    Serial.print(i);
+    Serial.print(i + 1);
     Serial.print(" ");
     print_sensor_values(sensor_data.additional[i].temperature, sensor_data.additional[i].humidity, sensor_data.additional[i].pressure, sensor_data.additional[i].co2_concentration);
   }
