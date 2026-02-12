@@ -18,34 +18,16 @@ MHZ19_uart mhz19;
 Adafruit_BME680 bme;
 
 // Per-metric weights for parent sensor
-const double sensor_weight_parent_temperature = 0.3;
-const double sensor_weight_parent_humidity =    0.3;
+const double sensor_weight_parent_temperature = 0.2;
+const double sensor_weight_parent_humidity =    0.2;
 const double sensor_weight_parent_pressure =    1.0;
 const double sensor_weight_parent_co2 =         1.0;
 
 // Per-metric weights for each additional sensor (index-aligned to token.h entries)
-const double sensor_weights_additional_temperature[N_ADDITIONAL_SENSORS] =  {1.0, 1.5};
-const double sensor_weights_additional_humidity[N_ADDITIONAL_SENSORS] =     {1.0, 1.5};
-const double sensor_weights_additional_pressure[N_ADDITIONAL_SENSORS] =     {0.0, 1.0};
-const double sensor_weights_additional_co2[N_ADDITIONAL_SENSORS] =          {0.0, 0.0};
-
-
-void init_SHT31(bool show_log){
-  Wire.beginTransmission(SHT31_ADDR);
-  Wire.write(SHT31_SOFT_RESET_MSB);
-  Wire.write(SHT31_SOFT_RESET_LSB);
-  Wire.endTransmission();
-  delay(500);
-  Wire.beginTransmission(SHT31_ADDR);
-  Wire.write(SHT31_CLEAR_STATUS_REGISTER_MSB);
-  Wire.write(SHT31_CLEAR_STATUS_REGISTER_LSB);
-  Wire.endTransmission();
-  delay(500);
-  Serial.println("Temperature & Humidity Sensor Initialized");
-  if (show_log) {
-    display_print(0, 1, "[I] SHT31 TH");
-  }
-}
+const double sensor_weights_additional_temperature[N_ADDITIONAL_SENSORS] =  {1.0, 1.0, 1.0};
+const double sensor_weights_additional_humidity[N_ADDITIONAL_SENSORS] =     {1.0, 1.0, 1.0};
+const double sensor_weights_additional_pressure[N_ADDITIONAL_SENSORS] =     {0.0, 1.0, 0.0};
+const double sensor_weights_additional_co2[N_ADDITIONAL_SENSORS] =          {0.0, 0.0, 0.0};
 
 
 void init_BME680(bool show_log){
@@ -76,40 +58,10 @@ void init_MHZ19C(bool show_log){
 void init_sensors(){
   Wire.begin();
   Wire.setTimeout(I2C_TIMEOUT_MS);
-  init_SHT31(true);
   init_BME680(true);
   init_MHZ19C(true);
   additional_sensors_request();
 }
-
-
-
-// temperature & humidity
-bool get_data_SHT31(float *temperature, float *humidity) {
-  unsigned int buf[6];
-  Wire.beginTransmission(SHT31_ADDR);
-  Wire.write(SHT31_SINGLE_SHOT_HIGH_MSB);
-  Wire.write(SHT31_SINGLE_SHOT_HIGH_LSB);
-  Wire.endTransmission();
-  delay(100);
-  int n_bytes = Wire.requestFrom(SHT31_ADDR, 6);
-  if (n_bytes != 6) {
-    Serial.println("[WARN] SHT31 read timed out");
-    init_SHT31(false);
-    delay(1000);
-    return false;
-  }
-  for (int i = 0; i < 6; ++i){
-    buf[i] = Wire.read();
-  }
-  uint32_t t = (buf[0] << 8) | buf[1];
-  *temperature = (float)t * 175 / 65535.0 - 45.0;
-  uint32_t h = (buf[3] << 8) | buf[4];
-  *humidity = (float)(h) / 65535.0 * 100.0;
-  return true;
-}
-
-
 
 // Temperature / Humidity / Pressure (BME680)
 bool get_data_BME680(float *temperature, float *humidity, float *pressure) {
@@ -193,23 +145,14 @@ struct Sensor_data get_sensor_data(){
 
   Sensor_data sensor_data; // initialized with FLT_MAX sentinels
 
-  float temperatures_sht[SENSOR_N_DATA_FOR_AVERAGE], humidities_sht[SENSOR_N_DATA_FOR_AVERAGE];
   float temperatures_bme[SENSOR_N_DATA_FOR_AVERAGE], humidities_bme[SENSOR_N_DATA_FOR_AVERAGE], pressures_bme[SENSOR_N_DATA_FOR_AVERAGE];
   float co2_concentrations[SENSOR_N_DATA_FOR_AVERAGE];
-  int n_temperature_sht = 0;
-  int n_humidity_sht = 0;
   int n_temperature_bme = 0;
   int n_humidity_bme = 0;
   int n_pressure_bme = 0;
   int n_co2_concentration = 0;
   for (int i = 0; i < SENSOR_N_DATA_FOR_AVERAGE; ++i){
     Serial.print("=");
-    bool ok_sht31 = get_data_SHT31(&temperatures_sht[n_temperature_sht], &humidities_sht[n_humidity_sht]);
-    if (ok_sht31) {
-      ++n_temperature_sht;
-      ++n_humidity_sht;
-    }
-
     float t_bme = 0.0f, h_bme = 0.0f, p_bme = 0.0f;
     bool ok_bme680 = get_data_BME680(&t_bme, &h_bme, &p_bme);
     if (ok_bme680) {
@@ -222,21 +165,11 @@ struct Sensor_data get_sensor_data(){
   Serial.println("");
 
   // Parent (local) sensor data
-  auto average_two = [](float a, float b) {
-    int count = 0;
-    float sum = 0.0f;
-    if (a != FLT_MAX) { sum += a; ++count; }
-    if (b != FLT_MAX) { sum += b; ++count; }
-    return (count > 0) ? sum / count : FLT_MAX;
-  };
-
-  float temp_sht = compute_trimmed_mean(temperatures_sht, n_temperature_sht);
-  float hum_sht = compute_trimmed_mean(humidities_sht, n_humidity_sht);
   float temp_bme = compute_trimmed_mean(temperatures_bme, n_temperature_bme);
   float hum_bme = compute_trimmed_mean(humidities_bme, n_humidity_bme);
 
-  sensor_data.parent.temperature = average_two(temp_sht, temp_bme);
-  sensor_data.parent.humidity = average_two(hum_sht, hum_bme);
+  sensor_data.parent.temperature = temp_bme;
+  sensor_data.parent.humidity = hum_bme;
   sensor_data.parent.pressure = compute_trimmed_mean(pressures_bme, n_pressure_bme);
   sensor_data.parent.co2_concentration = compute_trimmed_mean(co2_concentrations, n_co2_concentration);
 
