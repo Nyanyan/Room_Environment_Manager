@@ -21,6 +21,7 @@ static unsigned long g_last_wifi_connect_ms = 0; // track last successful WiFi a
 
 void init_wifi(){
   while (true) {
+    
     for (int attempt = 0; attempt < WIFI_CONNECT_MAX_TRY; ++attempt) {
       WiFi.begin(WIFI_SSID, WIFI_PASS);
       unsigned long long strt = millis();

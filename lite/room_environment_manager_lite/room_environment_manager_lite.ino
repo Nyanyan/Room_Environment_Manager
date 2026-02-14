@@ -26,7 +26,8 @@ TaskHandle_t display_task_handle = nullptr;
 void suspend_display_updates() {
   portENTER_CRITICAL(&display_timer_mux);
   if (display_timer != nullptr) {
-    timerAlarmDisable(display_timer);
+    // timerAlarmDisable(display_timer);
+    timerStop(display_timer);
   }
   portEXIT_CRITICAL(&display_timer_mux);
   if (display_sem != nullptr) {
@@ -38,7 +39,8 @@ void resume_display_updates() {
   portENTER_CRITICAL(&display_timer_mux);
   if (display_timer != nullptr) {
     timerWrite(display_timer, 0);   // restart counter so we do not fire immediately
-    timerAlarmEnable(display_timer);
+    // timerAlarmEnable(display_timer);
+    timerStart(display_timer);
   }
   portEXIT_CRITICAL(&display_timer_mux);
 }
@@ -85,10 +87,14 @@ void setup() {
   xTaskCreatePinnedToCore(display_task, "display_task", 4096, nullptr, 2, &display_task_handle, 0);
 
   // 100ms display update timer
-  display_timer = timerBegin(0, 80, true); // 80MHz / 80 = 1MHz (1us per tick)
-  timerAttachInterrupt(display_timer, &on_display_timer, true);
-  timerAlarmWrite(display_timer, 100000, true); // 100ms
-  timerAlarmEnable(display_timer);
+  display_timer = timerBegin(1000000); // 1MHz (1us per tick)
+  timerAttachInterrupt(display_timer, &on_display_timer);
+  timerAlarm(display_timer, 100000, true, 0); // 100ms, autoreload
+  timerStart(display_timer);
+  // display_timer = timerBegin(0, 80, true); // 80MHz / 80 = 1MHz (1us per tick)
+  // timerAttachInterrupt(display_timer, &on_display_timer, true);
+  // timerAlarmWrite(display_timer, 100000, true); // 100ms
+  // timerAlarmEnable(display_timer);
 }
 
 
