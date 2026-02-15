@@ -363,10 +363,7 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
   ac_status.pid_prev_millis = now;
   ac_status.last_pid_sample_ms = now;
 
-  int base_set_temp = ac_status.temp;
-  if (base_set_temp < AC_TEMP_LIMIT_MIN || base_set_temp > AC_TEMP_LIMIT_MAX) {
-    base_set_temp = round(target_temp);
-  }
+  const double base_set_temp = target_temp; // anchor control around target instead of current setpoint to avoid getting stuck
 
   int set_temp = round(base_set_temp + control);
   set_temp = constrain(set_temp, AC_TEMP_LIMIT_MIN, AC_TEMP_LIMIT_MAX);
