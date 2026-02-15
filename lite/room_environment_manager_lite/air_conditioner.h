@@ -14,6 +14,10 @@
 #define AC_TEMP_LIMIT_MIN 16
 #define AC_TEMP_LIMIT_MAX 30
 
+// rate limiting
+#define AC_SET_TEMP_MIN_INTERVAL_MS 60000UL // limit AC setpoint changes to once every minute
+#define AC_PID_SAMPLE_INTERVAL_MS   30000UL // PID sampling cadence (30 seconds)
+
 // auto
 #define AC_AUTO_THRESHOLD1 0.5 // weight = 1
 #define AC_AUTO_THRESHOLD2 1.2 // weight = 10
@@ -23,7 +27,7 @@
 // PID constants
 #define AC_PID_KP 0.5
 #define AC_PID_KI 0.05
-#define AC_PID_KD 0.1
+#define AC_PID_KD 0.4
 #define AC_PID_I_CLAMP 30.0
 
 // PID history buffer
@@ -43,6 +47,9 @@ struct AC_status{
   unsigned long pid_prev_millis;
   bool pid_initialized;
 
+  unsigned long last_pid_sample_ms;
+  unsigned long last_set_temp_change_ms;
+
   // history for better smoothing/diagnostics
   double pid_error_history[AC_PID_HISTORY];
   unsigned long pid_time_history[AC_PID_HISTORY];
@@ -60,6 +67,8 @@ struct AC_status{
     pid_initialized = false;
     pid_history_size = 0;
     pid_history_index = 0;
+    last_pid_sample_ms = 0;
+    last_set_temp_change_ms = 0;
   }
 };
 
