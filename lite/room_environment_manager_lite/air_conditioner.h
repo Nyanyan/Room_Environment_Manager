@@ -15,8 +15,8 @@
 #define AC_PID_SAMPLE_INTERVAL_MS   30000UL // PID sampling cadence (30 seconds)
 
 // PID constants
-#define AC_PID_KP 0.5
-#define AC_PID_KI 0.05
+#define AC_PID_KP 0.9
+#define AC_PID_KI 0.1
 #define AC_PID_KD 0.4
 #define AC_PID_I_CLAMP 30.0
 
