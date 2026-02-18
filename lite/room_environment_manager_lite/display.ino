@@ -40,7 +40,7 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
   display_print(11, 0, String(time_info.time_str));
   
   // 2nd line
-  display_print(0, 1, fmt_or_placeholder(parent.humidity, 0, " %  ", "---- %  "));
+  display_print(0, 1, fmt_or_placeholder(parent.humidity, 1, " %  ", "---- %  "));
   display_print(11, 1, fmt_or_placeholder(parent.pressure, 0, " hPa ", "---- hPa"));
   
 
@@ -72,7 +72,7 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
     } else if (ac_status.state == AC_STATE_HEAT) {
       ac_mode = "\xc0\xde\xdd\xce\xde\xb3"; // ﾀﾞﾝﾎﾞｳ
     }
-    fourth_line += String(ac_status.temp) + "*C";
+    fourth_line += ac_mode + " " + String(ac_status.temp) + "*C";
   } else{
     fourth_line += "OFF";
   }
