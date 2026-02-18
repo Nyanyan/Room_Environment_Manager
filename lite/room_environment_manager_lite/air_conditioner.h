@@ -10,10 +10,6 @@
 #define AC_STATE_DRY 2
 #define AC_STATE_HEAT 3
 
-// limit
-#define AC_TEMP_LIMIT_MIN 16
-#define AC_TEMP_LIMIT_MAX 30
-
 // rate limiting
 #define AC_SET_TEMP_MIN_INTERVAL_MS 60000UL // limit AC setpoint changes to once every minute
 #define AC_PID_SAMPLE_INTERVAL_MS   30000UL // PID sampling cadence (30 seconds)

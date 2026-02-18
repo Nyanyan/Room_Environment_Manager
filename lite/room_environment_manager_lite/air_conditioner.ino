@@ -1,9 +1,9 @@
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
-#define AC_USE_MITSUBISHI true // set to 0 for Panasonic
+#define AC_USE_MITSUBISHIHEAVY true // set to 0 for Panasonic
 
-#if AC_USE_MITSUBISHI
-#include <ir_Mitsubishi.h>
+#if AC_USE_MITSUBISHIHEAVY
+#include <ir_MitsubishiHeavy.h>
 #else
 #include <ir_Panasonic.h>
 #endif
@@ -14,11 +14,20 @@
 #include "time_manager.h"
 #include "memory.h"
 
+// limit
+#if AC_USE_MITSUBISHIHEAVY
+#define AC_TEMP_LIMIT_MIN kMitsubishiHeavyMinTemp
+#define AC_TEMP_LIMIT_MAX kMitsubishiHeavyMaxTemp
+#else
+#define AC_TEMP_LIMIT_MIN kPanasonicAcMinTemp
+#define AC_TEMP_LIMIT_MAX kPanasonicAcMaxTemp
+#endif
+
 #define AC_N_TRY 1
 
-#if AC_USE_MITSUBISHI
+#if AC_USE_MITSUBISHIHEAVY
 // IR transmitter controls Mitsubishi A/C
-IRMitsubishiAC ac(AC_LED_PIN);
+IRMitsubishiHeavy88Ac ac(AC_LED_PIN);
 #else
 // IR transmitter controls Panasonic A/C
 IRPanasonicAc ac(AC_LED_PIN);
@@ -52,7 +61,7 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
   ac_status.temp = set_temp;
   ac_status.last_set_temp_change_ms = millis();
   for (int i = 0; i < AC_N_TRY; ++i){
-    #if AC_USE_MITSUBISHI
+    #if AC_USE_MITSUBISHIHEAVY
     ac.on();
     ac.setFan(kMitsubishiAcFanAuto);
     ac.setMode(kMitsubishiAcCool);
@@ -79,7 +88,7 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
   ac_status.temp = set_temp;
   ac_status.last_set_temp_change_ms = millis();
   for (int i = 0; i < AC_N_TRY; ++i){
-    #if AC_USE_MITSUBISHI
+    #if AC_USE_MITSUBISHIHEAVY
     ac.on();
     ac.setFan(kMitsubishiAcFanAuto);
     ac.setMode(kMitsubishiAcDry);
@@ -106,7 +115,7 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
   ac_status.temp = set_temp;
   ac_status.last_set_temp_change_ms = millis();
   for (int i = 0; i < AC_N_TRY; ++i){
-    #if AC_USE_MITSUBISHI
+    #if AC_USE_MITSUBISHIHEAVY
     ac.on();
     ac.setFan(kMitsubishiAcFanAuto);
     ac.setMode(kMitsubishiAcHeat);
@@ -134,7 +143,7 @@ void ac_off(AC_status &ac_status){
   ac_status.state = AC_STATE_OFF;
   ac_status.last_set_temp_change_ms = millis();
   for (int i = 0; i < AC_N_TRY; ++i){
-    #if AC_USE_MITSUBISHI
+    #if AC_USE_MITSUBISHIHEAVY
     ac.off();
     ac.setFan(kMitsubishiAcFanAuto);
     ac.setMode(kMitsubishiAcHeat);

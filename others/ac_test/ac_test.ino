@@ -2,22 +2,27 @@
 #include <IRsend.h>
 
 // true: Mitsubishi / false: Panasonic (default)
-#define AC_USE_MITSUBISHI false
+#define AC_USE_MITSUBISHIHEAVY true
 
 // IR LED output pin
 #define AC_LED_PIN D7
 
-#if AC_USE_MITSUBISHI
-#include <ir_Mitsubishi.h>
-IRMitsubishiAC ac(AC_LED_PIN);
+#if AC_USE_MITSUBISHIHEAVY
+#include <ir_MitsubishiHeavy.h>
+IRMitsubishiHeavy88Ac ac(AC_LED_PIN);
 #else
 #include <ir_Panasonic.h>
 IRPanasonicAc ac(AC_LED_PIN);
 #endif
 
 void sendAcOff() {
-#if AC_USE_MITSUBISHI
+#if AC_USE_MITSUBISHIHEAVY
   ac.off();
+  ac.setFan(kMitsubishiHeavy88FanAuto);
+  ac.setMode(kMitsubishiHeavyCool);
+  ac.setTemp(20);
+  ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
+  ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
 #else
   ac.setModel(kPanasonicRkr);
   ac.off();
