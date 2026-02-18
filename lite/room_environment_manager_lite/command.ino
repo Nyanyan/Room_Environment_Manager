@@ -224,7 +224,7 @@ void command_print_command_list(Time_info &time_info){
   str += "  - `ac [モード] [温度]`\n";
   str += "    - エアコンを起動する\n";
   str += "    - モード: `cool` (`c`) / `dry` (`d`) / `heat` (`h`)\n";
-  str += "    - 設定温度は16度から30度まで\n";
+  str += "    - 設定温度は" + String(AC_TEMP_LIMIT_MIN) + "度から" + String(AC_TEMP_LIMIT_MAX) + "度まで\n";
   str += "    - 例: `ac c 28`: 冷房を28度設定でつける\n";
   str += "  - `ac auto [モード] [温度]` (`auto`は`a`と省略可能)\n";
   str += "    - 部屋の温度を一定に保つようにエアコンを制御する\n";
@@ -250,7 +250,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
   if (command.arg1 == "cool" || command.arg1 == "c"){ // ac cool [arg2]
     int set_temp = command.arg2.toInt();
     if (set_temp < AC_TEMP_LIMIT_MIN || AC_TEMP_LIMIT_MAX < set_temp){ // ac cool [error]
-      String str = "[ERROR] 設定温度は16度から30度にしてください。取得した温度: " + command.arg2;
+      String str = "[ERROR] 設定温度は" + String(AC_TEMP_LIMIT_MIN) + "度から" + String(AC_TEMP_LIMIT_MAX) + "度にしてください。取得した温度: " + command.arg2;
       Serial.println(str);
       slack_send_message(time_info, str);
     } else{ // ac cool [temp]
@@ -264,7 +264,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
   } else if (command.arg1 == "dry" || command.arg1 == "d"){ // ac dry [arg2]
     int set_temp = command.arg2.toInt();
     if (set_temp < AC_TEMP_LIMIT_MIN || AC_TEMP_LIMIT_MAX < set_temp){ // ac dry [error]
-      String str = "[ERROR] 設定温度は16度から30度にしてください。取得した温度: " + command.arg2;
+      String str = "[ERROR] 設定温度は" + String(AC_TEMP_LIMIT_MIN) + "度から" + String(AC_TEMP_LIMIT_MAX) + "度にしてください。取得した温度: " + command.arg2;
       Serial.println(str);
       slack_send_message(time_info, str);
     } else { // ac dry [temp]
@@ -278,7 +278,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
   } else if (command.arg1 == "heat" || command.arg1 == "h") { // ac heat [arg2]
     int set_temp = command.arg2.toInt();
     if (set_temp < AC_TEMP_LIMIT_MIN || AC_TEMP_LIMIT_MAX < set_temp){ // ac heat [error]
-      String str = "[ERROR] 設定温度は16度から30度にしてください。取得した温度: " + command.arg2;
+      String str = "[ERROR] 設定温度は" + String(AC_TEMP_LIMIT_MIN) + "度から" + String(AC_TEMP_LIMIT_MAX) + "度にしてください。取得した温度: " + command.arg2;
       Serial.println(str);
       slack_send_message(time_info, str);
     } else { // ac heat [temp]
