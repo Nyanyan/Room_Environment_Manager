@@ -23,7 +23,7 @@
 #define AC_TEMP_LIMIT_MAX kPanasonicAcMaxTemp
 #endif
 
-#define AC_N_TRY 1
+#define AC_N_TRY 1  // send multiple times to improve reception reliability
 
 #if AC_USE_MITSUBISHIHEAVY
 // IR transmitter controls Mitsubishi A/C
@@ -36,7 +36,8 @@ IRPanasonicAc ac(AC_LED_PIN);
 // Guard IR transmission from timer-driven display updates to keep waveforms stable
 static void ac_send_with_guard() {
   suspend_display_updates();
-  ac.send();
+  // Repeat the IR frame to match the reliable behavior seen in ac_test.ino
+  ac.send(2); // send with repeats
   resume_display_updates();
   delay(1000);
 }
@@ -143,7 +144,7 @@ void ac_off(AC_status &ac_status){
     #if AC_USE_MITSUBISHIHEAVY
     ac.off();
     ac.setFan(kMitsubishiHeavy88FanAuto);
-    ac.setMode(kMitsubishiHeavyHeat);
+    ac.setMode(kMitsubishiHeavyCool);
     ac.setTemp(20);
     ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
     ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
