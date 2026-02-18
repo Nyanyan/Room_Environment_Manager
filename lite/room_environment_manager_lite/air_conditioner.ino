@@ -63,12 +63,11 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
   for (int i = 0; i < AC_N_TRY; ++i){
     #if AC_USE_MITSUBISHIHEAVY
     ac.on();
-    ac.setFan(kMitsubishiAcFanAuto);
-    ac.setMode(kMitsubishiAcCool);
+    ac.setFan(kMitsubishiHeavy88FanAuto);
+    ac.setMode(kMitsubishiHeavyCool);
     ac.setTemp(set_temp);
-    ac.setVane(kMitsubishiAcVaneAuto);      // vertical auto
-    ac.setVaneLeft(kMitsubishiAcVaneAuto);  // keep left vane in sync
-    ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
+    ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
     #else
     ac.setModel(kPanasonicRkr);
     ac.on();
@@ -90,12 +89,11 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
   for (int i = 0; i < AC_N_TRY; ++i){
     #if AC_USE_MITSUBISHIHEAVY
     ac.on();
-    ac.setFan(kMitsubishiAcFanAuto);
-    ac.setMode(kMitsubishiAcDry);
+    ac.setFan(kMitsubishiHeavy88FanAuto);
+    ac.setMode(kMitsubishiHeavyDry);
     ac.setTemp(set_temp);
-    ac.setVane(kMitsubishiAcVaneAuto);
-    ac.setVaneLeft(kMitsubishiAcVaneAuto);
-    ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
+    ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
     #else
     ac.setModel(kPanasonicRkr);
     ac.on();
@@ -117,12 +115,11 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
   for (int i = 0; i < AC_N_TRY; ++i){
     #if AC_USE_MITSUBISHIHEAVY
     ac.on();
-    ac.setFan(kMitsubishiAcFanAuto);
-    ac.setMode(kMitsubishiAcHeat);
+    ac.setFan(kMitsubishiHeavy88FanAuto);
+    ac.setMode(kMitsubishiHeavyHeat);
     ac.setTemp(set_temp);
-    ac.setVane(kMitsubishiAcVaneAuto);
-    ac.setVaneLeft(kMitsubishiAcVaneAuto);
-    ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
+    ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
     #else
     ac.setModel(kPanasonicRkr);
     ac.on();
@@ -145,12 +142,11 @@ void ac_off(AC_status &ac_status){
   for (int i = 0; i < AC_N_TRY; ++i){
     #if AC_USE_MITSUBISHIHEAVY
     ac.off();
-    ac.setFan(kMitsubishiAcFanAuto);
-    ac.setMode(kMitsubishiAcHeat);
+    ac.setFan(kMitsubishiHeavy88FanAuto);
+    ac.setMode(kMitsubishiHeavyHeat);
     ac.setTemp(20);
-    ac.setVane(kMitsubishiAcVaneAuto);
-    ac.setVaneLeft(kMitsubishiAcVaneAuto);
-    ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
+    ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
     #else
     ac.setModel(kPanasonicRkr);
     ac.off();

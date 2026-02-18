@@ -72,7 +72,7 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
     } else if (ac_status.state == AC_STATE_HEAT) {
       ac_mode = "\xc0\xde\xdd\xce\xde\xb3"; // ﾀﾞﾝﾎﾞｳ
     }
-    fourth_line += " " + String(ac_status.temp) + "*C";
+    fourth_line += String(ac_status.temp) + "*C";
   } else{
     fourth_line += "OFF";
   }
