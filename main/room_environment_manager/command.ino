@@ -77,6 +77,53 @@ bool parse_time_str(const String &time_str, uint8_t &hour, uint8_t &minute) {
   return true;
 }
 
+bool is_leap_year(uint16_t year) {
+  if (year % 400 == 0) return true;
+  if (year % 100 == 0) return false;
+  return (year % 4) == 0;
+}
+
+uint8_t days_in_month(uint16_t year, uint8_t month) {
+  static const uint8_t days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  if (month < 1 || month > 12) {
+    return 31;
+  }
+  if (month == 2 && is_leap_year(year)) {
+    return 29;
+  }
+  return days[month - 1];
+}
+
+void increment_date(uint16_t &year, uint8_t &month, uint8_t &day) {
+  ++day;
+  uint8_t dim = days_in_month(year, month);
+  if (day <= dim) {
+    return;
+  }
+  day = 1;
+  ++month;
+  if (month <= 12) {
+    return;
+  }
+  month = 1;
+  ++year;
+}
+
+void resolve_next_reservation_date(const Time_info &now, uint8_t hour, uint8_t minute, uint16_t &year, uint8_t &month,
+                                   uint8_t &day) {
+  year = static_cast<uint16_t>(now.year);
+  month = static_cast<uint8_t>(now.month);
+  day = static_cast<uint8_t>(now.day);
+
+  if (hour > now.hour) {
+    return;
+  }
+  if (hour == now.hour && minute > now.minute) {
+    return;
+  }
+  increment_date(year, month, day);
+}
+
 String format_reservation_line(const CommandReservation &res) {
   char buf[128];
   snprintf(buf, sizeof(buf), "[%lu] %04u/%02u/%02u %02u:%02u %s", static_cast<unsigned long>(res.id),
@@ -275,8 +322,9 @@ void command_print_command_list(Time_info &time_info){
   str += "      - off ac auto mode\n";
   str += "- `reserve` (r)\n";
   str += "  - command reservation\n";
-  str += "  - `reserve new (r n) [YYYYMMDD] [hhmm] [command]`\n";
+  str += "  - `reserve new (r n) [YYYYMMDD (optional)] [hhmm] [command]`\n";
   str += "    - new command reservation\n";
+  str += "    - If the date is omitted, the next time the specified time will be executed\n";
   str += "  - `reserve check (r c)`\n";
   str += "    - check command reservation\n";
   str += "  - `reserve delete (r d) [reservation_id]`\n";
@@ -413,33 +461,43 @@ void command_check_reserve(Command command, Time_info &time_info, Settings &sett
     return;
   }
   if (command.arg1 == "new" || command.arg1 == "n") {
-    uint16_t year;
-    uint8_t month;
-    uint8_t day;
-    if (!parse_date_str(command.arg2, year, month, day)) {
+    String time_str;
+    String cmd_text;
+    uint16_t year = 0;
+    uint8_t month = 0;
+    uint8_t day = 0;
+    bool has_explicit_date = parse_date_str(command.arg2, year, month, day);
+    bool looks_like_date = command.arg2.length() == 8;
+
+    if (!has_explicit_date && looks_like_date) {
       String str = String("[ERROR] invalid date: ") + command.arg2;
       slack_send_message(time_info, str);
       return;
     }
-    String time_str;
-    String cmd_text;
 
-    if (command.arg4.length() > 0) {
+    if (has_explicit_date) {
+      if (command.arg3.length() == 0) {
+        slack_send_message(time_info, "[ERROR] expected time after date");
+        return;
+      }
       time_str = command.arg3;
       cmd_text = command.arg4;
     } else {
-      // Backward compatibility: arg3 contains both time and command
-      String time_and_cmd = command.arg3;
-      trim_leading_spaces(time_and_cmd);
-      int split = time_and_cmd.indexOf(' ');
-      if (split < 0) {
-        slack_send_message(time_info, "[ERROR] expected time and command after date");
+      if (command.arg2.length() == 0) {
+        slack_send_message(time_info, "[ERROR] time is missing");
         return;
       }
-      time_str = time_and_cmd.substring(0, split);
-      cmd_text = time_and_cmd.substring(split + 1);
-      trim_leading_spaces(cmd_text);
+      time_str = command.arg2;
+      cmd_text = command.arg3;
+      if (command.arg4.length() > 0) {
+        if (cmd_text.length() > 0) {
+          cmd_text += " ";
+        }
+        cmd_text += command.arg4;
+      }
     }
+
+    trim_leading_spaces(cmd_text);
 
     uint8_t hour;
     uint8_t minute;
@@ -447,6 +505,9 @@ void command_check_reserve(Command command, Time_info &time_info, Settings &sett
       String str = String("[ERROR] invalid time: ") + time_str;
       slack_send_message(time_info, str);
       return;
+    }
+    if (!has_explicit_date) {
+      resolve_next_reservation_date(time_info, hour, minute, year, month, day);
     }
     if (cmd_text.length() == 0) {
       slack_send_message(time_info, "[ERROR] command is empty");
