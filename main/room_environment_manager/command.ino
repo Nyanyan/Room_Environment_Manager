@@ -281,20 +281,20 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
 
 String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
   graph_draw_temperature(graph_data, graph_img, time_info);
-  graph_encode_bmp(graph_img);
-  String graph_temperature = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_TEMPERATURE);
+  graph_encode_jpeg(graph_img);
+  String graph_temperature = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_TEMPERATURE);
 
   graph_draw_humidity(graph_data, graph_img, time_info);
-  graph_encode_bmp(graph_img);
-  String graph_humidity = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_HUMIDITY);
+  graph_encode_jpeg(graph_img);
+  String graph_humidity = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_HUMIDITY);
 
   graph_draw_pressure(graph_data, graph_img, time_info);
-  graph_encode_bmp(graph_img);
-  String graph_pressure = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_PRESSURE);
+  graph_encode_jpeg(graph_img);
+  String graph_pressure = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_PRESSURE);
 
   graph_draw_co2_concentration(graph_data, graph_img, time_info);
-  graph_encode_bmp(graph_img);
-  String graph_co2 = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_CO2_CONCENTRATION);
+  graph_encode_jpeg(graph_img);
+  String graph_co2 = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_CO2_CONCENTRATION);
 
   String str = 
     String("<") + graph_temperature + String("| >") + 
