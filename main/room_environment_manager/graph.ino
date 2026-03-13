@@ -377,7 +377,7 @@ void graph_encode_jpeg(Graph_img &graph_img) {
     return;
   }
 
-  rc = jpg.encodeBegin(&jpe, GRAPH_IMG_WIDTH, GRAPH_IMG_HEIGHT, JPEGE_PIXEL_RGB888, JPEGE_SUBSAMPLE_444, JPEGE_Q_HIGH);
+  rc = jpg.encodeBegin(&jpe, GRAPH_IMG_WIDTH, GRAPH_IMG_HEIGHT, JPEGE_PIXEL_RGB888, JPEGE_SUBSAMPLE_444, JPEGE_Q_BEST);
   if (rc != JPEGE_SUCCESS) {
     jpg.close();
     graph_img.jpeg_size = 0;
