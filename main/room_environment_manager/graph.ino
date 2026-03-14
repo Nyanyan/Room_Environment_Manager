@@ -400,9 +400,10 @@ void graph_encode_jpeg(Graph_img &graph_img) {
           if (img_y < 0) img_y = 0;
           const uint8_t palette_idx = graph_img.graph[img_y][img_x];
           const int mcu_idx = (py * mcu_w + px) * 3;
-          mcu[mcu_idx + 0] = color_palette[palette_idx][0]; // R
+          // JPEGENC on this target interprets 24bpp bytes as B,G,R order.
+          mcu[mcu_idx + 0] = color_palette[palette_idx][2]; // B
           mcu[mcu_idx + 1] = color_palette[palette_idx][1]; // G
-          mcu[mcu_idx + 2] = color_palette[palette_idx][2]; // B
+          mcu[mcu_idx + 2] = color_palette[palette_idx][0]; // R
         }
       }
       rc = jpg.addMCU(&jpe, mcu, mcu_w * 3);
