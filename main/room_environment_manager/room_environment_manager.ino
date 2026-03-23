@@ -39,6 +39,7 @@ void setup() {
 void loop() {
   // get sensor data
   Sensor_data sensor_data = get_sensor_data();
+  additional_sensors_set_representative(sensor_data.representative);
 
   // update time
   Time_info time_info = time_get_local();

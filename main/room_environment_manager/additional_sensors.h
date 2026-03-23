@@ -7,6 +7,9 @@
 // Trigger an ESP-NOW request to all additional sensors and update cached data.
 void additional_sensors_request();
 
+// Update representative data that will be embedded in the next request packet.
+void additional_sensors_set_representative(const SensorReading &representative);
+
 // Check if the idx-th additional sensor responded in the latest request.
 bool additional_sensor_received(int idx);
 

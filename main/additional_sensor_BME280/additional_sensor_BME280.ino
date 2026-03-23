@@ -24,12 +24,24 @@ struct __attribute__((packed)) SensorPacket {
   float pressure_hpa;
 };
 
+struct __attribute__((packed)) ParentRepresentativePacket {
+  char header[N_SLAVE_HEADER];
+  float representative_temperature_c;
+  float representative_humidity_pct;
+  float representative_pressure_hpa;
+  float representative_co2_ppm;
+};
+
 double latest_temperature = 0.0;
 double latest_humidity = 0.0;
 double latest_pressure = 0.0;
 static float temperature_samples[SENSOR_N_DATA_FOR_AVERAGE];
 static float humidity_samples[SENSOR_N_DATA_FOR_AVERAGE];
 static float pressure_samples[SENSOR_N_DATA_FOR_AVERAGE];
+static float parent_representative_temperature = FLT_MAX;
+static float parent_representative_humidity = FLT_MAX;
+static float parent_representative_pressure = FLT_MAX;
+static float parent_representative_co2 = FLT_MAX;
 
 // Compute trimmed mean after sorting and dropping 5% high/low outliers.
 float compute_trimmed_mean(const float *samples, int count) {
@@ -187,6 +199,7 @@ void setup() {
   bme_ready = true;
 
   get_temperature_humidity_pressure();
+  display_print_info(parent_representative_temperature, parent_representative_humidity, parent_representative_pressure, parent_representative_co2);
 
 
   //Set device in AP mode to begin with
@@ -206,8 +219,32 @@ void setup() {
 
 // callback when data is recv from Master
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+  if (data_len < N_SLAVE_HEADER) {
+    Serial.printf("received short packet: %d bytes\n", data_len);
+    return;
+  }
+
   Serial.println("received");
   if (is_correct_header(data)){ // check header
+    if (data_len >= (int)sizeof(ParentRepresentativePacket)) {
+      ParentRepresentativePacket parent_packet = {};
+      memcpy(&parent_packet, data, sizeof(parent_packet));
+      parent_representative_temperature = parent_packet.representative_temperature_c;
+      parent_representative_humidity = parent_packet.representative_humidity_pct;
+      parent_representative_pressure = parent_packet.representative_pressure_hpa;
+      parent_representative_co2 = parent_packet.representative_co2_ppm;
+
+      Serial.print("Updated representative from parent: ");
+      Serial.print(parent_representative_temperature);
+      Serial.print(" C, ");
+      Serial.print(parent_representative_humidity);
+      Serial.print(" %, ");
+      Serial.print(parent_representative_pressure);
+      Serial.print(" hPa, ");
+      Serial.print(parent_representative_co2);
+      Serial.println(" ppm");
+    }
+
     SensorPacket packet = {};
     memcpy(packet.header, additional_sensor_header, N_SLAVE_HEADER);
     packet.temperature_c = (float)latest_temperature; // already trimmed mean
@@ -238,5 +275,5 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
 
 void loop() {
   get_temperature_humidity_pressure();
-  display_print_info();
+  display_print_info(parent_representative_temperature, parent_representative_humidity, parent_representative_pressure, parent_representative_co2);
 }
