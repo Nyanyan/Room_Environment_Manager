@@ -1,4 +1,8 @@
+#include <ST7032_asukiaaa.h>
+#include <float.h>
 #include "display.h"
+
+ST7032_asukiaaa lcd;
 
 void init_lcd() {
     lcd.begin(16, 2); // columns and rows
