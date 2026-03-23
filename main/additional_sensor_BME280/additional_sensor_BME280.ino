@@ -8,6 +8,7 @@
 #include <cstring>
 #include <float.h>
 #include "token.h"
+#include "display.h"
 
 Adafruit_BME280 bme;
 bool bme_ready = false;
@@ -165,6 +166,8 @@ void setup() {
   // Initialize I2C on ESP32-C3 (default: SDA=D4, SCL=D5)
   Wire.begin();
   Wire.setTimeout(2000);
+
+  init_lcd();
 
   if (!bme.begin(0x76)) {
     Serial.println("Failed to find BME280 sensor");
