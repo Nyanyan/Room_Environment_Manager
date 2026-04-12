@@ -54,9 +54,9 @@ IRPanasonicAc ac(AC_LED_PIN);
 
 const char* ac_type_display_name() {
 #if AC_TYPE == AC_MITSUBISHIHEAVY88
-  return "MitsubishiHeavy88";
+  return "MitsubishiH88";
 #elif AC_TYPE == AC_MITSUBISHIELECTRIC
-  return "MitsubishiElectric";
+  return "MitsubishiE";
 #elif AC_TYPE == AC_PANASONIC
   return "Panasonic";
 #else
