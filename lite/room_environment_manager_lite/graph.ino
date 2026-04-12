@@ -342,20 +342,20 @@ void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info
 
 
 
-void graph_encode_jpeg(Graph_img &graph_img) {
+void graph_encode_jpeg(Graph_img &graph_img, uint8_t *jpeg_buf, uint32_t jpeg_buf_size, uint32_t &jpeg_size) {
   JPEGENC jpg;
   JPEGENCODE jpe;
 
-  int rc = jpg.open(graph_img.jpeg_buf, JPEG_GRAPH_BUF_SIZE);
+  int rc = jpg.open(jpeg_buf, jpeg_buf_size);
   if (rc != JPEGE_SUCCESS) {
-    graph_img.jpeg_size = 0;
+    jpeg_size = 0;
     return;
   }
 
   rc = jpg.encodeBegin(&jpe, GRAPH_IMG_WIDTH, GRAPH_IMG_HEIGHT, JPEGE_PIXEL_RGB888, JPEGE_SUBSAMPLE_444, JPEGE_Q_BEST);
   if (rc != JPEGE_SUCCESS) {
     jpg.close();
-    graph_img.jpeg_size = 0;
+    jpeg_size = 0;
     return;
   }
 
@@ -385,7 +385,7 @@ void graph_encode_jpeg(Graph_img &graph_img) {
     }
   }
 
-  graph_img.jpeg_size = (uint32_t)jpg.close();
+  jpeg_size = (uint32_t)jpg.close();
 }
 
 

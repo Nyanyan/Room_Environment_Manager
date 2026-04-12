@@ -371,17 +371,26 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
 
 
 String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
+  uint8_t *jpeg_buf = (uint8_t*)malloc(JPEG_GRAPH_BUF_SIZE);
+  if (jpeg_buf == nullptr) {
+    Serial.println("[ERROR] cannot allocate jpeg buffer");
+    return String("");
+  }
+  uint32_t jpeg_size = 0;
+
   graph_draw_temperature(graph_data, graph_img, time_info);
-  graph_encode_jpeg(graph_img);
-  String graph_temperature = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_TEMPERATURE);
+  graph_encode_jpeg(graph_img, jpeg_buf, JPEG_GRAPH_BUF_SIZE, jpeg_size);
+  String graph_temperature = slack_upload_img(jpeg_buf, jpeg_size, JPEG_GRAPH_FILE_NAME_TEMPERATURE);
 
   graph_draw_humidity(graph_data, graph_img, time_info);
-  graph_encode_jpeg(graph_img);
-  String graph_humidity = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_HUMIDITY);
+  graph_encode_jpeg(graph_img, jpeg_buf, JPEG_GRAPH_BUF_SIZE, jpeg_size);
+  String graph_humidity = slack_upload_img(jpeg_buf, jpeg_size, JPEG_GRAPH_FILE_NAME_HUMIDITY);
 
   graph_draw_pressure(graph_data, graph_img, time_info);
-  graph_encode_jpeg(graph_img);
-  String graph_pressure = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_PRESSURE);
+  graph_encode_jpeg(graph_img, jpeg_buf, JPEG_GRAPH_BUF_SIZE, jpeg_size);
+  String graph_pressure = slack_upload_img(jpeg_buf, jpeg_size, JPEG_GRAPH_FILE_NAME_PRESSURE);
+
+  free(jpeg_buf);
 
   String str = 
     String("<") + graph_temperature + String("| >") + 

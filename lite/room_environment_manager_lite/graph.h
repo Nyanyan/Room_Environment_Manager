@@ -88,8 +88,6 @@ struct Value_color{
 // graph image
 struct Graph_img{
   uint8_t graph[GRAPH_IMG_HEIGHT][GRAPH_IMG_WIDTH];
-  uint8_t jpeg_buf[JPEG_GRAPH_BUF_SIZE];
-  uint32_t jpeg_size;
 };
 
 
