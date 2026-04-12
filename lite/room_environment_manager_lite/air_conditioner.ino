@@ -1,6 +1,9 @@
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
-#define AC_USE_MITSUBISHIHEAVY true // set to 0 for Panasonic
+#define AC_PANASONIC 0
+#define AC_MITSUBISHIHEAVY88 1
+#define AC_MITSUBISHIELECTRIC 2
+#define AC_TYPE AC_MITSUBISHIELECTRIC
 
 #if AC_USE_MITSUBISHIHEAVY
 #include <ir_MitsubishiHeavy.h>
