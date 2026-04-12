@@ -1,9 +1,10 @@
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 
+// for more info: https://github.com/crankyoldgit/IRremoteESP8266/blob/master/SupportedProtocols.md
 #define AC_PANASONIC 0
 #define AC_MITSUBISHIHEAVY88 1
-#define AC_MITSUBISHIELECTRIC 2
+#define AC_MITSUBISHIELECTRIC 2 // IRMitsubishiAC
 #define AC_TYPE AC_MITSUBISHIELECTRIC
 
 #if AC_USE_MITSUBISHIHEAVY
