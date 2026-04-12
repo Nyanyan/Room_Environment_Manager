@@ -34,9 +34,9 @@ void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status 
   };
 
   display_print(0, 0, fmt_or_placeholder(representative.temperature, 1, " *C ", "---- *C "));
-  display_print(11, 0, fmt_or_placeholder(representative.humidity, 0, " %  ", "---- %  "));
-  display_print(0, 1, fmt_or_placeholder(representative.pressure, 1, " hPa ", "---- hPa"));
-  display_print(11, 1, fmt_or_placeholder(representative.co2_concentration, 0, " ppm  ", "---- ppm "));
+  display_print(0, 1, fmt_or_placeholder(representative.humidity, 1, " %  ", "---- %  "));
+  display_print(9, 0, fmt_or_placeholder(representative.pressure, 1, " hPa ", "---- hPa"));
+  display_print(9, 1, fmt_or_placeholder(representative.co2_concentration, 0, " ppm  ", "---- ppm "));
 
   if (settings.ac_auto_mode == AC_AUTO_OFF){
     display_print(0, 2, "MANUAL   ");

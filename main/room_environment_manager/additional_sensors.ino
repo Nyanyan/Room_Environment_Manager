@@ -35,11 +35,24 @@ struct __attribute__((packed)) AdditionalSensorPacket {
   float pressure_hpa;
 };
 
+struct __attribute__((packed)) AdditionalSensorRequestPacket {
+  char header[N_SLAVE_HEADER];
+  float representative_temperature_c;
+  float representative_humidity_pct;
+  float representative_pressure_hpa;
+  float representative_co2_ppm;
+};
+
 static SensorReading g_additional_sensor_data[N_ADDITIONAL_SENSORS];
 static bool g_additional_sensor_received[N_ADDITIONAL_SENSORS];
 static SensorReading g_additional_sensor_last_data[N_ADDITIONAL_SENSORS];
 static unsigned long g_additional_sensor_last_ms[N_ADDITIONAL_SENSORS];
 static unsigned long g_last_additional_request_ms = 0;
+static SensorReading g_representative_for_children;
+
+void additional_sensors_set_representative(const SensorReading &representative) {
+  g_representative_for_children = representative;
+}
 
 static void reset_wifi_for_espnow() {
   WiFi.persistent(false);
@@ -150,7 +163,15 @@ void additional_sensors_request() {
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     Serial.print("request data to additional sensor ");
     Serial.println(i + 1);
-    esp_err_t send_res = esp_now_send(additional_sensor_mac_addrs[i], (uint8_t *)additional_sensor_headers[i], N_SLAVE_HEADER);
+
+    AdditionalSensorRequestPacket request = {};
+    memcpy(request.header, additional_sensor_headers[i], N_SLAVE_HEADER);
+    request.representative_temperature_c = g_representative_for_children.temperature;
+    request.representative_humidity_pct = g_representative_for_children.humidity;
+    request.representative_pressure_hpa = g_representative_for_children.pressure;
+    request.representative_co2_ppm = g_representative_for_children.co2_concentration;
+
+    esp_err_t send_res = esp_now_send(additional_sensor_mac_addrs[i], reinterpret_cast<uint8_t *>(&request), sizeof(request));
     if (send_res != ESP_OK) {
       Serial.printf("[WARN] esp_now_send failed (%d) to sensor %d\n", send_res, i);
     }

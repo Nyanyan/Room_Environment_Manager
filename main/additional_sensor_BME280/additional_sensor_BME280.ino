@@ -8,6 +8,7 @@
 #include <cstring>
 #include <float.h>
 #include "token.h"
+#include "display.h"
 
 Adafruit_BME280 bme;
 bool bme_ready = false;
@@ -23,12 +24,57 @@ struct __attribute__((packed)) SensorPacket {
   float pressure_hpa;
 };
 
+struct __attribute__((packed)) ParentRepresentativePacket {
+  char header[N_SLAVE_HEADER];
+  float representative_temperature_c;
+  float representative_humidity_pct;
+  float representative_pressure_hpa;
+  float representative_co2_ppm;
+};
+
 double latest_temperature = 0.0;
 double latest_humidity = 0.0;
 double latest_pressure = 0.0;
 static float temperature_samples[SENSOR_N_DATA_FOR_AVERAGE];
 static float humidity_samples[SENSOR_N_DATA_FOR_AVERAGE];
 static float pressure_samples[SENSOR_N_DATA_FOR_AVERAGE];
+static float parent_representative_temperature = FLT_MAX;
+static float parent_representative_humidity = FLT_MAX;
+static float parent_representative_pressure = FLT_MAX;
+static float parent_representative_co2 = FLT_MAX;
+static float local_temperature_at_parent_receive = FLT_MAX;
+static float local_humidity_at_parent_receive = FLT_MAX;
+static float local_pressure_at_parent_receive = FLT_MAX;
+static bool has_parent_representative = false;
+
+bool is_valid_value(float value) {
+  return value != FLT_MAX;
+}
+
+float make_display_value(float parent_base, float local_base, float local_now) {
+  if (!is_valid_value(parent_base)) {
+    return FLT_MAX;
+  }
+  if (!is_valid_value(local_base) || !is_valid_value(local_now)) {
+    return parent_base;
+  }
+  return parent_base + (local_now - local_base);
+}
+
+void get_display_representative(float *temperature_c, float *humidity_pct, float *pressure_hpa, float *co2_ppm) {
+  if (!has_parent_representative) {
+    *temperature_c = FLT_MAX;
+    *humidity_pct = FLT_MAX;
+    *pressure_hpa = FLT_MAX;
+    *co2_ppm = FLT_MAX;
+    return;
+  }
+
+  *temperature_c = make_display_value(parent_representative_temperature, local_temperature_at_parent_receive, (float)latest_temperature);
+  *humidity_pct = make_display_value(parent_representative_humidity, local_humidity_at_parent_receive, (float)latest_humidity);
+  *pressure_hpa = make_display_value(parent_representative_pressure, local_pressure_at_parent_receive, (float)latest_pressure);
+  *co2_ppm = parent_representative_co2;
+}
 
 // Compute trimmed mean after sorting and dropping 5% high/low outliers.
 float compute_trimmed_mean(const float *samples, int count) {
@@ -166,6 +212,8 @@ void setup() {
   Wire.begin();
   Wire.setTimeout(2000);
 
+  init_lcd();
+
   if (!bme.begin(0x76)) {
     Serial.println("Failed to find BME280 sensor");
     while (true) {
@@ -184,6 +232,12 @@ void setup() {
   bme_ready = true;
 
   get_temperature_humidity_pressure();
+  float display_temperature = FLT_MAX;
+  float display_humidity = FLT_MAX;
+  float display_pressure = FLT_MAX;
+  float display_co2 = FLT_MAX;
+  get_display_representative(&display_temperature, &display_humidity, &display_pressure, &display_co2);
+  display_print_info(display_temperature, display_humidity, display_pressure, display_co2);
 
 
   //Set device in AP mode to begin with
@@ -203,8 +257,43 @@ void setup() {
 
 // callback when data is recv from Master
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+  if (data_len < N_SLAVE_HEADER) {
+    Serial.printf("received short packet: %d bytes\n", data_len);
+    return;
+  }
+
   Serial.println("received");
   if (is_correct_header(data)){ // check header
+    if (data_len >= (int)sizeof(ParentRepresentativePacket)) {
+      ParentRepresentativePacket parent_packet = {};
+      memcpy(&parent_packet, data, sizeof(parent_packet));
+      parent_representative_temperature = parent_packet.representative_temperature_c;
+      parent_representative_humidity = parent_packet.representative_humidity_pct;
+      parent_representative_pressure = parent_packet.representative_pressure_hpa;
+      parent_representative_co2 = parent_packet.representative_co2_ppm;
+      local_temperature_at_parent_receive = (float)latest_temperature;
+      local_humidity_at_parent_receive = (float)latest_humidity;
+      local_pressure_at_parent_receive = (float)latest_pressure;
+      has_parent_representative = true;
+
+      Serial.print("Updated representative from parent: ");
+      Serial.print(parent_representative_temperature);
+      Serial.print(" C, ");
+      Serial.print(parent_representative_humidity);
+      Serial.print(" %, ");
+      Serial.print(parent_representative_pressure);
+      Serial.print(" hPa, ");
+      Serial.print(parent_representative_co2);
+      Serial.println(" ppm");
+      Serial.print("Local snapshot at receive: ");
+      Serial.print(local_temperature_at_parent_receive);
+      Serial.print(" C, ");
+      Serial.print(local_humidity_at_parent_receive);
+      Serial.print(" %, ");
+      Serial.print(local_pressure_at_parent_receive);
+      Serial.println(" hPa");
+    }
+
     SensorPacket packet = {};
     memcpy(packet.header, additional_sensor_header, N_SLAVE_HEADER);
     packet.temperature_c = (float)latest_temperature; // already trimmed mean
@@ -235,4 +324,10 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
 
 void loop() {
   get_temperature_humidity_pressure();
+  float display_temperature = FLT_MAX;
+  float display_humidity = FLT_MAX;
+  float display_pressure = FLT_MAX;
+  float display_co2 = FLT_MAX;
+  get_display_representative(&display_temperature, &display_humidity, &display_pressure, &display_co2);
+  display_print_info(display_temperature, display_humidity, display_pressure, display_co2);
 }
