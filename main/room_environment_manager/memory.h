@@ -7,7 +7,7 @@
 #include "time_manager.h"
 
 // Reservation capacity and limits
-const size_t RESERVATION_MAX = 16;
+const size_t RESERVATION_MAX = 8;
 const size_t RESERVATION_COMMAND_MAX_LEN = 80;
 
 const uint8_t RESERVATION_REPEAT_NONE = 0;
