@@ -322,7 +322,7 @@ void command_print_command_list(Time_info &time_info){
   str += "      - off ac auto mode\n";
   str += "- `reserve` (r)\n";
   str += "  - command reservation\n";
-  str += "  - `reserve new (r n) [YYYYMMDD (optional)] [hhmm] [command]`\n";
+  str += "  - `reserve new (r n) [YYYYMMDD or `everyday` or `monday` to `sunday` (optional)] [hhmm] [command]`\n";
   str += "    - new command reservation\n";
   str += "    - If the date is omitted, the next time the specified time will be executed\n";
   str += "  - `reserve check (r c)`\n";
