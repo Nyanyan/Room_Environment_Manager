@@ -124,11 +124,138 @@ void resolve_next_reservation_date(const Time_info &now, uint8_t hour, uint8_t m
   increment_date(year, month, day);
 }
 
+uint8_t weekday_from_date(uint16_t year, uint8_t month, uint8_t day) {
+  // Sakamoto's algorithm: 0 = Sunday ... 6 = Saturday
+  static const uint8_t t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+  uint16_t y = year;
+  if (month < 3) {
+    --y;
+  }
+  uint8_t w = static_cast<uint8_t>((y + y / 4 - y / 100 + y / 400 + t[month - 1] + day) % 7);
+  return w == 0 ? RESERVATION_WEEKDAY_SUNDAY : w;
+}
+
+bool parse_weekday_keyword(const String &text, uint8_t &weekday) {
+  String lower = text;
+  lower.toLowerCase();
+  if (lower == "monday") {
+    weekday = RESERVATION_WEEKDAY_MONDAY;
+    return true;
+  }
+  if (lower == "tuesday") {
+    weekday = RESERVATION_WEEKDAY_TUESDAY;
+    return true;
+  }
+  if (lower == "wednesday") {
+    weekday = RESERVATION_WEEKDAY_WEDNESDAY;
+    return true;
+  }
+  if (lower == "thursday") {
+    weekday = RESERVATION_WEEKDAY_THURSDAY;
+    return true;
+  }
+  if (lower == "friday") {
+    weekday = RESERVATION_WEEKDAY_FRIDAY;
+    return true;
+  }
+  if (lower == "saturday") {
+    weekday = RESERVATION_WEEKDAY_SATURDAY;
+    return true;
+  }
+  if (lower == "sunday") {
+    weekday = RESERVATION_WEEKDAY_SUNDAY;
+    return true;
+  }
+  return false;
+}
+
+bool parse_recurring_keyword(const String &text, uint8_t &repeat_type, uint8_t &weekday) {
+  String lower = text;
+  lower.toLowerCase();
+  if (lower == "everyday") {
+    repeat_type = RESERVATION_REPEAT_EVERYDAY;
+    weekday = 0;
+    return true;
+  }
+  if (parse_weekday_keyword(lower, weekday)) {
+    repeat_type = RESERVATION_REPEAT_WEEKLY;
+    return true;
+  }
+  return false;
+}
+
+const char *weekday_label(uint8_t weekday) {
+  switch (weekday) {
+    case RESERVATION_WEEKDAY_MONDAY:
+      return "monday";
+    case RESERVATION_WEEKDAY_TUESDAY:
+      return "tuesday";
+    case RESERVATION_WEEKDAY_WEDNESDAY:
+      return "wednesday";
+    case RESERVATION_WEEKDAY_THURSDAY:
+      return "thursday";
+    case RESERVATION_WEEKDAY_FRIDAY:
+      return "friday";
+    case RESERVATION_WEEKDAY_SATURDAY:
+      return "saturday";
+    case RESERVATION_WEEKDAY_SUNDAY:
+      return "sunday";
+    default:
+      return "unknown";
+  }
+}
+
+bool is_yyyymmdd_candidate(const String &text) {
+  if (text.length() != 8) {
+    return false;
+  }
+  for (int i = 0; i < 8; ++i) {
+    char c = text.charAt(i);
+    if (c < '0' || c > '9') {
+      return false;
+    }
+  }
+  return true;
+}
+
+void resolve_next_weekly_reservation_date(const Time_info &now, uint8_t target_weekday, uint8_t hour, uint8_t minute,
+                                          uint16_t &year, uint8_t &month, uint8_t &day) {
+  year = static_cast<uint16_t>(now.year);
+  month = static_cast<uint8_t>(now.month);
+  day = static_cast<uint8_t>(now.day);
+
+  uint8_t current_weekday = weekday_from_date(year, month, day);
+  int delta = static_cast<int>(target_weekday) - static_cast<int>(current_weekday);
+  if (delta < 0) {
+    delta += 7;
+  }
+  if (delta == 0) {
+    bool is_future_today = (hour > now.hour) || (hour == now.hour && minute > now.minute);
+    if (!is_future_today) {
+      delta = 7;
+    }
+  }
+  for (int i = 0; i < delta; ++i) {
+    increment_date(year, month, day);
+  }
+}
+
 String format_reservation_line(const CommandReservation &res) {
-  char buf[128];
-  snprintf(buf, sizeof(buf), "[%lu] %04u/%02u/%02u %02u:%02u %s", static_cast<unsigned long>(res.id),
-           static_cast<unsigned int>(res.year), static_cast<unsigned int>(res.month), static_cast<unsigned int>(res.day),
-           static_cast<unsigned int>(res.hour), static_cast<unsigned int>(res.minute), res.command);
+  char buf[192];
+  if (res.repeat_type == RESERVATION_REPEAT_EVERYDAY) {
+    snprintf(buf, sizeof(buf), "[%lu] everyday %02u:%02u (next %04u/%02u/%02u) %s", static_cast<unsigned long>(res.id),
+             static_cast<unsigned int>(res.hour), static_cast<unsigned int>(res.minute), static_cast<unsigned int>(res.year),
+             static_cast<unsigned int>(res.month), static_cast<unsigned int>(res.day), res.command);
+  } else if (res.repeat_type == RESERVATION_REPEAT_WEEKLY) {
+    snprintf(buf, sizeof(buf), "[%lu] %s %02u:%02u (next %04u/%02u/%02u) %s", static_cast<unsigned long>(res.id),
+             weekday_label(res.weekday), static_cast<unsigned int>(res.hour), static_cast<unsigned int>(res.minute),
+             static_cast<unsigned int>(res.year), static_cast<unsigned int>(res.month), static_cast<unsigned int>(res.day),
+             res.command);
+  } else {
+    snprintf(buf, sizeof(buf), "[%lu] %04u/%02u/%02u %02u:%02u %s", static_cast<unsigned long>(res.id),
+             static_cast<unsigned int>(res.year), static_cast<unsigned int>(res.month), static_cast<unsigned int>(res.day),
+             static_cast<unsigned int>(res.hour), static_cast<unsigned int>(res.minute), res.command);
+  }
   return String(buf);
 }
 
@@ -322,9 +449,11 @@ void command_print_command_list(Time_info &time_info){
   str += "      - off ac auto mode\n";
   str += "- `reserve` (r)\n";
   str += "  - command reservation\n";
-  str += "  - `reserve new (r n) [YYYYMMDD or `everyday` or `monday` to `sunday` (optional)] [hhmm] [command]`\n";
+  str += "  - `reserve new (r n) [YYYYMMDD|everyday|monday..sunday (optional)] [hhmm] [command]`\n";
   str += "    - new command reservation\n";
-  str += "    - If the date is omitted, the next time the specified time will be executed\n";
+  str += "    - date omitted: execute at next specified time\n";
+  str += "    - `everyday`: execute every day at specified time\n";
+  str += "    - weekday: execute every specified weekday at specified time\n";
   str += "  - `reserve check (r c)`\n";
   str += "    - check command reservation\n";
   str += "  - `reserve delete (r d) [reservation_id]`\n";
@@ -466,23 +595,33 @@ void command_check_reserve(Command command, Time_info &time_info, Settings &sett
     uint16_t year = 0;
     uint8_t month = 0;
     uint8_t day = 0;
+    uint8_t repeat_type = RESERVATION_REPEAT_NONE;
+    uint8_t repeat_weekday = 0;
+    bool has_explicit_schedule = false;
     bool has_explicit_date = parse_date_str(command.arg2, year, month, day);
-    bool looks_like_date = command.arg2.length() == 8;
-
-    if (!has_explicit_date && looks_like_date) {
-      String str = String("[ERROR] invalid date: ") + command.arg2;
-      slack_send_message(time_info, str);
-      return;
-    }
-
     if (has_explicit_date) {
+      has_explicit_schedule = true;
       if (command.arg3.length() == 0) {
         slack_send_message(time_info, "[ERROR] expected time after date");
         return;
       }
       time_str = command.arg3;
       cmd_text = command.arg4;
+    } else if (parse_recurring_keyword(command.arg2, repeat_type, repeat_weekday)) {
+      has_explicit_schedule = true;
+      if (command.arg3.length() == 0) {
+        slack_send_message(time_info, "[ERROR] expected time after recurrence");
+        return;
+      }
+      time_str = command.arg3;
+      cmd_text = command.arg4;
     } else {
+      bool looks_like_date = is_yyyymmdd_candidate(command.arg2);
+      if (looks_like_date) {
+        String str = String("[ERROR] invalid date: ") + command.arg2;
+        slack_send_message(time_info, str);
+        return;
+      }
       if (command.arg2.length() == 0) {
         slack_send_message(time_info, "[ERROR] time is missing");
         return;
@@ -506,9 +645,15 @@ void command_check_reserve(Command command, Time_info &time_info, Settings &sett
       slack_send_message(time_info, str);
       return;
     }
-    if (!has_explicit_date) {
+
+    if (!has_explicit_schedule) {
       resolve_next_reservation_date(time_info, hour, minute, year, month, day);
+    } else if (repeat_type == RESERVATION_REPEAT_EVERYDAY) {
+      resolve_next_reservation_date(time_info, hour, minute, year, month, day);
+    } else if (repeat_type == RESERVATION_REPEAT_WEEKLY) {
+      resolve_next_weekly_reservation_date(time_info, repeat_weekday, hour, minute, year, month, day);
     }
+
     if (cmd_text.length() == 0) {
       slack_send_message(time_info, "[ERROR] command is empty");
       return;
@@ -520,6 +665,8 @@ void command_check_reserve(Command command, Time_info &time_info, Settings &sett
     reservation.day = day;
     reservation.hour = hour;
     reservation.minute = minute;
+    reservation.repeat_type = repeat_type;
+    reservation.weekday = repeat_weekday;
     strncpy(reservation.command, cmd_text.c_str(), RESERVATION_COMMAND_MAX_LEN - 1);
     reservation.command[RESERVATION_COMMAND_MAX_LEN - 1] = '\0';
 
@@ -529,12 +676,8 @@ void command_check_reserve(Command command, Time_info &time_info, Settings &sett
       return;
     }
 
-    char buf[160];
-    snprintf(buf, sizeof(buf), "[INFO] reserved id:%lu %04u/%02u/%02u %02u:%02u %s",
-             static_cast<unsigned long>(assigned_id), static_cast<unsigned int>(year), static_cast<unsigned int>(month),
-             static_cast<unsigned int>(day), static_cast<unsigned int>(hour), static_cast<unsigned int>(minute),
-             reservation.command);
-    slack_send_message(time_info, String(buf));
+    reservation.id = assigned_id;
+    slack_send_message(time_info, String("[INFO] reserved ") + format_reservation_line(reservation));
     command_send_reservation_list(time_info);
   } else if (command.arg1 == "check" || command.arg1 == "c") {
     command_send_reservation_list(time_info);

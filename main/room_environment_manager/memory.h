@@ -10,6 +10,18 @@
 const size_t RESERVATION_MAX = 4;
 const size_t RESERVATION_COMMAND_MAX_LEN = 80;
 
+const uint8_t RESERVATION_REPEAT_NONE = 0;
+const uint8_t RESERVATION_REPEAT_EVERYDAY = 1;
+const uint8_t RESERVATION_REPEAT_WEEKLY = 2;
+
+const uint8_t RESERVATION_WEEKDAY_MONDAY = 1;
+const uint8_t RESERVATION_WEEKDAY_TUESDAY = 2;
+const uint8_t RESERVATION_WEEKDAY_WEDNESDAY = 3;
+const uint8_t RESERVATION_WEEKDAY_THURSDAY = 4;
+const uint8_t RESERVATION_WEEKDAY_FRIDAY = 5;
+const uint8_t RESERVATION_WEEKDAY_SATURDAY = 6;
+const uint8_t RESERVATION_WEEKDAY_SUNDAY = 7;
+
 struct CommandReservation {
 	uint32_t id;
 	uint16_t year;
@@ -17,10 +29,12 @@ struct CommandReservation {
 	uint8_t day;
 	uint8_t hour;
 	uint8_t minute;
+	uint8_t repeat_type;
+	uint8_t weekday;
 	char command[RESERVATION_COMMAND_MAX_LEN];
 	uint8_t active;
 
-	CommandReservation() : id(0), year(0), month(0), day(0), hour(0), minute(0), active(0) {
+	CommandReservation() : id(0), year(0), month(0), day(0), hour(0), minute(0), repeat_type(RESERVATION_REPEAT_NONE), weekday(0), active(0) {
 		command[0] = '\0';
 	}
 };

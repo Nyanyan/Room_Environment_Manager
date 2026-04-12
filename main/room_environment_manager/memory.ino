@@ -29,7 +29,7 @@ constexpr uint8_t kVersionAc = 1;
 constexpr uint32_t kMagicSettings = 0x57AABBCC; // identifies valid Settings payload
 constexpr uint8_t kVersionSettings = 1;
 constexpr uint32_t kReservationMagic = 0xAC5EED02; // identifies reservation payload
-constexpr uint8_t kReservationVersion = 1;
+constexpr uint8_t kReservationVersion = 2;
 constexpr size_t kEepromSize = 1024; // bytes reserved for this module
 constexpr int kAcStatusAddr = 0;   // start address for AC status block
 constexpr int kSettingsAddr = kAcStatusAddr + sizeof(AcPersisted);
@@ -67,6 +67,58 @@ void ensure_initialized() {
 
 bool is_state_valid(int32_t state) {
 	return state == AC_STATE_OFF || state == AC_STATE_COOL || state == AC_STATE_DRY || state == AC_STATE_HEAT;
+}
+
+bool reservation_is_leap_year(uint16_t year) {
+	if (year % 400 == 0) return true;
+	if (year % 100 == 0) return false;
+	return (year % 4) == 0;
+}
+
+uint8_t reservation_days_in_month(uint16_t year, uint8_t month) {
+	static const uint8_t days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+	if (month < 1 || month > 12) {
+		return 31;
+	}
+	if (month == 2 && reservation_is_leap_year(year)) {
+		return 29;
+	}
+	return days[month - 1];
+}
+
+void reservation_increment_date(uint16_t &year, uint8_t &month, uint8_t &day) {
+	++day;
+	uint8_t dim = reservation_days_in_month(year, month);
+	if (day <= dim) {
+		return;
+	}
+	day = 1;
+	++month;
+	if (month <= 12) {
+		return;
+	}
+	month = 1;
+	++year;
+}
+
+uint8_t reservation_weekday_from_date(uint16_t year, uint8_t month, uint8_t day) {
+	// Sakamoto's algorithm: 0 = Sunday ... 6 = Saturday
+	static const uint8_t t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+	uint16_t y = year;
+	if (month < 3) {
+		--y;
+	}
+	uint8_t w = static_cast<uint8_t>((y + y / 4 - y / 100 + y / 400 + t[month - 1] + day) % 7);
+	return w == 0 ? RESERVATION_WEEKDAY_SUNDAY : w;
+}
+
+bool is_valid_repeat_type(uint8_t repeat_type) {
+	return repeat_type == RESERVATION_REPEAT_NONE || repeat_type == RESERVATION_REPEAT_EVERYDAY ||
+	       repeat_type == RESERVATION_REPEAT_WEEKLY;
+}
+
+bool is_valid_weekday(uint8_t weekday) {
+	return weekday >= RESERVATION_WEEKDAY_MONDAY && weekday <= RESERVATION_WEEKDAY_SUNDAY;
 }
 
 struct ReservationBlock {
@@ -137,6 +189,23 @@ bool is_earlier(const CommandReservation &lhs, const CommandReservation &rhs) {
 	if (lhs.day != rhs.day) return lhs.day < rhs.day;
 	if (lhs.hour != rhs.hour) return lhs.hour < rhs.hour;
 	return lhs.minute < rhs.minute;
+}
+
+void advance_recurring_reservation(CommandReservation &reservation, const Time_info &now) {
+	if (reservation.repeat_type == RESERVATION_REPEAT_EVERYDAY) {
+		do {
+			reservation_increment_date(reservation.year, reservation.month, reservation.day);
+		} while (is_due_or_past(reservation, now));
+		return;
+	}
+
+	if (reservation.repeat_type == RESERVATION_REPEAT_WEEKLY) {
+		do {
+			do {
+				reservation_increment_date(reservation.year, reservation.month, reservation.day);
+			} while (reservation_weekday_from_date(reservation.year, reservation.month, reservation.day) != reservation.weekday);
+		} while (is_due_or_past(reservation, now));
+	}
 }
 
 } // namespace
@@ -247,6 +316,14 @@ bool reservation_add(const CommandReservation &reservation, uint32_t &assigned_i
 		return false;
 	}
 	CommandReservation to_store = reservation;
+	if (!is_valid_repeat_type(to_store.repeat_type)) {
+		to_store.repeat_type = RESERVATION_REPEAT_NONE;
+	}
+	if (to_store.repeat_type != RESERVATION_REPEAT_WEEKLY) {
+		to_store.weekday = 0;
+	} else if (!is_valid_weekday(to_store.weekday)) {
+		return false;
+	}
 	to_store.id = block.next_id++;
 	to_store.active = 1;
 	block.slots[free_index] = to_store;
@@ -304,8 +381,14 @@ bool reservation_pop_due(const Time_info &now, CommandReservation &reservation_o
 	if (candidate_index == -1) {
 		return false;
 	}
-	reservation_out = block.slots[candidate_index];
-	block.slots[candidate_index] = CommandReservation();
+	CommandReservation selected = block.slots[candidate_index];
+	reservation_out = selected;
+	if (selected.repeat_type == RESERVATION_REPEAT_NONE) {
+		block.slots[candidate_index] = CommandReservation();
+	} else {
+		advance_recurring_reservation(selected, now);
+		block.slots[candidate_index] = selected;
+	}
 	save_reservation_block(block);
 	return true;
 }
