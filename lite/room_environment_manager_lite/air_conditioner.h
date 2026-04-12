@@ -62,4 +62,6 @@ struct AC_status{
   }
 };
 
+const char* ac_type_display_name();
+
 #endif

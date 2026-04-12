@@ -77,6 +77,7 @@ void setup() {
   memory_load_settings(settings);
   init_display();
   display_print(0, 0, "[I] Initializing");
+  display_print(0, 1, String("[I] AC: ") + String(ac_type_display_name()));
   init_wifi();
   Time_info time_info = time_get();
   slack_send_message(time_info, "[INFO] 起動中...");
@@ -86,8 +87,8 @@ void setup() {
   sensor_data = get_sensor_data();
 
   display_clear();
-  display_print(0, 0, "Started");
-  display_print(0, 1, "please wait a minute");
+  display_print(0, 0, "[I] Started");
+  display_print(0, 1, "[I] please wait a minute");
   time_info = time_get_local();
   slack_send_message(time_info, "[INFO] 起動しました");
 

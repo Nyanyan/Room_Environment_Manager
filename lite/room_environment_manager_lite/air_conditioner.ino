@@ -52,6 +52,18 @@ IRPanasonicAc ac(AC_LED_PIN);
 #error "Unsupported AC_TYPE"
 #endif
 
+const char* ac_type_display_name() {
+#if AC_TYPE == AC_MITSUBISHIHEAVY88
+  return "MitsubishiHeavy88";
+#elif AC_TYPE == AC_MITSUBISHIELECTRIC
+  return "MitsubishiElectric";
+#elif AC_TYPE == AC_PANASONIC
+  return "Panasonic";
+#else
+  return "Unknown";
+#endif
+}
+
 // Guard IR transmission from timer-driven display updates to keep waveforms stable
 static void ac_send_with_guard() {
   suspend_display_updates();
