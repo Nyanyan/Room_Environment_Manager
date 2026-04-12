@@ -45,50 +45,9 @@ const Value_color color_pressure[N_COLOR_PRESSURE] = {
   {1020, PALETTE_RED}
 };
 
-const Value_color color_co2_concentration[N_COLOR_CO2_CONCENTRATION] = {
-  {400, PALETTE_NAVYBLUE},
-  {500, PALETTE_BLUE},
-  {600, PALETTE_SKYBLUE},
-  {700, PALETTE_GREEN},
-  {800, PALETTE_ORANGE},
-  {900, PALETTE_RED},
-  {1000, PALETTE_PURPLE}
-};
-
 void init_graph(Graph_img &graph_img){
-  uint16_t* bmp_img_16;            // bmp header as uint16_t
-  uint32_t* bmp_img_32;            // bmp header as uint32_t
-
-  // file header
-  graph_img.bmp_img[0] = 'B';  // bfType: always B
-  graph_img.bmp_img[1] = 'M';  // bfType: always M
-  bmp_img_32 = (uint32_t*)(graph_img.bmp_img + 2);
-  bmp_img_32[0] = BMP_GRAPH_FILE_SIZE;           // bfSize: file size
-  bmp_img_32[1] = 0;                       // bfReserved1 & bfReserved2: always 0
-  bmp_img_32[2] = BMP_OFFSET_TO_IMG_DATA;  // bfOffBits: offset to main image data
-
-  // information header
-  bmp_img_32[3] = 40;                     // bcSize: 40 bytes
-  bmp_img_32[4] = GRAPH_IMG_WIDTH;        // bcWidth: image width
-  bmp_img_32[5] = GRAPH_IMG_HEIGHT;       // bcHeight: image height
-  bmp_img_16 = (uint16_t*)(graph_img.bmp_img + 26);
-  bmp_img_16[0] = 1;                      // bcPlanes: always 1
-  bmp_img_16[1] = BMP_BIT_PER_PIXEL;      // bcBitCount: bit per pixel
-  bmp_img_32 = (uint32_t*)(graph_img.bmp_img + 30);
-  bmp_img_32[0] = 0;                      // biCompression: compression, 0 = no compression
-  bmp_img_32[1] = 3780;                   // biSizeImage: 3780 = 96 dpi
-  bmp_img_32[2] = 3780;                   // biXPixPerMeter: 3780 = 96 dpi
-  bmp_img_32[3] = 3780;                   // biYPixPerMeter: 3780 = 96 dpi
-  bmp_img_32[4] = BMP_N_COLOR_PALETTE;    // biClrUsed: color palette size
-  bmp_img_32[5] = BMP_N_COLOR_PALETTE;    // biCirImportant: important color palette size
-
-  // color palette
-  for (int i = 0; i < BMP_N_COLOR_PALETTE; ++i){
-    for (int j = 0; j < 3; ++j){
-      graph_img.bmp_img[BMP_HEADER_BYTE + 4 * i + 2 - j] = color_palette[i][j]; // note: BGR
-    }
-    graph_img.bmp_img[BMP_HEADER_BYTE + 4 * i + 3] = 0;
-  }
+  // no initialization needed for JPEG
+  (void)graph_img;
 }
 
 void graph_draw_white(Graph_img &graph_img) {
@@ -383,43 +342,50 @@ void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info
 
 
 
-void graph_draw_co2_concentration(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
-  graph_draw_white(graph_img);
-  graph_draw_x_scale(graph_img, graph_data);
-  int y_min, y_max;
-  graph_calculate_range(graph_data.co2_concentration, color_co2_concentration, N_COLOR_CO2_CONCENTRATION, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, &y_min, &y_max);
-  graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, color_co2_concentration, N_COLOR_CO2_CONCENTRATION);
-  graph_plot(graph_img, graph_data.co2_concentration, y_min, y_max);
-  graph_draw_frame(graph_img);
-  graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_CO2_CONCENTRATION_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_co2_concentration, CHAR_CO2_CONCENTRATION_N); // title + y unit
-  graph_draw_str(graph_img, CHAR_UNIT_X_EY, CHAR_UNIT_X_EX, char_idx_time, CHAR_TIME_N); // x unit
-  graph_draw_time(graph_img, time_info);
-}
+void graph_encode_jpeg(Graph_img &graph_img) {
+  JPEGENC jpg;
+  JPEGENCODE jpe;
 
-
-
-void graph_encode_bmp(Graph_img &graph_img){
-  // bitmap init
-  for (int i = BMP_OFFSET_TO_IMG_DATA; i < BMP_GRAPH_FILE_SIZE; ++i){
-    graph_img.bmp_img[i] = 0;
+  int rc = jpg.open(graph_img.jpeg_buf, JPEG_GRAPH_BUF_SIZE);
+  if (rc != JPEGE_SUCCESS) {
+    graph_img.jpeg_size = 0;
+    return;
   }
 
-  // graph to bitmap
-  int bmp_idx = BMP_OFFSET_TO_IMG_DATA;
-  int n_pixel_per_elem = 0;
-  for (int y = 0; y < GRAPH_IMG_HEIGHT; ++y){
-    for (int x = 0; x < GRAPH_IMG_WIDTH; ++x){
-      if (0 < n_pixel_per_elem){
-        graph_img.bmp_img[bmp_idx] <<= BMP_BIT_PER_PIXEL;
+  rc = jpg.encodeBegin(&jpe, GRAPH_IMG_WIDTH, GRAPH_IMG_HEIGHT, JPEGE_PIXEL_RGB888, JPEGE_SUBSAMPLE_444, JPEGE_Q_BEST);
+  if (rc != JPEGE_SUCCESS) {
+    jpg.close();
+    graph_img.jpeg_size = 0;
+    return;
+  }
+
+  uint8_t mcu[8 * 8 * 3];
+  const int mcu_w = jpe.cx;
+  const int mcu_h = jpe.cy;
+  const int mcu_count_x = (GRAPH_IMG_WIDTH + mcu_w - 1) / mcu_w;
+  const int mcu_count_y = (GRAPH_IMG_HEIGHT + mcu_h - 1) / mcu_h;
+
+  for (int my = 0; my < mcu_count_y && rc == JPEGE_SUCCESS; my++) {
+    for (int mx = 0; mx < mcu_count_x && rc == JPEGE_SUCCESS; mx++) {
+      for (int py = 0; py < mcu_h; py++) {
+        for (int px = 0; px < mcu_w; px++) {
+          int img_x = mx * mcu_w + px;
+          int img_y = GRAPH_IMG_HEIGHT - 1 - (my * mcu_h + py); // graph[] is top-down, JPEG is top-down
+          if (img_x >= GRAPH_IMG_WIDTH) img_x = GRAPH_IMG_WIDTH - 1;
+          if (img_y < 0) img_y = 0;
+          const uint8_t palette_idx = graph_img.graph[img_y][img_x];
+          const int mcu_idx = (py * mcu_w + px) * 3;
+          // JPEGENC on this target interprets 24bpp bytes as B,G,R order.
+          mcu[mcu_idx + 0] = color_palette[palette_idx][2]; // B
+          mcu[mcu_idx + 1] = color_palette[palette_idx][1]; // G
+          mcu[mcu_idx + 2] = color_palette[palette_idx][0]; // R
+        }
       }
-      graph_img.bmp_img[bmp_idx] |= graph_img.graph[y][x];
-      ++n_pixel_per_elem;
-      if (n_pixel_per_elem == 8 / BMP_BIT_PER_PIXEL){
-        ++bmp_idx;
-        n_pixel_per_elem = 0;
-      }
+      rc = jpg.addMCU(&jpe, mcu, mcu_w * 3);
     }
   }
+
+  graph_img.jpeg_size = (uint32_t)jpg.close();
 }
 
 
@@ -430,14 +396,12 @@ void graph_add_data(Graph_data &graph_data, Sensor_data &sensor_data){
     graph_data.temperature[i] = graph_data.temperature[i + 1];
     graph_data.humidity[i] = graph_data.humidity[i + 1];
     graph_data.pressure[i] = graph_data.pressure[i + 1];
-    graph_data.co2_concentration[i] = graph_data.co2_concentration[i + 1];
   }
 
   const SensorReading &reading = sensor_data.parent;
   graph_data.temperature[GRAPH_DATA_N - 1] = (reading.temperature == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.temperature;
   graph_data.humidity[GRAPH_DATA_N - 1] = (reading.humidity == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.humidity;
   graph_data.pressure[GRAPH_DATA_N - 1] = (reading.pressure == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.pressure;
-  graph_data.co2_concentration[GRAPH_DATA_N - 1] = (reading.co2_concentration == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.co2_concentration;
 }
 
 
