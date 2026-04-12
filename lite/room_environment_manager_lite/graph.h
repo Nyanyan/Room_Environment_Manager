@@ -10,6 +10,7 @@ struct Graph_data{
   float temperature[GRAPH_DATA_N];
   float humidity[GRAPH_DATA_N];
   float pressure[GRAPH_DATA_N];
+  float co2_concentration[GRAPH_DATA_N];
   int last_data_update_minute;
   int last_data_update_hour;
 
@@ -18,6 +19,7 @@ struct Graph_data{
       temperature[i] = GRAPH_DATA_UNDEFINED;
       humidity[i] = GRAPH_DATA_UNDEFINED;
       pressure[i] = GRAPH_DATA_UNDEFINED;
+      co2_concentration[i] = GRAPH_DATA_UNDEFINED;
     }
     last_data_update_minute = -1;
     last_data_update_hour = -1;
@@ -86,6 +88,10 @@ struct Value_color{
 // pressure graph
 #define N_COLOR_PRESSURE 4
 #define GRAPH_PRESSURE_SCALE_INTERVAL 5
+
+// co2 concentration graph
+#define N_COLOR_CO2_CONCENTRATION 7
+#define GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL 50
 
 
 // graph bitmap

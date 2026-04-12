@@ -364,7 +364,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   } else {
     str += "- エアコン状態: OFF\n";
   }
-  // str += get_graph_urls(graph_data, graph_img, time_info);
+  str += get_graph_urls(graph_data, graph_img, time_info);
   slack_send_message(time_info, str);
 }
 
@@ -383,10 +383,15 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
   graph_encode_bmp(graph_img);
   String graph_pressure = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_PRESSURE);
 
+  graph_draw_co2_concentration(graph_data, graph_img, time_info);
+  graph_encode_bmp(graph_img);
+  String graph_co2 = slack_upload_img(graph_img.bmp_img, BMP_GRAPH_FILE_SIZE, BMP_GRAPH_FILE_NAME_CO2_CONCENTRATION);
+
   String str = 
     String("<") + graph_temperature + String("| >") + 
     String("<") + graph_humidity + String("| >") + 
-    String("<") + graph_pressure + String("| >");
+    String("<") + graph_pressure + String("| >") +
+    String("<") + graph_co2 + String("| >");
   return str;
 }
 

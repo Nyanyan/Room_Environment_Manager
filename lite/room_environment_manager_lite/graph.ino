@@ -45,6 +45,16 @@ const Value_color color_pressure[N_COLOR_PRESSURE] = {
   {1020, PALETTE_RED}
 };
 
+const Value_color color_co2_concentration[N_COLOR_CO2_CONCENTRATION] = {
+  {400, PALETTE_NAVYBLUE},
+  {500, PALETTE_BLUE},
+  {600, PALETTE_SKYBLUE},
+  {700, PALETTE_GREEN},
+  {800, PALETTE_ORANGE},
+  {900, PALETTE_RED},
+  {1000, PALETTE_PURPLE}
+};
+
 void init_graph(Graph_img &graph_img){
   uint16_t* bmp_img_16;            // bmp header as uint16_t
   uint32_t* bmp_img_32;            // bmp header as uint32_t
@@ -373,6 +383,21 @@ void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info
 
 
 
+void graph_draw_co2_concentration(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
+  graph_draw_white(graph_img);
+  graph_draw_x_scale(graph_img, graph_data);
+  int y_min, y_max;
+  graph_calculate_range(graph_data.co2_concentration, color_co2_concentration, N_COLOR_CO2_CONCENTRATION, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, &y_min, &y_max);
+  graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, color_co2_concentration, N_COLOR_CO2_CONCENTRATION);
+  graph_plot(graph_img, graph_data.co2_concentration, y_min, y_max);
+  graph_draw_frame(graph_img);
+  graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_CO2_CONCENTRATION_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_co2_concentration, CHAR_CO2_CONCENTRATION_N); // title + y unit
+  graph_draw_str(graph_img, CHAR_UNIT_X_EY, CHAR_UNIT_X_EX, char_idx_time, CHAR_TIME_N); // x unit
+  graph_draw_time(graph_img, time_info);
+}
+
+
+
 void graph_encode_bmp(Graph_img &graph_img){
   // bitmap init
   for (int i = BMP_OFFSET_TO_IMG_DATA; i < BMP_GRAPH_FILE_SIZE; ++i){
@@ -405,12 +430,14 @@ void graph_add_data(Graph_data &graph_data, Sensor_data &sensor_data){
     graph_data.temperature[i] = graph_data.temperature[i + 1];
     graph_data.humidity[i] = graph_data.humidity[i + 1];
     graph_data.pressure[i] = graph_data.pressure[i + 1];
+    graph_data.co2_concentration[i] = graph_data.co2_concentration[i + 1];
   }
 
   const SensorReading &reading = sensor_data.parent;
   graph_data.temperature[GRAPH_DATA_N - 1] = (reading.temperature == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.temperature;
   graph_data.humidity[GRAPH_DATA_N - 1] = (reading.humidity == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.humidity;
   graph_data.pressure[GRAPH_DATA_N - 1] = (reading.pressure == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.pressure;
+  graph_data.co2_concentration[GRAPH_DATA_N - 1] = (reading.co2_concentration == FLT_MAX) ? GRAPH_DATA_UNDEFINED : reading.co2_concentration;
 }
 
 
