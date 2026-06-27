@@ -3,6 +3,15 @@
 #include <ArduinoJson.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(__has_include)
+#if __has_include(<WebSocketsClient.h>)
+#include <WebSocketsClient.h>
+#define SLACK_SOCKET_MODE_AVAILABLE 1
+#endif
+#endif
+#ifndef SLACK_SOCKET_MODE_AVAILABLE
+#define SLACK_SOCKET_MODE_AVAILABLE 0
+#endif
 #include "display.h"
 #include "time_manager.h"
 #include "slack.h"
@@ -13,12 +22,18 @@
 #ifndef SLACK_CHANNEL_ID
 #define SLACK_CHANNEL_ID SLACK_CHANNEL
 #endif
+#ifndef SLACK_APP_TOKEN
+#define SLACK_APP_TOKEN ""
+#endif
 
 #define SLACK_CONNECT_N_TRY 3
 #define SLACK_HTTP_TIMEOUT_MS 8000
 #define WIFI_CONNECT_MAX_TRY 3
 
 static unsigned long g_last_wifi_connect_ms = 0; // track last successful WiFi association
+
+void init_wifi();
+static bool ensure_wifi_connected_and_settled();
 
 static bool is_http_success(int status_code) {
   return status_code == HTTP_CODE_OK || status_code == HTTP_CODE_MOVED_PERMANENTLY;
@@ -80,6 +95,241 @@ static bool parse_slack_ok(const String &json, StaticJsonDocument<N> &doc, const
   return true;
 }
 
+#define SLACK_COMMAND_QUEUE_SIZE 4
+static String g_slack_command_queue[SLACK_COMMAND_QUEUE_SIZE];
+static uint8_t g_slack_command_head = 0;
+static uint8_t g_slack_command_count = 0;
+
+static void enqueue_slack_command(const String &message) {
+  if (message.length() == 0) {
+    return;
+  }
+  if (g_slack_command_count >= SLACK_COMMAND_QUEUE_SIZE) {
+    g_slack_command_head = (g_slack_command_head + 1) % SLACK_COMMAND_QUEUE_SIZE;
+    g_slack_command_count--;
+  }
+  uint8_t idx = (g_slack_command_head + g_slack_command_count) % SLACK_COMMAND_QUEUE_SIZE;
+  g_slack_command_queue[idx] = message;
+  g_slack_command_count++;
+}
+
+static String dequeue_slack_command() {
+  if (g_slack_command_count == 0) {
+    return String("");
+  }
+  String message = g_slack_command_queue[g_slack_command_head];
+  g_slack_command_queue[g_slack_command_head] = "";
+  g_slack_command_head = (g_slack_command_head + 1) % SLACK_COMMAND_QUEUE_SIZE;
+  g_slack_command_count--;
+  return message;
+}
+
+static bool slack_app_token_configured() {
+  return strlen(SLACK_APP_TOKEN) > 0;
+}
+
+#if SLACK_SOCKET_MODE_AVAILABLE
+static WebSocketsClient g_slack_socket;
+static bool g_slack_socket_started = false;
+static bool g_slack_socket_connected = false;
+static bool g_slack_socket_event_registered = false;
+static unsigned long g_next_socket_connect_ms = 0;
+static String g_socket_host;
+static String g_socket_path;
+static uint16_t g_socket_port = 443;
+static String g_last_slack_event_ts;
+
+static void slack_socket_event(WStype_t type, uint8_t *payload, size_t length);
+
+static bool parse_wss_url(const String &url, String &host, uint16_t &port, String &path) {
+  const String prefix = "wss://";
+  if (!url.startsWith(prefix)) {
+    return false;
+  }
+  int host_start = prefix.length();
+  int path_start = url.indexOf('/', host_start);
+  if (path_start < 0) {
+    return false;
+  }
+  host = url.substring(host_start, path_start);
+  path = url.substring(path_start);
+  port = 443;
+  int colon = host.indexOf(':');
+  if (colon >= 0) {
+    port = static_cast<uint16_t>(host.substring(colon + 1).toInt());
+    host = host.substring(0, colon);
+  }
+  return host.length() > 0 && path.length() > 0;
+}
+
+static void slack_socket_ack(const char *envelope_id) {
+  if (envelope_id == nullptr || envelope_id[0] == '\0') {
+    return;
+  }
+  StaticJsonDocument<128> ack_doc;
+  ack_doc["envelope_id"] = envelope_id;
+  String ack;
+  serializeJson(ack_doc, ack);
+  g_slack_socket.sendTXT(ack);
+}
+
+static bool slack_socket_open() {
+  if (!slack_app_token_configured()) {
+    return false;
+  }
+  if (!ensure_wifi_connected_and_settled()) {
+    Serial.println("[ERROR] WiFi not connected; skip Slack Socket Mode open");
+    return false;
+  }
+
+  HTTPClient http;
+  if (!begin_http_with_retries(http, SLACK_URL_SOCKET_OPEN)) {
+    Serial.println("[ERROR] apps.connections.open begin failed");
+    return false;
+  }
+  add_slack_auth_header(http, SLACK_APP_TOKEN);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  int status_code = http.POST("");
+  if (!is_http_success(status_code)) {
+    Serial.println("[ERROR] apps.connections.open status code error: " + String(status_code));
+    http.end();
+    return false;
+  }
+
+  String json = http.getString();
+  StaticJsonDocument<2048> doc;
+  if (!parse_slack_ok(json, doc, "apps.connections.open")) {
+    http.end();
+    return false;
+  }
+  String socket_url = doc["url"] | "";
+  http.end();
+
+  if (!parse_wss_url(socket_url, g_socket_host, g_socket_port, g_socket_path)) {
+    Serial.println("[ERROR] invalid Slack Socket Mode URL");
+    return false;
+  }
+
+  if (!g_slack_socket_event_registered) {
+    g_slack_socket.onEvent(slack_socket_event);
+    g_slack_socket_event_registered = true;
+  }
+  g_slack_socket.disconnect();
+  g_slack_socket.setReconnectInterval(5000);
+  g_slack_socket.enableHeartbeat(15000, 3000, 2);
+  g_slack_socket.beginSSL(g_socket_host.c_str(), g_socket_port, g_socket_path.c_str());
+  g_slack_socket_started = true;
+  g_slack_socket_connected = false;
+  Serial.println("[INFO] Slack Socket Mode connecting");
+  return true;
+}
+
+static void slack_socket_service() {
+  static bool warned_missing_token = false;
+  if (!slack_app_token_configured()) {
+    if (!warned_missing_token) {
+      Serial.println("[ERROR] SLACK_APP_TOKEN is not set; Slack Socket Mode disabled");
+      warned_missing_token = true;
+    }
+    return;
+  }
+
+  unsigned long now = millis();
+  if (!g_slack_socket_started && now >= g_next_socket_connect_ms) {
+    if (!slack_socket_open()) {
+      g_next_socket_connect_ms = now + 30000;
+      return;
+    }
+  }
+  if (g_slack_socket_started) {
+    g_slack_socket.loop();
+  }
+}
+
+static void slack_socket_event(WStype_t type, uint8_t *payload, size_t length) {
+  if (type == WStype_CONNECTED) {
+    g_slack_socket_connected = true;
+    Serial.println("[INFO] Slack Socket Mode connected");
+    return;
+  }
+  if (type == WStype_DISCONNECTED) {
+    if (g_slack_socket_connected || g_slack_socket_started) {
+      Serial.println("[WARN] Slack Socket Mode disconnected");
+    }
+    g_slack_socket_connected = false;
+    g_slack_socket_started = false;
+    g_next_socket_connect_ms = millis() + 5000;
+    return;
+  }
+  if (type != WStype_TEXT) {
+    return;
+  }
+
+  String message;
+  message.reserve(length);
+  for (size_t i = 0; i < length; ++i) {
+    message += static_cast<char>(payload[i]);
+  }
+  StaticJsonDocument<4096> doc;
+  DeserializationError err = deserializeJson(doc, message);
+  if (err) {
+    Serial.println(String("[ERROR] Slack socket JSON parse failed: ") + err.c_str());
+    return;
+  }
+
+  const char *wrapper_type = doc["type"] | "";
+  if (strcmp(wrapper_type, "disconnect") == 0) {
+    Serial.println("[INFO] Slack requested Socket Mode reconnect");
+    g_slack_socket.disconnect();
+    g_slack_socket_connected = false;
+    g_slack_socket_started = false;
+    g_next_socket_connect_ms = millis() + 1000;
+    return;
+  }
+  if (strcmp(wrapper_type, "events_api") != 0) {
+    return;
+  }
+
+  const char *envelope_id = doc["envelope_id"] | "";
+  slack_socket_ack(envelope_id);
+
+  JsonObject event = doc["payload"]["event"];
+  const char *event_type = event["type"] | "";
+  const char *subtype = event["subtype"] | "";
+  const char *channel = event["channel"] | "";
+  const char *text = event["text"] | "";
+  const char *event_ts = event["event_ts"] | "";
+
+  if (strcmp(event_type, "message") != 0) {
+    return;
+  }
+  if (strcmp(channel, SLACK_CHANNEL_ID) != 0) {
+    return;
+  }
+  if (subtype[0] != '\0') {
+    return;
+  }
+  if (text[0] == '\0') {
+    return;
+  }
+  if (event_ts[0] != '\0' && g_last_slack_event_ts == event_ts) {
+    return;
+  }
+
+  g_last_slack_event_ts = event_ts;
+  enqueue_slack_command(String(text));
+  Serial.println(String("[INFO] Slack command queued: ") + text);
+}
+#else
+static void slack_socket_service() {
+  static bool warned = false;
+  if (!warned) {
+    Serial.println("[ERROR] WebSocketsClient library is not installed; Slack Socket Mode disabled");
+    warned = true;
+  }
+}
+#endif
+
 void init_wifi(){
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
@@ -128,35 +378,8 @@ static bool ensure_wifi_connected_and_settled() {
 }
 
 String slack_get_message() {
-  String res;
-  if (!ensure_wifi_connected_and_settled()) {
-    Serial.println("[ERROR] WiFi not connected; skip slack_get_message");
-    return res;
-  }
-
-  HTTPClient http;
-  if (!begin_http_with_retries(http, SLACK_URL_RECEIVE)) {
-    Serial.println("[ERROR] Slack conversations.history begin failed");
-    return res;
-  }
-
-  add_slack_auth_header(http, SLACK_TOKEN);
-  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  String body = String("channel=") + url_encode(SLACK_CHANNEL_ID) + "&limit=1";
-  int status_code = http.POST(body);
-  Serial.printf("[HTTPS] conversations.history code: %d\n", status_code);
-  if (is_http_success(status_code)) {
-    String raw_json = http.getString();
-    StaticJsonDocument<2048> doc;
-    if (parse_slack_ok(raw_json, doc, "conversations.history")) {
-      const char* text = doc["messages"][0]["text"] | "";
-      res = text;
-    }
-  } else {
-    Serial.printf("[HTTPS] conversations.history failed, error: %s\n", http.errorToString(status_code).c_str());
-  }
-  http.end();
-  return res;
+  slack_socket_service();
+  return dequeue_slack_command();
 }
 
 char* slack_send_message(Time_info &time_info, String str){

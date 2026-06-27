@@ -76,5 +76,11 @@ You need
 
 * Slack bot token
   * channels:history
-  * channels:write
+  * chat:write
   * files:write
+* Slack app-level token for Socket Mode
+  * connections:write
+  * define it in `main/room_environment_manager/token.h` as `SLACK_APP_TOKEN`
+* Event subscriptions for Socket Mode
+  * subscribe to `message.channels` for public channels
+  * install `arduinoWebSockets` for `WebSocketsClient.h`
