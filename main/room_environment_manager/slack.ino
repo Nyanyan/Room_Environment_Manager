@@ -123,6 +123,30 @@ static String dequeue_slack_command() {
   return message;
 }
 
+static void trim_spaces(String &text) {
+  text.trim();
+}
+
+static String normalize_slack_command_text(const char *raw_text) {
+  String text = raw_text == nullptr ? String("") : String(raw_text);
+  trim_spaces(text);
+
+  while (text.startsWith("<@")) {
+    int mention_end = text.indexOf('>');
+    if (mention_end < 0) {
+      break;
+    }
+    text.remove(0, mention_end + 1);
+    trim_spaces(text);
+    if (text.startsWith(":") || text.startsWith(",")) {
+      text.remove(0, 1);
+      trim_spaces(text);
+    }
+  }
+
+  return text;
+}
+
 static bool slack_app_token_configured() {
   return strlen(SLACK_APP_TOKEN) > 0;
 }
@@ -299,16 +323,20 @@ static void slack_socket_event(WStype_t type, uint8_t *payload, size_t length) {
   const char *text = event["text"] | "";
   const char *event_ts = event["event_ts"] | "";
 
-  if (strcmp(event_type, "message") != 0) {
+  bool is_plain_message = strcmp(event_type, "message") == 0;
+  bool is_app_mention = strcmp(event_type, "app_mention") == 0;
+  if (!is_plain_message && !is_app_mention) {
     return;
   }
   if (strcmp(channel, SLACK_CHANNEL_ID) != 0) {
     return;
   }
-  if (subtype[0] != '\0') {
+  if (is_plain_message && subtype[0] != '\0') {
     return;
   }
-  if (text[0] == '\0') {
+
+  String command_text = normalize_slack_command_text(text);
+  if (command_text.length() == 0) {
     return;
   }
   if (event_ts[0] != '\0' && g_last_slack_event_ts == event_ts) {
@@ -316,14 +344,17 @@ static void slack_socket_event(WStype_t type, uint8_t *payload, size_t length) {
   }
 
   g_last_slack_event_ts = event_ts;
-  enqueue_slack_command(String(text));
-  Serial.println(String("[INFO] Slack command queued: ") + text);
+  enqueue_slack_command(command_text);
+  Serial.println(String("[INFO] Slack command queued: ") + command_text);
 }
 #else
 static void slack_socket_service() {
   static bool warned = false;
   if (!warned) {
     Serial.println("[ERROR] WebSocketsClient library is not installed; Slack Socket Mode disabled");
+    display_clear();
+    display_print(0, 0, "Slack cmd disabled");
+    display_print(0, 1, "Install websocket");
     warned = true;
   }
 }

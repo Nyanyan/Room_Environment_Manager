@@ -83,4 +83,5 @@ You need
   * define it in `main/room_environment_manager/token.h` as `SLACK_APP_TOKEN`
 * Event subscriptions for Socket Mode
   * subscribe to `message.channels` for public channels
+  * subscribe to `app_mention` if commands are sent as `@bot monitor`
   * install `arduinoWebSockets` for `WebSocketsClient.h`
