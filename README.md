@@ -75,13 +75,16 @@ You need
 You need
 
 * Slack bot token
-  * channels:history
+  * channels:history for public channels
+  * groups:history for private channels
   * chat:write
   * files:write
 * Slack app-level token for Socket Mode
   * connections:write
   * define it in `main/room_environment_manager/token.h` as `SLACK_APP_TOKEN`
+* Socket Mode
+  * enable Socket Mode in Slack app settings
 * Event subscriptions for Socket Mode
   * subscribe to `message.channels` for public channels
-  * subscribe to `app_mention` if commands are sent as `@bot monitor`
-  * install `arduinoWebSockets` for `WebSocketsClient.h`
+  * subscribe to `message.groups` for private channels
+  * invite the bot to the target channel
