@@ -1,6 +1,8 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+#include <JPEGENC.h>
+
 // graph data
 #define GRAPH_DATA_INTERVAL 10 // minute
 #define GRAPH_DATA_1_DAY 144 // 1 day
@@ -55,16 +57,11 @@ struct Graph_data{
 
 
 
-// graph bitmap image
-#define BMP_BIT_PER_PIXEL 4
-#define BMP_HEADER_BYTE (14 + 40)
-#define BMP_OFFSET_TO_IMG_DATA (BMP_HEADER_BYTE + BMP_N_COLOR_PALETTE * 4)
-#define BMP_GRAPH_FILE_SIZE (BMP_OFFSET_TO_IMG_DATA + GRAPH_IMG_HEIGHT * GRAPH_IMG_WIDTH * BMP_BIT_PER_PIXEL / 8)
-#define BMP_GRAPH_FILE_NAME_TEMPERATURE "temperature.bmp"
-#define BMP_GRAPH_FILE_NAME_HUMIDITY "humidity.bmp"
-#define BMP_GRAPH_FILE_NAME_PRESSURE "pressure.bmp"
-#define BMP_GRAPH_FILE_NAME_CO2_CONCENTRATION "co2.bmp"
-#define BMP_GRAPH_FILE_NAME_THI "thi.bmp"
+// JPEG output buffer
+#define JPEG_GRAPH_BUF_SIZE 30720
+#define JPEG_GRAPH_FILE_NAME_TEMPERATURE "temperature.jpg"
+#define JPEG_GRAPH_FILE_NAME_HUMIDITY "humidity.jpg"
+#define JPEG_GRAPH_FILE_NAME_PRESSURE "pressure.jpg"
 #define HTTP_BOUNDARY "boundary"
 
 
@@ -88,10 +85,9 @@ struct Value_color{
 #define GRAPH_PRESSURE_SCALE_INTERVAL 5
 
 
-// graph bitmap
+// graph image
 struct Graph_img{
   uint8_t graph[GRAPH_IMG_HEIGHT][GRAPH_IMG_WIDTH];
-  uint8_t bmp_img[BMP_GRAPH_FILE_SIZE];
 };
 
 

@@ -1,11 +1,20 @@
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
-#define AC_USE_MITSUBISHIHEAVY true // set to 0 for Panasonic
 
-#if AC_USE_MITSUBISHIHEAVY
+// for more info: https://github.com/crankyoldgit/IRremoteESP8266/blob/master/SupportedProtocols.md
+#define AC_PANASONIC 0
+#define AC_MITSUBISHIHEAVY88 1
+#define AC_MITSUBISHIELECTRIC 2 // IRMitsubishiAC
+#define AC_TYPE AC_MITSUBISHIELECTRIC
+
+#if AC_TYPE == AC_MITSUBISHIHEAVY88
 #include <ir_MitsubishiHeavy.h>
-#else
+#elif AC_TYPE == AC_MITSUBISHIELECTRIC
+#include <ir_Mitsubishi.h>
+#elif AC_TYPE == AC_PANASONIC
 #include <ir_Panasonic.h>
+#else
+#error "Unsupported AC_TYPE"
 #endif
 #include "air_conditioner.h"
 #include "command.h"
@@ -15,23 +24,45 @@
 #include "memory.h"
 
 // limit
-#if AC_USE_MITSUBISHIHEAVY
+#if AC_TYPE == AC_MITSUBISHIHEAVY88
 #define AC_TEMP_LIMIT_MIN kMitsubishiHeavyMinTemp
 #define AC_TEMP_LIMIT_MAX kMitsubishiHeavyMaxTemp
-#else
+#elif AC_TYPE == AC_MITSUBISHIELECTRIC
+#define AC_TEMP_LIMIT_MIN kMitsubishiAcMinTemp
+#define AC_TEMP_LIMIT_MAX kMitsubishiAcMaxTemp
+#elif AC_TYPE == AC_PANASONIC
 #define AC_TEMP_LIMIT_MIN kPanasonicAcMinTemp
 #define AC_TEMP_LIMIT_MAX kPanasonicAcMaxTemp
+#else
+#error "Unsupported AC_TYPE"
 #endif
 
 #define AC_N_TRY 1  // send multiple times to improve reception reliability
 
-#if AC_USE_MITSUBISHIHEAVY
-// IR transmitter controls Mitsubishi A/C
+#if AC_TYPE == AC_MITSUBISHIHEAVY88
+// IR transmitter controls Mitsubishi Heavy A/C
 IRMitsubishiHeavy88Ac ac(AC_LED_PIN);
-#else
+#elif AC_TYPE == AC_MITSUBISHIELECTRIC
+// IR transmitter controls Mitsubishi Electric A/C
+IRMitsubishiAC ac(AC_LED_PIN);
+#elif AC_TYPE == AC_PANASONIC
 // IR transmitter controls Panasonic A/C
 IRPanasonicAc ac(AC_LED_PIN);
+#else
+#error "Unsupported AC_TYPE"
 #endif
+
+const char* ac_type_display_name() {
+#if AC_TYPE == AC_MITSUBISHIHEAVY88
+  return "MitsubishiH88";
+#elif AC_TYPE == AC_MITSUBISHIELECTRIC
+  return "MitsubishiE";
+#elif AC_TYPE == AC_PANASONIC
+  return "Panasonic";
+#else
+  return "Unknown";
+#endif
+}
 
 // Guard IR transmission from timer-driven display updates to keep waveforms stable
 static void ac_send_with_guard() {
@@ -62,14 +93,21 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
   ac_status.temp = set_temp;
   ac_status.last_set_temp_change_ms = millis();
   for (int i = 0; i < AC_N_TRY; ++i){
-    #if AC_USE_MITSUBISHIHEAVY
+    #if AC_TYPE == AC_MITSUBISHIHEAVY88
     ac.on();
     ac.setFan(kMitsubishiHeavy88FanAuto);
     ac.setMode(kMitsubishiHeavyCool);
     ac.setTemp(set_temp);
     ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
     ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
-    #else
+    #elif AC_TYPE == AC_MITSUBISHIELECTRIC
+    ac.on();
+    ac.setFan(kMitsubishiAcFanAuto);
+    ac.setMode(kMitsubishiAcCool);
+    ac.setTemp(set_temp);
+    ac.setVane(kMitsubishiAcVaneAuto);
+    ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    #elif AC_TYPE == AC_PANASONIC
     ac.setModel(kPanasonicRkr);
     ac.on();
     ac.setFan(kPanasonicAcFanAuto);
@@ -77,6 +115,8 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
     ac.setTemp(set_temp);
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #else
+    #error "Unsupported AC_TYPE"
     #endif
     ac_send_with_guard();
   }
@@ -88,14 +128,21 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
   ac_status.temp = set_temp;
   ac_status.last_set_temp_change_ms = millis();
   for (int i = 0; i < AC_N_TRY; ++i){
-    #if AC_USE_MITSUBISHIHEAVY
+    #if AC_TYPE == AC_MITSUBISHIHEAVY88
     ac.on();
     ac.setFan(kMitsubishiHeavy88FanAuto);
     ac.setMode(kMitsubishiHeavyDry);
     ac.setTemp(set_temp);
     ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
     ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
-    #else
+    #elif AC_TYPE == AC_MITSUBISHIELECTRIC
+    ac.on();
+    ac.setFan(kMitsubishiAcFanAuto);
+    ac.setMode(kMitsubishiAcDry);
+    ac.setTemp(set_temp);
+    ac.setVane(kMitsubishiAcVaneAuto);
+    ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    #elif AC_TYPE == AC_PANASONIC
     ac.setModel(kPanasonicRkr);
     ac.on();
     ac.setFan(kPanasonicAcFanAuto);
@@ -103,6 +150,8 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
     ac.setTemp(set_temp);
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #else
+    #error "Unsupported AC_TYPE"
     #endif
     ac_send_with_guard();
   }
@@ -114,14 +163,21 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
   ac_status.temp = set_temp;
   ac_status.last_set_temp_change_ms = millis();
   for (int i = 0; i < AC_N_TRY; ++i){
-    #if AC_USE_MITSUBISHIHEAVY
+    #if AC_TYPE == AC_MITSUBISHIHEAVY88
     ac.on();
     ac.setFan(kMitsubishiHeavy88FanAuto);
     ac.setMode(kMitsubishiHeavyHeat);
     ac.setTemp(set_temp);
     ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
     ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
-    #else
+    #elif AC_TYPE == AC_MITSUBISHIELECTRIC
+    ac.on();
+    ac.setFan(kMitsubishiAcFanAuto);
+    ac.setMode(kMitsubishiAcHeat);
+    ac.setTemp(set_temp);
+    ac.setVane(kMitsubishiAcVaneAuto);
+    ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    #elif AC_TYPE == AC_PANASONIC
     ac.setModel(kPanasonicRkr);
     ac.on();
     ac.setFan(kPanasonicAcFanAuto);
@@ -129,6 +185,8 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
     ac.setTemp(set_temp);
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #else
+    #error "Unsupported AC_TYPE"
     #endif
     ac_send_with_guard();
   }
@@ -141,14 +199,21 @@ void ac_off(AC_status &ac_status){
   ac_status.state = AC_STATE_OFF;
   ac_status.last_set_temp_change_ms = millis();
   for (int i = 0; i < AC_N_TRY; ++i){
-    #if AC_USE_MITSUBISHIHEAVY
+    #if AC_TYPE == AC_MITSUBISHIHEAVY88
     ac.off();
     ac.setFan(kMitsubishiHeavy88FanAuto);
     ac.setMode(kMitsubishiHeavyCool);
     ac.setTemp(20);
     ac.setSwingVertical(kMitsubishiHeavy88SwingVAuto);
     ac.setSwingHorizontal(kMitsubishiHeavy88SwingHAuto);
-    #else
+    #elif AC_TYPE == AC_MITSUBISHIELECTRIC
+    ac.off();
+    ac.setFan(kMitsubishiAcFanAuto);
+    ac.setMode(kMitsubishiAcCool);
+    ac.setTemp(20);
+    ac.setVane(kMitsubishiAcVaneAuto);
+    ac.setWideVane(kMitsubishiAcWideVaneAuto);
+    #elif AC_TYPE == AC_PANASONIC
     ac.setModel(kPanasonicRkr);
     ac.off();
     ac.setFan(kPanasonicAcFanHigh);
@@ -156,6 +221,8 @@ void ac_off(AC_status &ac_status){
     ac.setTemp(20);
     ac.setSwingVertical(kPanasonicAcSwingVAuto);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #else
+    #error "Unsupported AC_TYPE"
     #endif
     ac_send_with_guard();
   }
