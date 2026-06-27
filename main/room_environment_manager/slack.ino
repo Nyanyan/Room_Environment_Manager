@@ -79,8 +79,7 @@ static bool begin_http_with_retries(HTTPClient &http, const char *url) {
   return false;
 }
 
-template <size_t N>
-static bool parse_slack_ok(const String &json, StaticJsonDocument<N> &doc, const char *context) {
+static bool parse_slack_ok(const String &json, JsonDocument &doc, const char *context) {
   doc.clear();
   DeserializationError err = deserializeJson(doc, json);
   if (err) {
@@ -166,7 +165,7 @@ static void slack_socket_ack(const char *envelope_id) {
   if (envelope_id == nullptr || envelope_id[0] == '\0') {
     return;
   }
-  StaticJsonDocument<128> ack_doc;
+  JsonDocument ack_doc;
   ack_doc["envelope_id"] = envelope_id;
   String ack;
   serializeJson(ack_doc, ack);
@@ -197,7 +196,7 @@ static bool slack_socket_open() {
   }
 
   String json = http.getString();
-  StaticJsonDocument<2048> doc;
+  JsonDocument doc;
   if (!parse_slack_ok(json, doc, "apps.connections.open")) {
     http.end();
     return false;
@@ -270,7 +269,7 @@ static void slack_socket_event(WStype_t type, uint8_t *payload, size_t length) {
   for (size_t i = 0; i < length; ++i) {
     message += static_cast<char>(payload[i]);
   }
-  StaticJsonDocument<4096> doc;
+  JsonDocument doc;
   DeserializationError err = deserializeJson(doc, message);
   if (err) {
     Serial.println(String("[ERROR] Slack socket JSON parse failed: ") + err.c_str());
@@ -400,7 +399,7 @@ char* slack_send_message(Time_info &time_info, String str){
   String str_with_timestamp = String(time_info.time_str) + "\n" + str;
   Serial.println(str_with_timestamp);
 
-  StaticJsonDocument<2048> body_doc;
+  JsonDocument body_doc;
   body_doc["channel"] = SLACK_CHANNEL_ID;
   body_doc["text"] = str_with_timestamp;
   String body;
@@ -412,7 +411,7 @@ char* slack_send_message(Time_info &time_info, String str){
   Serial.printf("[HTTPS] chat.postMessage code: %d\n", status_code);
   if (is_http_success(status_code)) {
     String json = http.getString();
-    StaticJsonDocument<2048> doc;
+    JsonDocument doc;
     if (parse_slack_ok(json, doc, "chat.postMessage")) {
       const char *response_ts = doc["ts"] | "";
       strncpy(ts, response_ts, sizeof(ts) - 1);
@@ -453,7 +452,7 @@ String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_fi
       return String("");
     }
     received_string = http.getString();
-    StaticJsonDocument<2048> doc;
+    JsonDocument doc;
     if (!parse_slack_ok(received_string, doc, "getUploadURLExternal")) {
       http.end();
       return String("");
@@ -530,7 +529,7 @@ String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_fi
     }
     received_string = http.getString();
     Serial.println(String("completeUploadExternal result: ") + received_string);
-    StaticJsonDocument<4096> doc;
+    JsonDocument doc;
     if (!parse_slack_ok(received_string, doc, "completeUploadExternal")) {
       http.end();
       return String("");

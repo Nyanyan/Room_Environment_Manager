@@ -1,6 +1,13 @@
 #include <esp_now.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#if defined(__has_include)
+#if __has_include(<WebSocketsClient.h>)
+#include <WebSocketsClient.h>
+#endif
+#endif
 #include "air_conditioner.h"
 #include "display.h"
 #include "graph.h"

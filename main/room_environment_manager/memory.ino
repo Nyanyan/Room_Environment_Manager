@@ -70,7 +70,7 @@ bool is_state_valid(int32_t state) {
 	return state == AC_STATE_OFF || state == AC_STATE_COOL || state == AC_STATE_DRY || state == AC_STATE_HEAT;
 }
 
-bool is_alert_temperature_valid(double temperature) {
+bool is_persisted_alert_temperature_valid(double temperature) {
 	return temperature >= ALERT_HOT_TEMPERATURE_MIN && temperature <= ALERT_HOT_TEMPERATURE_MAX;
 }
 
@@ -235,7 +235,7 @@ bool memory_load_settings(Settings &settings) {
 		settings.ac_auto_mode = payload.ac_auto_mode;
 	}
 	settings.ac_auto_temp = payload.ac_auto_temp;
-	settings.alert_hot_temperature = is_alert_temperature_valid(payload.alert_hot_temperature)
+	settings.alert_hot_temperature = is_persisted_alert_temperature_valid(payload.alert_hot_temperature)
 		? payload.alert_hot_temperature
 		: ALERT_HOT_TEMPERATURE_DEFAULT;
 	return true;
