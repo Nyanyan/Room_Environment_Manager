@@ -283,7 +283,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   } else{
     str += "OFF\n";
   }
-  str += "Alert temperature : " + String(alert_hot_temperature, 1) + " *C\n";
+  str += String("Alert temperature : ") + String(alert_hot_temperature, 1) + " *C\n";
 
   str += "< *Connection* >\n";
   bool ac_connected = ac_controller_check_connection();
@@ -357,7 +357,7 @@ void command_print_command_list(Time_info &time_info){
   str += "  - `set alert [on/off]`\n";
   str += "    - alert on slack when very hot\n";
   str += "  - `set alert temp [temperature]`\n";
-  str += "    - alert temperature must be in [" + String(ALERT_HOT_TEMPERATURE_MIN, 1) + "," + String(ALERT_HOT_TEMPERATURE_MAX, 1) + "] *C\n";
+  str += String("    - alert temperature must be in [") + String(ALERT_HOT_TEMPERATURE_MIN, 1) + "," + String(ALERT_HOT_TEMPERATURE_MAX, 1) + "] *C\n";
   str += "- `monitor`\n";
   str += "  - check environment\n";
   str += "- `help`\n";
