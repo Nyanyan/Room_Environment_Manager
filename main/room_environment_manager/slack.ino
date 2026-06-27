@@ -133,6 +133,7 @@ static bool slack_app_token_configured() {
 
 static WiFiClientSecure g_slack_socket;
 static bool g_slack_socket_started = false;
+static bool g_slack_socket_paused_for_wifi = false;
 static unsigned long g_next_socket_connect_ms = 0;
 static unsigned long g_last_socket_rx_ms = 0;
 static unsigned long g_last_socket_ping_ms = 0;
@@ -313,6 +314,9 @@ static void handle_slack_socket_text(const String &message) {
     return;
   }
   if (strcmp(wrapper_type, "events_api") != 0) {
+    if (wrapper_type[0] != '\0') {
+      Serial.println(String("[INFO] Slack socket message type: ") + wrapper_type);
+    }
     return;
   }
 
@@ -326,13 +330,16 @@ static void handle_slack_socket_text(const String &message) {
   const char *text = event["text"] | "";
   const char *event_ts = event["event_ts"] | "";
 
+  Serial.println(String("[INFO] Slack event received: ") + event_type + String(" channel:") + channel);
   if (strcmp(event_type, "message") != 0) {
     return;
   }
   if (strcmp(channel, SLACK_CHANNEL_ID) != 0) {
+    Serial.println(String("[WARN] Slack event ignored for channel: ") + channel);
     return;
   }
   if (subtype[0] != '\0') {
+    Serial.println(String("[INFO] Slack message subtype ignored: ") + subtype);
     return;
   }
 
@@ -492,6 +499,9 @@ static bool slack_socket_open() {
 
 static void slack_socket_service() {
   static bool warned_missing_token = false;
+  if (g_slack_socket_paused_for_wifi) {
+    return;
+  }
   if (!slack_app_token_configured()) {
     if (!warned_missing_token) {
       Serial.println("[ERROR] SLACK_APP_TOKEN is not set; Slack Socket Mode disabled");
@@ -535,6 +545,7 @@ static void slack_socket_service() {
 void init_wifi(){
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
   WiFi.setAutoReconnect(true);
 
   while (true) {
@@ -577,6 +588,20 @@ static bool ensure_wifi_connected_and_settled() {
     delay(grace_ms - elapsed);
   }
   return WiFi.status() == WL_CONNECTED;
+}
+
+void slack_prepare_for_wifi_reset() {
+  g_slack_socket_paused_for_wifi = true;
+  if (g_slack_socket_started || g_slack_socket.connected()) {
+    Serial.println("[INFO] Slack Socket Mode closing before WiFi reset");
+  }
+  close_slack_socket(0);
+}
+
+void slack_resume_after_wifi_reset() {
+  g_slack_socket_paused_for_wifi = false;
+  g_next_socket_connect_ms = 0;
+  slack_socket_service();
 }
 
 void slack_maintain() {

@@ -7,6 +7,7 @@
 #include "sensors.h"
 #include "token.h"
 #include "additional_sensors.h"
+#include "slack.h"
 
 // Avoid rare I2C lockups by enforcing a timeout on transactions.
 constexpr uint16_t I2C_TIMEOUT_MS = 2000;
@@ -46,7 +47,7 @@ void init_BME680(bool show_log){
 void init_MHZ19C(bool show_log){
   mhz19.begin(MHZ19C_RX_PIN, MHZ19C_TX_PIN);
   mhz19.setAutoCalibration(true);
-  delay(10000);
+  slack_delay(10000);
   Serial.println("CO2 Sensor Initialized");
   if (show_log) {
     display_print(0, 3, "[I] MH-Z19C CO2");
@@ -161,6 +162,7 @@ struct Sensor_data get_sensor_data(){
       pressures_bme[n_pressure_bme++] = p_bme;
     }
     co2_concentrations[n_co2_concentration++] = mhz19.getCO2PPM();
+    slack_maintain();
   }
   Serial.println("");
 

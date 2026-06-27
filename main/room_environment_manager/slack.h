@@ -10,5 +10,7 @@
 void init_wifi();
 void slack_maintain();
 void slack_delay(unsigned long delay_ms);
+void slack_prepare_for_wifi_reset();
+void slack_resume_after_wifi_reset();
 
 #endif
