@@ -70,6 +70,10 @@ bool is_state_valid(int32_t state) {
 	return state == AC_STATE_OFF || state == AC_STATE_COOL || state == AC_STATE_DRY || state == AC_STATE_HEAT;
 }
 
+bool is_persisted_alert_temperature_valid(double temperature) {
+	return temperature >= ALERT_HOT_TEMPERATURE_MIN && temperature <= ALERT_HOT_TEMPERATURE_MAX;
+}
+
 bool reservation_is_leap_year(uint16_t year) {
 	if (year % 400 == 0) return true;
 	if (year % 100 == 0) return false;
