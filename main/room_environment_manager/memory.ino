@@ -20,7 +20,8 @@ struct SettingsPersisted {
 	uint8_t alert_when_hot; // bool stored as byte
 	int32_t ac_auto_mode;
 	float ac_auto_temp;
-	uint8_t reserved[7]; // keep alignment / future use
+	float alert_hot_temperature;
+	uint8_t reserved[3]; // keep alignment / future use
 	uint32_t checksum;
 };
 
@@ -67,6 +68,10 @@ void ensure_initialized() {
 
 bool is_state_valid(int32_t state) {
 	return state == AC_STATE_OFF || state == AC_STATE_COOL || state == AC_STATE_DRY || state == AC_STATE_HEAT;
+}
+
+bool is_alert_temperature_valid(double temperature) {
+	return temperature >= ALERT_HOT_TEMPERATURE_MIN && temperature <= ALERT_HOT_TEMPERATURE_MAX;
 }
 
 struct ReservationBlock {
@@ -200,6 +205,7 @@ bool memory_save_settings(const Settings &settings) {
 	payload.alert_when_hot = settings.alert_when_hot ? 1 : 0;
 	payload.ac_auto_mode = settings.ac_auto_mode;
 	payload.ac_auto_temp = static_cast<float>(settings.ac_auto_temp);
+	payload.alert_hot_temperature = static_cast<float>(settings.alert_hot_temperature);
 	payload.checksum = compute_checksum(payload);
 
 	EEPROM.put(kSettingsAddr, payload);
@@ -229,6 +235,9 @@ bool memory_load_settings(Settings &settings) {
 		settings.ac_auto_mode = payload.ac_auto_mode;
 	}
 	settings.ac_auto_temp = payload.ac_auto_temp;
+	settings.alert_hot_temperature = is_alert_temperature_valid(payload.alert_hot_temperature)
+		? payload.alert_hot_temperature
+		: ALERT_HOT_TEMPERATURE_DEFAULT;
 	return true;
 }
 
