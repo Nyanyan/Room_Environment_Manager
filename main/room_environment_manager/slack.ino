@@ -376,8 +376,26 @@ static bool ensure_wifi_connected_and_settled() {
   return WiFi.status() == WL_CONNECTED;
 }
 
-String slack_get_message() {
+void slack_maintain() {
   slack_socket_service();
+}
+
+void slack_delay(unsigned long delay_ms) {
+  const unsigned long step_ms = 50;
+  unsigned long start = millis();
+  while (millis() - start < delay_ms) {
+    slack_maintain();
+    unsigned long elapsed = millis() - start;
+    if (elapsed >= delay_ms) {
+      break;
+    }
+    unsigned long remaining = delay_ms - elapsed;
+    delay(remaining < step_ms ? remaining : step_ms);
+  }
+}
+
+String slack_get_message() {
+  slack_maintain();
   return dequeue_slack_command();
 }
 

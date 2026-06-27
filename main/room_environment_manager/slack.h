@@ -8,5 +8,7 @@
 #define SLACK_URL_COMPLETE_UPLOAD "https://slack.com/api/files.completeUploadExternal"
 
 void init_wifi();
+void slack_maintain();
+void slack_delay(unsigned long delay_ms);
 
 #endif
