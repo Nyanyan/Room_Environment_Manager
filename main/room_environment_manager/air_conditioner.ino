@@ -97,7 +97,6 @@ static volatile bool g_ac_send_cb_called = false;
 static volatile bool g_ac_send_cb_success = false;
 static unsigned long g_last_ac_ping_ms = 0;
 static bool g_last_ac_ping_ok = false;
-static bool g_ac_reset_wifi_for_espnow = false;
 constexpr unsigned long AC_PING_TIMEOUT_MS = 300;
 constexpr unsigned long AC_PING_CACHE_MS = 30000; // reuse ping result for 30s to avoid WiFi flapping
 
@@ -126,79 +125,60 @@ void init_ac(AC_status &ac_status){
   }
 }
 
-static bool can_use_connected_wifi_for_ac_espnow() {
-  return WiFi.status() == WL_CONNECTED && WiFi.channel() == CHANNEL;
-}
-
-static void reset_wifi_radio() {
+void reset_wifi() {
   WiFi.persistent(false);
   WiFi.disconnect();
   WiFi.mode(WIFI_OFF);
   delay(10);
 }
 
-void reset_wifi() {
-  slack_prepare_for_wifi_reset();
-  reset_wifi_radio();
+void InitESPNow() {
+  WiFi.disconnect();
+  if (esp_now_init() == ESP_OK) {
+    Serial.println("ESPNow Init Success");
+  }
+  else {
+    Serial.println("ESPNow Init Failed");
+    // Retry InitESPNow, add a counte and then restart?
+    // InitESPNow();
+    // or Simply Restart
+    ESP.restart();
+  }
 }
 
-bool espnow_init() {
-  g_ac_reset_wifi_for_espnow = !can_use_connected_wifi_for_ac_espnow();
-  if (g_ac_reset_wifi_for_espnow) {
-    Serial.println(String("[INFO] AC ESP-NOW needs WiFi channel ") + String(CHANNEL) +
-                   String("; reconnecting WiFi after send"));
-    reset_wifi();
-    WiFi.mode(WIFI_STA);
-    esp_wifi_set_channel(CHANNEL, WIFI_SECOND_CHAN_NONE);
-  } else {
-    Serial.println("[INFO] AC ESP-NOW using connected WiFi channel");
-  }
-
+void espnow_init() {
+  //Set device in STA mode to begin with
+  WiFi.mode(WIFI_STA);
+  esp_wifi_set_channel(CHANNEL, WIFI_SECOND_CHAN_NONE);
+  // This is the mac address of the Master in Station Mode
   Serial.print("STA MAC: "); Serial.println(WiFi.macAddress());
   Serial.print("STA CHANNEL "); Serial.println(WiFi.channel());
+  // Init ESPNow with a fallback logic
+  InitESPNow();
+  // Once ESPNow is successfully Init, we will register for Send CB to
+  // get the status of Trasnmitted packet
 
-  esp_err_t init_res = esp_now_init();
-  if (init_res != ESP_OK) {
-    Serial.printf("ESPNow Init Failed (%d)\n", init_res);
-    return false;
-  }
-  Serial.println("ESPNow Init Success");
 
+  // const uint8_t slave_mac_addr[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   memset(&slave, 0, sizeof(slave));
   for (int i = 0; i < 6; ++i) {
     slave.peer_addr[i] = slave_mac_addr[i];
   }
-  slave.channel = g_ac_reset_wifi_for_espnow ? CHANNEL : 0;
-  slave.ifidx = WIFI_IF_STA;
-  slave.encrypt = false;
-
-  esp_err_t addStatus = esp_now_add_peer(&slave);
-  if (addStatus == ESP_OK || addStatus == ESP_ERR_ESPNOW_EXIST) {
-    Serial.println("Pair success");
-    return true;
+  while (true){
+    esp_err_t addStatus = esp_now_add_peer(&slave);
+    if (addStatus == ESP_OK) {
+      // Pair success
+      Serial.println("Pair success");
+      break;
+    } else{
+      Serial.println("Cannot Pair");
+    }
   }
-
-  Serial.printf("Cannot Pair (%d)\n", addStatus);
-  return false;
-}
-
-void finish_espnow() {
-  esp_now_register_send_cb(nullptr);
-  esp_now_deinit();
-  if (g_ac_reset_wifi_for_espnow) {
-    reset_wifi_radio();
-    init_wifi();
-    slack_resume_after_wifi_reset();
-  }
-  g_ac_reset_wifi_for_espnow = false;
 }
 
 void send_ac() {
-  if (!espnow_init()) {
-    finish_espnow();
-    return;
-  }
-
+  reset_wifi();
+  espnow_init();
   esp_err_t result = esp_now_send(slave.peer_addr, send_data, N_SLAVE_HEADER + N_SLAVE_DATA);
   if (result == ESP_OK) {
     // data_status = STATUS_SEND_SUCCESS;
@@ -220,8 +200,8 @@ void send_ac() {
       Serial.println("Not sure what happened");
     }
   }
-
-  finish_espnow();
+  reset_wifi();
+  init_wifi();
 }
 
 void ac_cool_on(AC_status &ac_status, int set_temp){
@@ -273,12 +253,8 @@ bool ac_controller_check_connection() {
     return g_last_ac_ping_ok;
   }
 
-  if (!espnow_init()) {
-    finish_espnow();
-    g_last_ac_ping_ms = millis();
-    g_last_ac_ping_ok = false;
-    return false;
-  }
+  reset_wifi();
+  espnow_init();
 
   g_ac_send_cb_called = false;
   g_ac_send_cb_success = false;
@@ -296,9 +272,6 @@ bool ac_controller_check_connection() {
   if (result == ESP_OK) {
     unsigned long start = millis();
     while (!g_ac_send_cb_called && (millis() - start) < AC_PING_TIMEOUT_MS) {
-      if (!g_ac_reset_wifi_for_espnow) {
-        slack_maintain();
-      }
       delay(10);
     }
     ok = g_ac_send_cb_called && g_ac_send_cb_success;
@@ -306,7 +279,9 @@ bool ac_controller_check_connection() {
     Serial.printf("[WARN] esp_now_send ping failed (%d)\n", result);
   }
 
-  finish_espnow();
+  esp_now_register_send_cb(nullptr);
+  reset_wifi();
+  init_wifi();
 
   g_last_ac_ping_ms = millis();
   g_last_ac_ping_ok = ok;
@@ -413,9 +388,3 @@ void ac_auto(Settings &settings, Sensor_data &sensor_data, AC_status &ac_status,
     }
   }
 }
-
-
-
-
-
-

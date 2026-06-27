@@ -4,8 +4,9 @@
 #include <cstring>
 #include <float.h>
 #include "additional_sensors.h"
-#include "slack.h"
 
+// Forward declaration from slack.ino
+void init_wifi();
 
 // ESP-NOW channel shared with the additional sensor nodes.
 static const uint8_t ESPNOW_CHANNEL = 1;
@@ -48,18 +49,12 @@ static SensorReading g_additional_sensor_last_data[N_ADDITIONAL_SENSORS];
 static unsigned long g_additional_sensor_last_ms[N_ADDITIONAL_SENSORS];
 static unsigned long g_last_additional_request_ms = 0;
 static SensorReading g_representative_for_children;
-static bool g_additional_reset_wifi_for_espnow = false;
 
 void additional_sensors_set_representative(const SensorReading &representative) {
   g_representative_for_children = representative;
 }
 
-static bool can_use_connected_wifi_for_additional_espnow() {
-  return WiFi.status() == WL_CONNECTED && WiFi.channel() == ESPNOW_CHANNEL;
-}
-
 static void reset_wifi_for_espnow() {
-  slack_prepare_for_wifi_reset();
   WiFi.persistent(false);
   WiFi.disconnect(true, true);
   WiFi.mode(WIFI_OFF);
@@ -67,29 +62,17 @@ static void reset_wifi_for_espnow() {
 }
 
 static bool begin_espnow_for_additional() {
-  g_additional_reset_wifi_for_espnow = !can_use_connected_wifi_for_additional_espnow();
-  if (g_additional_reset_wifi_for_espnow) {
-    Serial.println(String("[INFO] Additional ESP-NOW needs WiFi channel ") + String(ESPNOW_CHANNEL) +
-                   String("; reconnecting WiFi after request"));
-    reset_wifi_for_espnow();
-    WiFi.mode(WIFI_STA);
-    esp_wifi_set_channel(ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE);
-  } else {
-    Serial.println("[INFO] Additional ESP-NOW using connected WiFi channel");
-  }
-
-  esp_err_t init_res = esp_now_init();
-  if (init_res != ESP_OK) {
-    Serial.printf("[ERROR] ESPNow init failed for additional sensors (%d)\n", init_res);
+  WiFi.mode(WIFI_STA);
+  esp_wifi_set_channel(ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE);
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("[ERROR] ESPNow init failed for additional sensors");
     return false;
   }
-
-  const uint8_t peer_channel = g_additional_reset_wifi_for_espnow ? ESPNOW_CHANNEL : 0;
   // broadcast peer to reach any additional sensor using the shared header
   esp_now_peer_info_t peerInfo = {};
   memset(peerInfo.peer_addr, 0xFF, 6);
-  peerInfo.channel = peer_channel;
-  peerInfo.ifidx = WIFI_IF_STA; // parent is STA when requesting
+  peerInfo.channel = ESPNOW_CHANNEL;
+   peerInfo.ifidx = WIFI_IF_STA; // parent is STA when requesting
   peerInfo.encrypt = false;
   esp_now_add_peer(&peerInfo);
 
@@ -97,7 +80,7 @@ static bool begin_espnow_for_additional() {
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     esp_now_peer_info_t peer = {};
     memcpy(peer.peer_addr, additional_sensor_mac_addrs[i], 6);
-    peer.channel = peer_channel;
+    peer.channel = ESPNOW_CHANNEL;
     peer.ifidx = WIFI_IF_STA;
     peer.encrypt = false;
     esp_err_t add_res = esp_now_add_peer(&peer);
@@ -109,15 +92,10 @@ static bool begin_espnow_for_additional() {
 }
 
 static void end_espnow_for_additional() {
-  esp_now_register_recv_cb(nullptr);
   esp_now_deinit();
-  if (g_additional_reset_wifi_for_espnow) {
-    WiFi.mode(WIFI_OFF);
-    delay(10);
-    init_wifi();
-    slack_resume_after_wifi_reset();
-  }
-  g_additional_reset_wifi_for_espnow = false;
+  WiFi.mode(WIFI_OFF);
+  delay(10);
+  init_wifi();
 }
 
 static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
@@ -174,12 +152,9 @@ void additional_sensors_request() {
     g_additional_sensor_data[i] = SensorReading();
   }
 
+  reset_wifi_for_espnow();
   if (!begin_espnow_for_additional()) {
-    if (g_additional_reset_wifi_for_espnow) {
-      init_wifi();
-      slack_resume_after_wifi_reset();
-      g_additional_reset_wifi_for_espnow = false;
-    }
+    init_wifi();
     return;
   }
 
@@ -204,9 +179,6 @@ void additional_sensors_request() {
 
   unsigned long start = millis();
   while (millis() - start < 1500) {
-    if (!g_additional_reset_wifi_for_espnow) {
-      slack_maintain();
-    }
     delay(10);
   }
 
