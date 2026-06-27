@@ -1,4 +1,5 @@
 #include <float.h>
+#include <stdlib.h>
 #include "command.h"
 #include "memory.h"
 #include "sensors.h"
@@ -158,6 +159,25 @@ String format_sensor_value(float v, int decimals, const char *unit) {
   return String(v, decimals) + String(" ") + String(unit);
 }
 
+bool parse_temperature_value(const String &text, double &temperature) {
+  if (text.length() == 0) {
+    return false;
+  }
+  char *end = nullptr;
+  temperature = strtod(text.c_str(), &end);
+  if (end == text.c_str()) {
+    return false;
+  }
+  while (*end == ' ' || *end == '\t') {
+    ++end;
+  }
+  return *end == '\0';
+}
+
+bool is_alert_temperature_valid(double temperature) {
+  return temperature >= ALERT_HOT_TEMPERATURE_MIN && temperature <= ALERT_HOT_TEMPERATURE_MAX;
+}
+
 void append_sensor_block(String &str, const char *title, const SensorReading &reading) {
   str += String("[") + title + String("]\n");
   str += "- Temp : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
@@ -211,7 +231,10 @@ struct Command command_get(){
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
   String str = "< *Room Environment* >\n";
   const SensorReading &heat_src = is_valid_sensor_value(sensor_data.representative.temperature) ? sensor_data.representative : sensor_data.parent;
-  if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= 31.0){
+  const double alert_hot_temperature = is_alert_temperature_valid(settings.alert_hot_temperature)
+    ? settings.alert_hot_temperature
+    : ALERT_HOT_TEMPERATURE_DEFAULT;
+  if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= alert_hot_temperature){
     if (settings.alert_when_hot){
       str += "<!channel>\n";
     }
@@ -260,6 +283,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   } else{
     str += "OFF\n";
   }
+  str += "Alert temperature : " + String(alert_hot_temperature, 1) + " *C\n";
 
   str += "< *Connection* >\n";
   bool ac_connected = ac_controller_check_connection();
@@ -332,6 +356,8 @@ void command_print_command_list(Time_info &time_info){
   str += "- `set`\n";
   str += "  - `set alert [on/off]`\n";
   str += "    - alert on slack when very hot\n";
+  str += "  - `set alert temp [temperature]`\n";
+  str += "    - alert temperature must be in [" + String(ALERT_HOT_TEMPERATURE_MIN, 1) + "," + String(ALERT_HOT_TEMPERATURE_MAX, 1) + "] *C\n";
   str += "- `monitor`\n";
   str += "  - check environment\n";
   str += "- `help`\n";
@@ -571,22 +597,44 @@ void command_check_set(Command command, Time_info &time_info){
   }
   if (command.arg1 == "alert"){ // set alert [arg2]
     if (command.arg2 == "on"){ // set alert on
+      settings.alert_when_hot = true;
+      memory_save_settings(settings);
       String str = "[INFO] SET ALERT ON";
       Serial.println(str);
       slack_send_message(time_info, str);
-      settings.alert_when_hot = true;
+      return;
+    }
+    if (command.arg2 == "off"){ // set alert off
+      settings.alert_when_hot = false;
       memory_save_settings(settings);
-    } else if (command.arg2 == "off"){ // set alert off
       String str = "[INFO] SET ALERT OFF";
       Serial.println(str);
       slack_send_message(time_info, str);
-      settings.alert_when_hot = false;
-      memory_save_settings(settings);
-    } else{ // set alert [error]
-      String str = "[ERROR] SET ALERT WHAT???";
+      return;
+    }
+
+    String temperature_arg = command.arg2;
+    if (command.arg2 == "temp" || command.arg2 == "temperature" || command.arg2 == "t") {
+      temperature_arg = command.arg3;
+    }
+
+    double alert_temperature = 0.0;
+    if (parse_temperature_value(temperature_arg, alert_temperature) && is_alert_temperature_valid(alert_temperature)) {
+      settings.alert_hot_temperature = alert_temperature;
+      bool saved = memory_save_settings(settings);
+      String str = saved
+        ? String("[INFO] SET ALERT TEMP: ") + String(alert_temperature, 1) + String(" *C")
+        : String("[ERROR] SET ALERT TEMP EEPROM SAVE FAILED");
       Serial.println(str);
       slack_send_message(time_info, str);
+      return;
     }
+
+    String str = String("[ERROR] SET ALERT expected on/off or temp [") +
+      String(ALERT_HOT_TEMPERATURE_MIN, 1) + String(",") +
+      String(ALERT_HOT_TEMPERATURE_MAX, 1) + String("] *C, got: ") + command.arg2;
+    Serial.println(str);
+    slack_send_message(time_info, str);
   } else{ // set [error]
     String str = "[ERROR] SET WHAT???";
     Serial.println(str);
