@@ -97,7 +97,7 @@ String slack_get_message() {
   if (status_code == HTTP_CODE_OK || status_code == HTTP_CODE_MOVED_PERMANENTLY) {
     String raw_json = http.getString();
     deserializeJson(doc, raw_json);
-    const char* text = doc["messages"][0]["text"];
+    const char* text = doc["messages"][0]["text"] | "";
     res = text;
   } else{
     Serial.printf("[HTTPS] POST... failed, error: %s\n", http.errorToString(status_code).c_str());
@@ -162,7 +162,9 @@ char* slack_send_message(Time_info &time_info, String str){
     Serial.println(json);
     deserializeJson(doc, json);
     if (doc.containsKey("ts")) {
-      strcpy(ts, doc["ts"]);
+      const char* response_ts = doc["ts"] | "";
+      strncpy(ts, response_ts, sizeof(ts) - 1);
+      ts[sizeof(ts) - 1] = '\0';
       Serial.println(ts);
     }
   } else {
@@ -210,12 +212,12 @@ String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_fi
   }
   received_string = http.getString();
   deserializeJson(doc, received_string);
-  if (doc["ok"] != true) {
+  if (!doc["ok"].as<bool>()) {
     Serial.print("[ERROR] getUploadURLExternal slack response is not ok");
     return String("");
   }
-  const char* upload_url = doc["upload_url"];
-  const char* file_id = doc["file_id"];
+  String upload_url = doc["upload_url"] | "";
+  String file_id = doc["file_id"] | "";
   Serial.println(String("upload_url: ") + upload_url);
   Serial.println(String("file_id: ") + file_id);
   http.end();
@@ -268,7 +270,7 @@ String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_fi
     return String("");
   }
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  String file_data = "[{\"id\":\"" + String(file_id) + "\", \"title\":\"" + img_file_name + "\"}]";
+  String file_data = "[{\"id\":\"" + file_id + "\", \"title\":\"" + img_file_name + "\"}]";
   //body = String("token=") + SLACK_TOKEN + "&channel_id=" + String(SLACK_CHANNEL_ID) + "&files=" + file_data;
   body = String("token=") + SLACK_TOKEN + "&files=" + file_data;
   status_code = http.POST(body);
@@ -279,11 +281,11 @@ String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_fi
   received_string = http.getString();
   Serial.println(String("completeUploadExternal result: ") + received_string);
   deserializeJson(doc, received_string);
-  if (doc["ok"] != true) {
+  if (!doc["ok"].as<bool>()) {
     Serial.print("[ERROR] completeUploadExternal slack response is not ok");
     return String("");
   }
-  const char* permalink = doc["files"][0]["permalink"];
+  const char* permalink = doc["files"][0]["permalink"] | "";
   Serial.println(permalink);
   Serial.println(String("permalink: ") + permalink);
   http.end();
