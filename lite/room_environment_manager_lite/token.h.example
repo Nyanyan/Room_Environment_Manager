@@ -1,0 +1,10 @@
+#ifndef TOKEN_H
+#define TOKEN_H
+
+#define WIFI_SSID "WiFi SSID"
+#define WIFI_PASS "Wifi Password"
+#define SLACK_TOKEN "xoxb-slack-token"
+#define SLACK_CHANNEL "#channel-name"
+#define SLACK_CHANNEL_ID "CHANNEL_ID"
+
+#endif
