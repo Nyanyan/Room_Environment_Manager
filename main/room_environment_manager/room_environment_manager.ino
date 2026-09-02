@@ -1,5 +1,6 @@
 #include <esp_now.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <esp_wifi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -39,9 +40,12 @@ void setup() {
 
 
 void loop() {
+  slack_maintain();
+
   // get sensor data
   Sensor_data sensor_data = get_sensor_data();
   additional_sensors_set_representative(sensor_data.representative);
+  slack_maintain();
 
   // update time
   Time_info time_info = time_get_local();
@@ -55,20 +59,24 @@ void loop() {
   } else { // regular update
     graph_data_update(time_info, graph_data, sensor_data);
   }
+  slack_maintain();
 
   // get command from user
   Command command = command_get();
   command_process(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);
   command_execute_reservations(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
+  slack_maintain();
 
   // air conditioner auto mode
   ac_auto(settings, sensor_data, ac_status, time_info);
+  slack_maintain();
 
   // send regular message
   regular_message(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
+  slack_maintain();
 
   // LCD
   display_print_info(sensor_data, settings, ac_status, time_info);
 
-  delay(1000);
+  slack_delay(1000);
 }

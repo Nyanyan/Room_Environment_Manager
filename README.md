@@ -75,6 +75,19 @@ You need
 You need
 
 * Slack bot token
-  * channels:history
+  * channels:history for public channel message events
+  * groups:history for private channel message events
   * chat:write
   * files:write
+* Slack app-level token for Socket Mode
+  * create an app-level token with `connections:write`
+  * define it in `main/room_environment_manager/token.h` as `SLACK_APP_TOKEN`
+* Socket Mode
+  * enable Socket Mode in Slack app settings
+  * no public Request URL is required when Socket Mode is enabled
+* Event Subscriptions
+  * enable events in Slack app settings
+  * subscribe Bot Events to `message.channels` for public channels
+  * subscribe Bot Events to `message.groups` for private channels
+  * reinstall the Slack app after changing scopes/events
+  * invite the bot to the target channel
