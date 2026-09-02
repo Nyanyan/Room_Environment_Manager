@@ -65,7 +65,6 @@ struct Graph_data{
 #define JPEG_GRAPH_FILE_NAME_HUMIDITY "humidity.jpg"
 #define JPEG_GRAPH_FILE_NAME_PRESSURE "pressure.jpg"
 #define JPEG_GRAPH_FILE_NAME_CO2_CONCENTRATION "co2.jpg"
-#define HTTP_BOUNDARY "boundary"
 
 
 // graph color scale

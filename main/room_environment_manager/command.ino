@@ -412,6 +412,8 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   }
   str += String("Alert temperature : ") + String(alert_hot_temperature, 1) + " *C\n";
 
+  String graph_urls = get_graph_urls(graph_data, graph_img, time_info);
+
   str += "< *Connection* >\n";
   bool ac_connected = ac_controller_check_connection();
   str += "- AC controller : ";
@@ -424,7 +426,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     str += additional_sensor_received(i) ? "OK\n" : "NG\n";
   }
 
-  str += get_graph_urls(graph_data, graph_img, time_info);
+  str += graph_urls;
   slack_send_message(time_info, str);
 }
 

@@ -4,7 +4,6 @@
 #include <ArduinoJson.h>
 #include <esp_system.h>
 #include <mbedtls/base64.h>
-#include <stdlib.h>
 #include <string.h>
 #include "display.h"
 #include "time_manager.h"
@@ -86,6 +85,17 @@ static bool parse_slack_ok(const String &json, JsonDocument &doc, const char *co
     return false;
   }
   return true;
+}
+
+static void log_network_diagnostics(const char *context) {
+  Serial.printf("[DIAG] %s WiFi status:%d RSSI:%d channel:%d free_heap:%u min_free_heap:%u max_alloc_heap:%u\n",
+                context,
+                static_cast<int>(WiFi.status()),
+                static_cast<int>(WiFi.RSSI()),
+                static_cast<int>(WiFi.channel()),
+                static_cast<unsigned int>(ESP.getFreeHeap()),
+                static_cast<unsigned int>(ESP.getMinFreeHeap()),
+                static_cast<unsigned int>(ESP.getMaxAllocHeap()));
 }
 
 #define SLACK_COMMAND_QUEUE_SIZE 8
@@ -563,6 +573,7 @@ void init_wifi(){
       if (WiFi.status() == WL_CONNECTED) {
         Serial.println("WiFi connected");
         g_last_wifi_connect_ms = millis();
+        log_network_diagnostics("WiFi connected");
         return;
       }
     }
@@ -723,39 +734,24 @@ String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_fi
     http.setReuse(false);
     if (!http.begin(upload_url)) {
       Serial.println(String("[ERROR] cannot begin ") + upload_url);
+      log_network_diagnostics("raw image upload begin failed");
       return String("");
     }
-    http.addHeader("Content-Type", String("multipart/form-data; boundary=") + HTTP_BOUNDARY);
-    String multipart_header = String("--") + HTTP_BOUNDARY + "\r\n";
-    multipart_header += String("Content-Disposition: form-data; name=\"uploadFile\"; filename=\"") + img_file_name + "\"\r\n";
-    multipart_header += "\r\n";
-    String multipart_footer = "\r\n";
-    multipart_footer += String("--") + HTTP_BOUNDARY + "--\r\n";
-    multipart_footer += "\r\n";
+    http.addHeader("Content-Type", "application/octet-stream");
 
-    uint32_t multipart_header_size = multipart_header.length();
-    uint32_t multipart_footer_size = multipart_footer.length();
-    uint32_t multipart_all_size = multipart_header_size + img_file_size + multipart_footer_size;
-    Serial.println("send " + String(multipart_all_size) + " bytes");
-    uint8_t* multipart_data = (uint8_t*)malloc(sizeof(uint8_t) * multipart_all_size);
-    if (multipart_data == nullptr) {
-      Serial.println("[ERROR] multipart malloc failed");
-      http.end();
-      return String("");
-    }
-    memcpy(multipart_data, multipart_header.c_str(), multipart_header_size);
-    memcpy(multipart_data + multipart_header_size, img_data, img_file_size);
-    memcpy(multipart_data + multipart_header_size + img_file_size, multipart_footer.c_str(), multipart_footer_size);
-
-    status_code = http.POST(multipart_data, multipart_all_size);
-    free(multipart_data);
+    Serial.println("send " + String(img_file_size) + " raw bytes: " + img_file_name);
+    log_network_diagnostics("before raw image upload");
+    status_code = http.POST(img_data, img_file_size);
+    Serial.printf("[HTTPS] raw image upload code: %d\n", status_code);
     if (!is_http_success(status_code)) {
-      Serial.println("[ERROR] upload image status code error: " + String(status_code));
+      Serial.println("[ERROR] upload image status code error: " + String(status_code) + " " + http.errorToString(status_code));
+      log_network_diagnostics("raw image upload failed");
       http.end();
       return String("");
     }
     received_string = http.getString();
     Serial.println(String("POST result: ") + received_string);
+    log_network_diagnostics("after raw image upload");
     http.end();
   }
 
