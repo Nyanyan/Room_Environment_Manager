@@ -64,9 +64,14 @@ You need
 * [BME280](https://akizukidenshi.com/catalog/g/g109421/)
   * Temperature & Humidity & Atmospheric Pressure Sensor
   * I2C
+* [SC2004CSLB](https://akizukidenshi.com/catalog/g/g100036/)
+  * LCD Character Module (20x4)
 * Infrared LED
 * 2SC1815 Transistor
 * Some Resistors
+  * LED current limiting resistor (~100R)
+  * LCD contrast adjustment resistor (~3.3k)
+  * Transistor related circuits (~1k & 10k)
 
 
 

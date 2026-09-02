@@ -5,7 +5,17 @@
 #define AC_PANASONIC 0
 #define AC_MITSUBISHIHEAVY88 1
 #define AC_MITSUBISHIELECTRIC 2 // IRMitsubishiAC
-#define AC_TYPE AC_MITSUBISHIELECTRIC
+#define AC_DAIKIN 3 // IRDaikinESP
+#define AC_SHARP 4 // IRSharpAc
+
+// Select one of the AC_* values above. For Sharp, AC_SHARP_MODEL can be A907, A903, or A705.
+#ifndef AC_TYPE
+#define AC_TYPE AC_DAIKIN
+#endif
+
+#ifndef AC_SHARP_MODEL
+#define AC_SHARP_MODEL A907
+#endif
 
 #if AC_TYPE == AC_MITSUBISHIHEAVY88
 #include <ir_MitsubishiHeavy.h>
@@ -13,6 +23,10 @@
 #include <ir_Mitsubishi.h>
 #elif AC_TYPE == AC_PANASONIC
 #include <ir_Panasonic.h>
+#elif AC_TYPE == AC_DAIKIN
+#include <ir_Daikin.h>
+#elif AC_TYPE == AC_SHARP
+#include <ir_Sharp.h>
 #else
 #error "Unsupported AC_TYPE"
 #endif
@@ -33,6 +47,12 @@
 #elif AC_TYPE == AC_PANASONIC
 #define AC_TEMP_LIMIT_MIN kPanasonicAcMinTemp
 #define AC_TEMP_LIMIT_MAX kPanasonicAcMaxTemp
+#elif AC_TYPE == AC_DAIKIN
+#define AC_TEMP_LIMIT_MIN kDaikinMinTemp
+#define AC_TEMP_LIMIT_MAX kDaikinMaxTemp
+#elif AC_TYPE == AC_SHARP
+#define AC_TEMP_LIMIT_MIN kSharpAcMinTemp
+#define AC_TEMP_LIMIT_MAX kSharpAcMaxTemp
 #else
 #error "Unsupported AC_TYPE"
 #endif
@@ -48,6 +68,12 @@ IRMitsubishiAC ac(AC_LED_PIN);
 #elif AC_TYPE == AC_PANASONIC
 // IR transmitter controls Panasonic A/C
 IRPanasonicAc ac(AC_LED_PIN);
+#elif AC_TYPE == AC_DAIKIN
+// IR transmitter controls Daikin A/C
+IRDaikinESP ac(AC_LED_PIN);
+#elif AC_TYPE == AC_SHARP
+// IR transmitter controls Sharp A/C
+IRSharpAc ac(AC_LED_PIN);
 #else
 #error "Unsupported AC_TYPE"
 #endif
@@ -59,6 +85,10 @@ const char* ac_type_display_name() {
   return "MitsubishiE";
 #elif AC_TYPE == AC_PANASONIC
   return "Panasonic";
+#elif AC_TYPE == AC_DAIKIN
+  return "Daikin";
+#elif AC_TYPE == AC_SHARP
+  return "Sharp";
 #else
   return "Unknown";
 #endif
@@ -115,6 +145,20 @@ void ac_cool_on(AC_status &ac_status, int set_temp){
     ac.setTemp(set_temp);
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #elif AC_TYPE == AC_DAIKIN
+    ac.on();
+    ac.setFan(kDaikinFanAuto);
+    ac.setMode(kDaikinCool);
+    ac.setTemp(set_temp);
+    ac.setSwingVertical(true);
+    ac.setSwingHorizontal(true);
+    #elif AC_TYPE == AC_SHARP
+    ac.setModel(AC_SHARP_MODEL);
+    ac.on();
+    ac.setFan(kSharpAcFanAuto);
+    ac.setMode(kSharpAcCool);
+    ac.setTemp(set_temp);
+    ac.setSwingV(kSharpAcSwingVIgnore);
     #else
     #error "Unsupported AC_TYPE"
     #endif
@@ -150,6 +194,20 @@ void ac_dry_on(AC_status &ac_status, int set_temp){
     ac.setTemp(set_temp);
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #elif AC_TYPE == AC_DAIKIN
+    ac.on();
+    ac.setFan(kDaikinFanAuto);
+    ac.setMode(kDaikinDry);
+    ac.setTemp(set_temp);
+    ac.setSwingVertical(true);
+    ac.setSwingHorizontal(true);
+    #elif AC_TYPE == AC_SHARP
+    ac.setModel(AC_SHARP_MODEL);
+    ac.on();
+    ac.setFan(kSharpAcFanAuto);
+    ac.setMode(kSharpAcDry);
+    ac.setTemp(set_temp);
+    ac.setSwingV(kSharpAcSwingVIgnore);
     #else
     #error "Unsupported AC_TYPE"
     #endif
@@ -185,6 +243,20 @@ void ac_heat_on(AC_status &ac_status, int set_temp){
     ac.setTemp(set_temp);
     ac.setSwingVertical(kPanasonicAcSwingVHighest);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #elif AC_TYPE == AC_DAIKIN
+    ac.on();
+    ac.setFan(kDaikinFanAuto);
+    ac.setMode(kDaikinHeat);
+    ac.setTemp(set_temp);
+    ac.setSwingVertical(true);
+    ac.setSwingHorizontal(true);
+    #elif AC_TYPE == AC_SHARP
+    ac.setModel(AC_SHARP_MODEL);
+    ac.on();
+    ac.setFan(kSharpAcFanAuto);
+    ac.setMode(kSharpAcHeat);
+    ac.setTemp(set_temp);
+    ac.setSwingV(kSharpAcSwingVIgnore);
     #else
     #error "Unsupported AC_TYPE"
     #endif
@@ -221,6 +293,20 @@ void ac_off(AC_status &ac_status){
     ac.setTemp(20);
     ac.setSwingVertical(kPanasonicAcSwingVAuto);
     ac.setSwingHorizontal(kPanasonicAcSwingHAuto);
+    #elif AC_TYPE == AC_DAIKIN
+    ac.off();
+    ac.setFan(kDaikinFanAuto);
+    ac.setMode(kDaikinCool);
+    ac.setTemp(20);
+    ac.setSwingVertical(false);
+    ac.setSwingHorizontal(false);
+    #elif AC_TYPE == AC_SHARP
+    ac.setModel(AC_SHARP_MODEL);
+    ac.setFan(kSharpAcFanAuto);
+    ac.setMode(kSharpAcCool);
+    ac.setTemp(20);
+    ac.setSwingV(kSharpAcSwingVIgnore);
+    ac.off();
     #else
     #error "Unsupported AC_TYPE"
     #endif
