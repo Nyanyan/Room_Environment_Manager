@@ -66,11 +66,11 @@ inline void slack_build_environment_report(JsonDocument &body, const char *times
   for (const char *title : {"Sensor", "Temp (°C)", "Hum (%)", "Pres (hPa)", "CO2 (ppm)"}) {
     slack_report_cell(header, title);
   }
-  slack_report_sensor_row(rows, fallback, "parent", sensors.parent);
+  slack_report_sensor_row(rows, fallback, "親", sensors.parent);
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
-    slack_report_sensor_row(rows, fallback, String("additional ") + String(i + 1), sensors.additional[i]);
+    slack_report_sensor_row(rows, fallback, String("子") + String(i + 1), sensors.additional[i]);
   }
-  slack_report_sensor_row(rows, fallback, "representative", sensors.representative);
+  slack_report_sensor_row(rows, fallback, "代表", sensors.representative);
   slack_report_section(blocks, details);
   // Slack uses top-level text for notifications and screen readers when blocks exist.
   body["text"] = fallback + details;

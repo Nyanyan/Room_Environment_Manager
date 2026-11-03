@@ -100,7 +100,7 @@ You need
 
 ## 環境レポート（main版）
 
-`monitor` と毎時の定期報告は、Slack公式の [Block Kit tableブロック](https://docs.slack.dev/reference/block-kit/blocks/table-block/) で環境データを表示します。行は `parent`、各 `additional` センサー、`representative`、列はセンサー名・温度（°C）・湿度（%）・気圧（hPa）・CO2（ppm）です。数値は右揃えで、温度・湿度・気圧は小数1桁、CO2は整数、欠測値は `N/A` と表示します。加湿器の目標湿度を含め、湿度の表示単位は `%` です。
+`monitor` と毎時の定期報告は、Slack公式の [Block Kit tableブロック](https://docs.slack.dev/reference/block-kit/blocks/table-block/) で環境データを表示します。行は `親`、`子1`・`子2`・…、`代表`、列はセンサー名・温度（°C）・湿度（%）・気圧（hPa）・CO2（ppm）です。数値は右揃えで、温度・湿度・気圧は小数1桁、CO2は整数、欠測値は `N/A` と表示します。加湿器の目標湿度を含め、湿度の表示単位は `%` です。
 
 同じメッセージ内に高温アラート、エアコン・加湿器の状態、通知設定、`Connection` 欄、グラフのリンクも表示します。通知・読み上げ用のトップレベル `text` にも全センサーの値と状態を含めます。
 
@@ -137,7 +137,7 @@ python tests/slack/run_tests.py --arduinojson-dir /path/to/ArduinoJson
 
 給水アラートは既定で有効、メンションは無効、自動加湿は無効です。自動加湿の有効・無効、目標湿度、アラート・メンション設定をEEPROMに保存します。手動のON状態は再起動後に再送しません。既存のエアコン設定と予約領域の位置は変更していません。`reserve` でも同じ `hm` コマンドを使用できます。
 
-`monitor` と毎時の定期レポートの `Humidifier` 欄に、加湿器の **OFF / WEAK / STRONG**、水切れの **YES / NO**、自動制御の目標とPID出力、通知設定を表示します。接続状態は `Connection` 欄の `Humidifier controller` に表示します。未接続時の運転状態と水切れは **UNKNOWN** です。給水アラートは水切れを確認したときに一度送信し、水切れが解消して再発するまで繰り返しません。通知を再度有効にしたときは継続中の水切れも通知します。
+`monitor` と毎時の定期レポートの `Humidifier` 欄に、加湿器の **OFF / WEAK / STRONG**、水切れの **YES / NO**、自動制御の目標湿度、通知設定を表示します。接続状態は `Connection` 欄の `Humidifier controller` に表示します。未接続時の運転状態と水切れは **UNKNOWN** です。給水アラートは水切れを確認したときに一度送信し、水切れが解消して再発するまで繰り返しません。通知を再度有効にしたときは継続中の水切れも通知します。
 
 ### 応答の遅い加湿器のPID制御
 

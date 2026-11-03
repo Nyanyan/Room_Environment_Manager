@@ -166,7 +166,6 @@ String humidifier_summary(const Settings &settings) {
   text += humidifier_connected() ? hm_state_label(hm_status.state) : "UNKNOWN";
   text += "\n- Auto PID : ";
   text += settings.hm_auto ? String(settings.hm_target_humidity, 1) + " %" : "OFF";
-  if (settings.hm_auto && hm_pid.initialized) text += " (output " + String(hm_pid.output, 0) + "%)";
   text += "\n- Needs water : ";
   text += humidifier_connected() ? (hm_status.needs_water ? "YES" : "NO") : "UNKNOWN";
   text += String("\n- Refill alert : ") + (settings.hm_water_alert ? "ON" : "OFF");

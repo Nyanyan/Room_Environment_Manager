@@ -75,12 +75,12 @@ int main() {
   }
   assert(cell(body, 0, 0) == "Sensor" && cell(body, 0, 1) == "Temp (°C)");
   assert(cell(body, 0, 2) == "Hum (%)" && cell(body, 0, 3) == "Pres (hPa)" && cell(body, 0, 4) == "CO2 (ppm)");
-  assert(cell(body, 1, 0) == "parent" && cell(body, 1, 1) == "27.0" && cell(body, 1, 2) == "42.2");
+  assert(cell(body, 1, 0) == "親" && cell(body, 1, 1) == "27.0" && cell(body, 1, 2) == "42.2");
   assert(cell(body, 1, 3) == "1021.6" && cell(body, 1, 4) == "418");
-  assert(cell(body, 2, 0) == "additional 1" && cell(body, 2, 3) == "N/A");
-  assert(cell(body, 3, 0) == "additional 2" && cell(body, 3, 3) == "1022.7");
-  assert(cell(body, 4, 0) == "additional 3" && cell(body, 4, 4) == "N/A");
-  assert(cell(body, 5, 0) == "representative" && cell(body, 5, 1) == "23.5");
+  assert(cell(body, 2, 0) == "子1" && cell(body, 2, 3) == "N/A");
+  assert(cell(body, 3, 0) == "子2" && cell(body, 3, 3) == "1022.7");
+  assert(cell(body, 4, 0) == "子3" && cell(body, 4, 4) == "N/A");
+  assert(cell(body, 5, 0) == "代表" && cell(body, 5, 1) == "23.5");
   assert(blocks[1]["column_settings"].size() == 5);
   for (size_t column = 0; column < 5; ++column) {
     assert(strcmp(blocks[1]["column_settings"][column]["align"], column == 0 ? "left" : "right") == 0);
@@ -88,8 +88,8 @@ int main() {
   assert(std::string(blocks[2]["text"]["text"] | "") == details.c_str());
   const std::string fallback = body["text"] | "";
   assert(fallback.find("Hum 42.2 %") != std::string::npos);
-  assert(fallback.find("additional 3:") != std::string::npos);
-  assert(fallback.find("representative:") != std::string::npos);
+  assert(fallback.find("子3:") != std::string::npos);
+  assert(fallback.find("代表:") != std::string::npos);
   assert(fallback.find("<!channel>") != std::string::npos);
   assert(fallback.find(details.c_str()) != std::string::npos);
   assert(posted_body.find("pct.") == std::string::npos);
