@@ -162,9 +162,7 @@ void humidifier_update(Settings &settings, const Sensor_data &sensors, Time_info
 }
 
 String humidifier_summary(const Settings &settings) {
-  String text = "< *Humidifier* >\n- Controller : ";
-  text += !hm_enabled ? "not configured\n" : (humidifier_connected() ? "OK\n" : "offline / not installed\n");
-  text += "- Status : ";
+  String text = "< *Humidifier* >\n- Status : ";
   text += humidifier_connected() ? hm_state_label(hm_status.state) : "UNKNOWN";
   text += "\n- Auto PID : ";
   text += settings.hm_auto ? String(settings.hm_target_humidity, 1) + " %RH" : "OFF";

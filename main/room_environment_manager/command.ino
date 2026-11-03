@@ -420,6 +420,9 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   bool ac_connected = ac_controller_check_connection();
   str += "- AC controller : ";
   str += ac_connected ? "OK\n" : "NG\n";
+  str += "- Humidifier controller : ";
+  str += !humidifier_configured() ? "not configured\n" :
+    (humidifier_connected() ? "OK\n" : "offline / not installed\n");
 
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     str += "- Additional ";
