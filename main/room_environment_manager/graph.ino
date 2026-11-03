@@ -1,6 +1,11 @@
 #include "graph.h"
 #include "sensors.h"
 #include "character.h"
+#include "air_conditioner.h"
+#include "command.h"
+#include "time_manager.h"
+#include <math.h>
+#include <limits.h>
 
 const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
   {255, 255, 255}, // white
@@ -228,40 +233,69 @@ void graph_draw_graph_line(Graph_img &graph_img, int fy, int fx, int ny, int nx,
 }
 
 
+bool graph_valid_value(float value) {
+  return isfinite(value) && value != GRAPH_DATA_UNDEFINED && value != FLT_MAX;
+}
+
+
+Graph_references graph_control_references(const Settings &settings, const AC_status &ac_status) {
+  Graph_references references;
+  if ((settings.ac_auto_mode == AC_AUTO_COOL || settings.ac_auto_mode == AC_AUTO_DRY ||
+       settings.ac_auto_mode == AC_AUTO_HEAT) && isfinite(settings.ac_auto_temp)) {
+    // Match the effective target used by ac_auto().
+    references.temperature_target = constrain(settings.ac_auto_temp,
+      (double)AC_TEMP_LIMIT_MIN, (double)AC_TEMP_LIMIT_MAX);
+  }
+  if ((ac_status.state == AC_STATE_COOL || ac_status.state == AC_STATE_DRY ||
+       ac_status.state == AC_STATE_HEAT) &&
+      ac_status.temp >= AC_TEMP_LIMIT_MIN && ac_status.temp <= AC_TEMP_LIMIT_MAX) {
+    references.ac_set_temperature = ac_status.temp;
+  }
+  if (settings.hm_auto && isfinite(settings.hm_target_humidity) &&
+      settings.hm_target_humidity >= 0.0 && settings.hm_target_humidity <= 100.0) {
+    references.humidity_target = settings.hm_target_humidity;
+  }
+  return references;
+}
+
+
 int graph_calculate_n_main_scale(int y_min, int y_max, const Value_color scales[], const int n_scales) {
   int n_main_scale = 0;
-  for (int32_t t = y_min; t <= y_max; ++t){
-    for (int i = 0; i < n_scales; ++i){
-      if (t == scales[i].value){
-        ++n_main_scale;
-      }
+  for (int i = 0; i < n_scales; ++i){
+    if (y_min <= scales[i].value && scales[i].value <= y_max){
+      ++n_main_scale;
     }
   }
   return n_main_scale;
 }
 
 
-void graph_calculate_range(float data[], const Value_color scales[], const int n_scales, const int interval, int *y_min, int *y_max) {
-  *y_min = 10000;
-  *y_max = -10000;
-  for (int i = 0; i < GRAPH_DATA_N; ++i){
-    if (data[i] != GRAPH_DATA_UNDEFINED){
-      *y_min = min(*y_min, (int)(data[i] - 0.9999));
-      *y_max = max(*y_max, (int)(data[i] + 0.9999));
+void graph_calculate_range(const float data[], const Value_color scales[], const int n_scales, const int interval, int *y_min, int *y_max, const float references[], int n_references) {
+  float low = FLT_MAX;
+  float high = -FLT_MAX;
+  for (int i = 0; i < GRAPH_DATA_N + n_references; ++i){
+    const float value = i < GRAPH_DATA_N ? data[i] : references[i - GRAPH_DATA_N];
+    if (graph_valid_value(value)){
+      low = min(low, value);
+      high = max(high, value);
     }
   }
-  *y_min -= *y_min % interval;
-  *y_max += (interval - *y_max % interval) % interval;
+  // A report can be requested before any sensor samples are available.
+  if (low == FLT_MAX) {
+    low = scales[0].value;
+    high = scales[1].value;
+  }
+  *y_min = (int)floorf(low / interval) * interval;
+  *y_max = (int)ceilf(high / interval) * interval;
   while (graph_calculate_n_main_scale(*y_min, *y_max, scales, n_scales) < 2) {
-    int n_sub, n_add;
-    for (n_sub = 1; n_sub < 200; ++n_sub) {
-      if (graph_calculate_n_main_scale(*y_min - n_sub, *y_min - n_sub, scales, n_scales)) {
-        break;
+    int n_sub = INT_MAX;
+    int n_add = INT_MAX;
+    for (int i = 0; i < n_scales; ++i) {
+      if (scales[i].value < *y_min) {
+        n_sub = min(n_sub, *y_min - scales[i].value);
       }
-    }
-    for (n_add = 1; n_add < 200; ++n_add) {
-      if (graph_calculate_n_main_scale(*y_max + n_add, *y_max + n_add, scales, n_scales)) {
-        break;
+      if (scales[i].value > *y_max) {
+        n_add = min(n_add, scales[i].value - *y_max);
       }
     }
     if (n_sub < n_add) {
@@ -270,10 +304,11 @@ void graph_calculate_range(float data[], const Value_color scales[], const int n
       *y_max += n_add;
     }
   }
-  if (graph_calculate_n_main_scale(*y_min, *y_min, scales, n_scales)) {
+  // Keep data/reference lines away from the frame, including integer setpoints.
+  if (*y_min >= low || graph_calculate_n_main_scale(*y_min, *y_min, scales, n_scales)) {
     *y_min -= interval;
   }
-  if (graph_calculate_n_main_scale(*y_max, *y_max, scales, n_scales)) {
+  if (*y_max <= high || graph_calculate_n_main_scale(*y_max, *y_max, scales, n_scales)) {
     *y_max += interval;
   }
 }
@@ -283,35 +318,61 @@ void graph_plot(Graph_img &graph_img, float data[], int y_min, int y_max) {
   int32_t fy = GRAPH_DATA_UNDEFINED;
   // yesterday
   for (int32_t x = 0; x < GRAPH_DATA_1_DAY; ++x){
-    if (data[x] != GRAPH_DATA_UNDEFINED){
+    if (graph_valid_value(data[x])){
       int32_t y = round((float)GRAPH_AREA_HEIGHT * (data[x] - y_min) / (y_max - y_min));
       graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_GRAY;
       if (fy != GRAPH_DATA_UNDEFINED){
         graph_draw_graph_line(graph_img, fy, x - 1, y, x, PALETTE_GRAY);
       }
       fy = y;
+    } else {
+      fy = GRAPH_DATA_UNDEFINED;
     }
   }
+  fy = GRAPH_DATA_UNDEFINED;
   for (int32_t x = GRAPH_DATA_1_DAY; x < GRAPH_DATA_N; ++x){
-    if (data[x] != GRAPH_DATA_UNDEFINED){
+    if (graph_valid_value(data[x])){
       int32_t y = round((float)GRAPH_AREA_HEIGHT * (data[x] - y_min) / (y_max - y_min));
       graph_img.graph[GRAPH_SY + y][GRAPH_SX + x - GRAPH_DATA_1_DAY] = PALETTE_BLACK;
       if (fy != GRAPH_DATA_UNDEFINED){
         graph_draw_graph_line(graph_img, fy, x - GRAPH_DATA_1_DAY - 1, y, x - GRAPH_DATA_1_DAY, PALETTE_BLACK);
       }
       fy = y;
+    } else {
+      fy = GRAPH_DATA_UNDEFINED;
     }
   }
 }
 
 
 
-void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
+void graph_draw_reference(Graph_img &graph_img, int y_min, int y_max, float value, bool target) {
+  if (!graph_valid_value(value) || value < y_min || value > y_max || y_min >= y_max) {
+    return;
+  }
+  const int y = round((float)GRAPH_AREA_HEIGHT * (value - y_min) / (y_max - y_min));
+  // Two pixels remain visible when a reference coincides with a colored grid
+  // or measured curve. Offset the blue dots so equal references show both colors.
+  const int second_y = y < GRAPH_AREA_HEIGHT ? y + 1 : y - 1;
+  const uint8_t color = target ? PALETTE_PURPLE : PALETTE_BLUE;
+  for (int x = 0; x < GRAPH_AREA_WIDTH; ++x) {
+    if (target ? x % 8 < 4 : x % 4 == 2) {
+      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = color;
+      graph_img.graph[GRAPH_SY + second_y][GRAPH_SX + x] = color;
+    }
+  }
+}
+
+
+void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info, const Graph_references &references) {
   graph_draw_white(graph_img);
   graph_draw_x_scale(graph_img, graph_data);
   int y_min, y_max;
-  graph_calculate_range(graph_data.temperature, color_temperature, N_COLOR_TEMPERATURE, GRAPH_TEMPERATURE_SCALE_INTERVAL, &y_min, &y_max);
+  const float levels[] = {references.temperature_target, references.ac_set_temperature};
+  graph_calculate_range(graph_data.temperature, color_temperature, N_COLOR_TEMPERATURE, GRAPH_TEMPERATURE_SCALE_INTERVAL, &y_min, &y_max, levels, 2);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_TEMPERATURE_SCALE_INTERVAL, color_temperature, N_COLOR_TEMPERATURE);
+  graph_draw_reference(graph_img, y_min, y_max, references.temperature_target, true);
+  graph_draw_reference(graph_img, y_min, y_max, references.ac_set_temperature, false);
   graph_plot(graph_img, graph_data.temperature, y_min, y_max);
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_TEMPERATURE_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_temperature, CHAR_TEMPERATURE_N); // title + y unit
@@ -321,12 +382,13 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
 
 
 
-void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
+void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info, const Graph_references &references){
   graph_draw_white(graph_img);
   graph_draw_x_scale(graph_img, graph_data);
   int y_min, y_max;
-  graph_calculate_range(graph_data.humidity, color_humidity, N_COLOR_HUMIDITY, GRAPH_HUMIDITY_SCALE_INTERVAL, &y_min, &y_max);
+  graph_calculate_range(graph_data.humidity, color_humidity, N_COLOR_HUMIDITY, GRAPH_HUMIDITY_SCALE_INTERVAL, &y_min, &y_max, &references.humidity_target, 1);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_HUMIDITY_SCALE_INTERVAL, color_humidity, N_COLOR_HUMIDITY);
+  graph_draw_reference(graph_img, y_min, y_max, references.humidity_target, true);
   graph_plot(graph_img, graph_data.humidity, y_min, y_max);
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_HUMIDITY_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_humidity, CHAR_HUMIDITY_N); // title + y unit
@@ -341,7 +403,7 @@ void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info
   graph_draw_white(graph_img);
   graph_draw_x_scale(graph_img, graph_data);
   int y_min, y_max;
-  graph_calculate_range(graph_data.pressure, color_pressure, N_COLOR_PRESSURE, GRAPH_PRESSURE_SCALE_INTERVAL, &y_min, &y_max);
+  graph_calculate_range(graph_data.pressure, color_pressure, N_COLOR_PRESSURE, GRAPH_PRESSURE_SCALE_INTERVAL, &y_min, &y_max, nullptr, 0);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_PRESSURE_SCALE_INTERVAL, color_pressure, N_COLOR_PRESSURE);
   graph_plot(graph_img, graph_data.pressure, y_min, y_max);
   graph_draw_frame(graph_img);
@@ -356,7 +418,7 @@ void graph_draw_co2_concentration(Graph_data &graph_data, Graph_img &graph_img, 
   graph_draw_white(graph_img);
   graph_draw_x_scale(graph_img, graph_data);
   int y_min, y_max;
-  graph_calculate_range(graph_data.co2_concentration, color_co2_concentration, N_COLOR_CO2_CONCENTRATION, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, &y_min, &y_max);
+  graph_calculate_range(graph_data.co2_concentration, color_co2_concentration, N_COLOR_CO2_CONCENTRATION, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, &y_min, &y_max, nullptr, 0);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, color_co2_concentration, N_COLOR_CO2_CONCENTRATION);
   graph_plot(graph_img, graph_data.co2_concentration, y_min, y_max);
   graph_draw_frame(graph_img);

@@ -28,6 +28,13 @@ struct Graph_data{
   }
 };
 
+// Current control values, shown as horizontal reference lines (not history).
+struct Graph_references {
+  float temperature_target = GRAPH_DATA_UNDEFINED;
+  float ac_set_temperature = GRAPH_DATA_UNDEFINED;
+  float humidity_target = GRAPH_DATA_UNDEFINED;
+};
+
 
 
 // bitmap color palette

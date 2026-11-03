@@ -393,7 +393,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   }
   str += String("Alert temperature : ") + String(alert_hot_temperature, 1) + " *C\n";
 
-  String graph_urls = get_graph_urls(graph_data, graph_img, time_info);
+  String graph_urls = get_graph_urls(graph_data, graph_img, time_info, settings, ac_status);
 
   str += "< *Connection* >\n";
   bool ac_connected = ac_controller_check_connection();
@@ -416,12 +416,13 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
 
 
 
-String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
-  graph_draw_temperature(graph_data, graph_img, time_info);
+String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info, const Settings &settings, const AC_status &ac_status){
+  const Graph_references references = graph_control_references(settings, ac_status);
+  graph_draw_temperature(graph_data, graph_img, time_info, references);
   graph_encode_jpeg(graph_img);
   String graph_temperature = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_TEMPERATURE);
 
-  graph_draw_humidity(graph_data, graph_img, time_info);
+  graph_draw_humidity(graph_data, graph_img, time_info, references);
   graph_encode_jpeg(graph_img);
   String graph_humidity = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_HUMIDITY);
 
@@ -433,7 +434,14 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
   graph_encode_jpeg(graph_img);
   String graph_co2 = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_CO2_CONCENTRATION);
 
-  String str = 
+  String str;
+  if (graph_valid_value(references.temperature_target) || graph_valid_value(references.humidity_target)) {
+    str += "グラフの紫破線：現在の自動目標値\n";
+  }
+  if (graph_valid_value(references.ac_set_temperature)) {
+    str += "気温グラフの青点線：現在のエアコン設定温度\n";
+  }
+  str +=
     String("<") + graph_temperature + String("| >") + 
     String("<") + graph_humidity + String("| >") + 
     String("<") + graph_pressure + String("| >") + 
