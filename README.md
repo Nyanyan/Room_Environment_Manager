@@ -98,6 +98,21 @@ You need
   * reinstall the Slack app after changing scopes/events
   * invite the bot to the target channel
 
+## メインのLCD表示
+
+20文字×4行のLCDは左列に気温・湿度・気圧・CO2、右列に時刻・エアコン状態・エアコンモード・加湿器モードを表示します。気圧とCO2は整数、気温・湿度・自動目標値は小数1桁です。
+
+```text
+23.5 *C   12:34:56
+50.0 %    AC COOL 24
+1013 hPa  AUTO C26.5
+418 ppm   HM A55.0%
+```
+
+`AUTO C/D/H` は冷房・除湿・暖房の自動目標温度、`HM A` は加湿器の自動目標湿度です。手動時は `AC MANUAL` / `HM MANUAL` と表示します。各欄を空白で埋めてから固定幅で配置し、欠測・非数・表示幅を超える値は `--` に置き換えるため、前の文字や隣の欄へのはみ出しを防ぎます。
+
+`python tests/display/run_tests.py` で表示内容、桁数やモード変更後の消し残し、欠測・範囲外入力を検証できます。
+
 ## 環境レポート（main版）
 
 `monitor` と毎時の定期報告は、Slack公式の [Block Kit tableブロック](https://docs.slack.dev/reference/block-kit/blocks/table-block/) で環境データを表示します。行は `親`、`子1`・`子2`・…、`代表`、列はセンサー名・温度（°C）・湿度（%）・気圧（hPa）・CO2（ppm）です。数値は右揃えで、温度・湿度・気圧は小数1桁、CO2は整数、欠測値は `N/A` と表示します。加湿器の目標湿度を含め、湿度の表示単位は `%` です。

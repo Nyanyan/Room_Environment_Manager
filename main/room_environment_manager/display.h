@@ -6,6 +6,7 @@
 #include "sensors.h"
 #include "time_manager.h"
 #include "command.h"
+#include "display_format.h"
 
 // display SC2004CSLB
 #define RS_PIN 4
@@ -19,6 +20,6 @@ void init_display();
 void display_clear();
 void display_print(int x, int y, String str);
 void display_print(int x, int y, const char *str);
-void display_print_info(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Time_info &time_info);
+void display_print_info(const Sensor_data &sensor_data, const Settings &settings, const AC_status &ac_status, const Time_info &time_info);
 
 #endif
