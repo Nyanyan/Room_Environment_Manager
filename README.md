@@ -98,6 +98,24 @@ You need
   * reinstall the Slack app after changing scopes/events
   * invite the bot to the target channel
 
+## Slack受信処理（main版）
+
+Socket Modeのイベントは、WebSocketのペイロードを256バイトずつ読み、ArduinoJsonのフィルターで必要な項目だけ解析します。添付、プレビュー、更新前メッセージなどを受信サイズ分の `String` に保存することはありません。8KiBを超える通常のイベントにも対応し、分割フレームと途中のPing/Pongを処理します。
+
+受信確認（ACK）は、Bot投稿・メッセージ更新・対象外チャンネルなどを除外する前に送信します。Bot識別情報があるメッセージは、`subtype` がなくてもコマンドとして実行しません。受け付けるコマンド本文は512バイトまでです。
+
+処理量の上限は、1メッセージのペイロード合計256KiB、制御フレームを含め128フレーム、受信時間2.5秒（進捗がない場合は1秒）です。フィルターと解析結果のヒープ確保には合計16KiBの上限があります。保持対象の本文などが大きすぎて解析できないイベントは実行せず、残りを読み捨てます。その時点で `envelope_id` を取得できていればACKします。取得できなかった場合はACKできない旨をログに出します。通信断・不正なフレーム・受信上限超過の場合は接続を閉じて再接続します。
+
+診断ログにはフレーム長、opcode、FIN、メッセージ全体の長さ、JSON解析のピーク確保量、イベント種別・subtype・再送回数を表示します。JSON解析用の確保量には、TLSなど別の処理が使うメモリは含みません。
+
+Python 3、C++17対応の `g++` とArduinoJson 7を使い、以下で受信処理のテストを実行できます。
+
+```sh
+python tests/slack/run_tests.py --arduinojson-dir /path/to/ArduinoJson
+```
+
+ライブラリのパスは `ARDUINOJSON_DIR` 環境変数でも指定できます。テストは実際の受信・ACK・コマンド振り分けコードを使用し、18万バイトのイベント、分割フレーム、Bot投稿、次のフレームの保持、タイムアウト、不正フレーム、メモリ上限を確認します。実際のSlack接続や秘密情報を含む `token.h` は使用しません。
+
 ## 加湿器（main版・任意設置）
 
 配線とESP-NOWのMACアドレス設定は [加湿器子機の説明](main/humidifier/README.md) を参照してください。既存のArduino ESP32 core 2.0.17で動作する構成です。
