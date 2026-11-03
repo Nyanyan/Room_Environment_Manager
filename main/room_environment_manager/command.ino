@@ -5,6 +5,7 @@
 #include "sensors.h"
 #include "additional_sensors.h"
 #include "humidifier.h"
+#include "slack.h"
 
 namespace {
 
@@ -280,13 +281,6 @@ bool is_valid_sensor_value(float v) {
   return v != FLT_MAX;
 }
 
-String format_sensor_value(float v, int decimals, const char *unit) {
-  if (!is_valid_sensor_value(v)) {
-    return String("N/A");
-  }
-  return String(v, decimals) + String(" ") + String(unit);
-}
-
 bool parse_temperature_value(const String &text, double &temperature) {
   if (text.length() == 0) {
     return false;
@@ -304,14 +298,6 @@ bool parse_temperature_value(const String &text, double &temperature) {
 
 bool is_alert_temperature_valid(double temperature) {
   return temperature >= ALERT_HOT_TEMPERATURE_MIN && temperature <= ALERT_HOT_TEMPERATURE_MAX;
-}
-
-void append_sensor_block(String &str, const char *title, const SensorReading &reading) {
-  str += String("[") + title + String("]\n");
-  str += "- Temp : " + format_sensor_value(reading.temperature, 1, "*C") + "\n";
-  str += "- Hum : " + format_sensor_value(reading.humidity, 1, "pct.") + "\n";
-  str += "- Pres : " + format_sensor_value(reading.pressure, 1, "hPa") + "\n";
-  str += "- CO2 : " + format_sensor_value(reading.co2_concentration, 0, "ppm") + "\n";
 }
 
 } // namespace
@@ -357,26 +343,19 @@ struct Command command_get(){
 
 
 void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
-  String str = "< *Room Environment* >\n";
+  String heading = "< *Room Environment* >\n";
   const SensorReading &heat_src = is_valid_sensor_value(sensor_data.representative.temperature) ? sensor_data.representative : sensor_data.parent;
   const double alert_hot_temperature = is_alert_temperature_valid(settings.alert_hot_temperature)
     ? settings.alert_hot_temperature
     : ALERT_HOT_TEMPERATURE_DEFAULT;
   if (is_valid_sensor_value(heat_src.temperature) && heat_src.temperature >= alert_hot_temperature){
     if (settings.alert_when_hot){
-      str += "<!channel>\n";
+      heading += "<!channel>\n";
     }
-    str += "!!!!!HEAT!!!!!\n";
+    heading += "!!!!!HEAT!!!!!\n";
   }
 
-  append_sensor_block(str, "parent", sensor_data.parent);
-  for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
-    String title = String("additional ") + String(i + 1);
-    append_sensor_block(str, title.c_str(), sensor_data.additional[i]);
-  }
-  append_sensor_block(str, "representative", sensor_data.representative);
-
-  str += "< *Air Conditioner* >\n";
+  String str = "< *Air Conditioner* >\n";
   str += "- AC auto : ";
   if (settings.ac_auto_mode == AC_AUTO_OFF) {
     str += "OFF\n";
@@ -432,7 +411,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
   }
 
   str += graph_urls;
-  slack_send_message(time_info, str);
+  slack_send_environment_report(time_info, sensor_data, heading, str);
 }
 
 

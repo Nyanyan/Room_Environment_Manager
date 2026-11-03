@@ -7,6 +7,12 @@
 #define SLACK_URL_GET_UPLOAD_URL "https://slack.com/api/files.getUploadURLExternal"
 #define SLACK_URL_COMPLETE_UPLOAD "https://slack.com/api/files.completeUploadExternal"
 
+struct Time_info;
+struct Sensor_data;
+class String;
+char *slack_send_environment_report(Time_info &time_info, const Sensor_data &sensors,
+                                    const String &heading, const String &details);
+
 void init_wifi();
 void slack_maintain();
 void slack_delay(unsigned long delay_ms);

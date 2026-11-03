@@ -10,6 +10,7 @@
 #include "slack.h"
 #include "slack_event.h"
 #include "slack_websocket.h"
+#include "slack_report.h"
 
 // WiFi password & Slack token
 #include "token.h"
@@ -626,9 +627,15 @@ String slack_get_message() {
   return dequeue_slack_command();
 }
 
-char* slack_send_message(Time_info &time_info, String str){
+static char *slack_post_message(JsonDocument &body_doc) {
   static char ts[32];
   strcpy(ts, "");
+
+  body_doc["channel"] = SLACK_CHANNEL_ID;
+  if (body_doc.overflowed()) {
+    Serial.println("[ERROR] Slack message JSON allocation failed");
+    return ts;
+  }
 
   if (!ensure_wifi_connected_and_settled()) {
     Serial.println("[ERROR] WiFi not connected; skip slack_send_message");
@@ -641,14 +648,14 @@ char* slack_send_message(Time_info &time_info, String str){
     return ts;
   }
 
-  String str_with_timestamp = String(time_info.time_str) + "\n" + str;
-  Serial.println(str_with_timestamp);
-
-  JsonDocument body_doc;
-  body_doc["channel"] = SLACK_CHANNEL_ID;
-  body_doc["text"] = str_with_timestamp;
+  Serial.println(body_doc["text"] | "");
   String body;
-  serializeJson(body_doc, body);
+  const size_t expected = measureJson(body_doc);
+  if (serializeJson(body_doc, body) != expected || body.length() != expected) {
+    Serial.println("[ERROR] Slack message serialization failed");
+    http.end();
+    return ts;
+  }
 
   add_slack_auth_header(http, SLACK_TOKEN);
   http.addHeader("Content-Type", "application/json; charset=utf-8");
@@ -668,6 +675,19 @@ char* slack_send_message(Time_info &time_info, String str){
   }
   http.end();
   return ts;
+}
+
+char *slack_send_message(Time_info &time_info, String str) {
+  JsonDocument body;
+  body["text"] = String(time_info.time_str) + "\n" + str;
+  return slack_post_message(body);
+}
+
+char *slack_send_environment_report(Time_info &time_info, const Sensor_data &sensors,
+                                    const String &heading, const String &details) {
+  JsonDocument body;
+  slack_build_environment_report(body, time_info.time_str, sensors, heading, details);
+  return slack_post_message(body);
 }
 
 String slack_upload_img(uint8_t *img_data, uint32_t img_file_size, String img_file_name){

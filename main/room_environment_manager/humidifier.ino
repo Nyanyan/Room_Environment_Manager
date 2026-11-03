@@ -165,7 +165,7 @@ String humidifier_summary(const Settings &settings) {
   String text = "< *Humidifier* >\n- Status : ";
   text += humidifier_connected() ? hm_state_label(hm_status.state) : "UNKNOWN";
   text += "\n- Auto PID : ";
-  text += settings.hm_auto ? String(settings.hm_target_humidity, 1) + " %RH" : "OFF";
+  text += settings.hm_auto ? String(settings.hm_target_humidity, 1) + " %" : "OFF";
   if (settings.hm_auto && hm_pid.initialized) text += " (output " + String(hm_pid.output, 0) + "%)";
   text += "\n- Needs water : ";
   text += humidifier_connected() ? (hm_status.needs_water ? "YES" : "NO") : "UNKNOWN";
@@ -202,7 +202,7 @@ void command_check_hm(Command command, Time_info &time, Settings &settings, cons
     bool saved = memory_save_settings(settings);
     humidifier_update(settings, sensors, time);
     slack_send_message(time, String(saved ? "[INFO] " : "[WARN] Could not save settings. ") +
-                       "HM AUTO PID target: " + String(target, 1) + " %RH" +
+                       "HM AUTO PID target: " + String(target, 1) + " %" +
                        (!hm_enabled ? " (controller not configured)" :
                         (!humidifier_connected() ? " (waiting for controller)" : "")));
     return;
