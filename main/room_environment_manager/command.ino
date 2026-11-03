@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "sensors.h"
 #include "additional_sensors.h"
+#include "humidifier.h"
 
 namespace {
 
@@ -403,6 +404,7 @@ void command_send_environment(Sensor_data &sensor_data, Settings &settings, AC_s
     str += "- AC status : OFF\n";
   }
 
+  str += humidifier_summary(settings);
   str += "< *Alert* >\n";
   str += "Alert when hot : ";
   if (settings.alert_when_hot){
@@ -473,6 +475,11 @@ void command_print_command_list(Time_info &time_info){
   str += "      - mode: cool (c) / dry (d) / heat (h)\n";
   str += "    - `ac auto off`\n";
   str += "      - off ac auto mode\n";
+  str += "- `hm` (humidifier)\n";
+  str += "  - `hm on [w/weak/s/strong]`, `hm off` (also disables auto)\n";
+  str += "  - `hm a [0-100]` / `hm auto [0-100]`: humidity PID control\n";
+  str += "  - `hm alert [on/off]`: refill alert\n";
+  str += "  - `hm mention [on/off]`: channel mention for refill alert\n";
   str += "- `reserve` (r)\n";
   str += "  - command reservation\n";
   str += "  - `reserve new (r n) [YYYYMMDD|everyday|monday..sunday (optional)] [hhmm] [command]`\n";
@@ -825,6 +832,7 @@ void command_process(Command command, Time_info &time_info, Sensor_data &sensor_
     return;
   }
   command_check_ac(command, time_info, settings, ac_status);
+  command_check_hm(command, time_info, settings, sensor_data);
   command_check_reserve(command, time_info, settings, ac_status);
   command_check_set(command, time_info);
   command_check_monitor(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);

@@ -5,6 +5,7 @@
 #include <float.h>
 #include "additional_sensors.h"
 #include "slack.h"
+#include "humidifier.h"
 
 
 // ESP-NOW channel shared with the additional sensor nodes.
@@ -121,6 +122,7 @@ static void end_espnow_for_additional() {
 }
 
 static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+  humidifier_receive(mac_addr, data, data_len);
   const int min_payload_bytes = N_SLAVE_HEADER + static_cast<int>(sizeof(float) * 2); // header + temp + humidity
   if (data_len < min_payload_bytes) {
     return;
@@ -162,9 +164,9 @@ static void OnAdditionalDataRecv(const uint8_t *mac_addr, const uint8_t *data, i
   }
 }
 
-void additional_sensors_request() {
+void additional_sensors_request(bool force) {
   unsigned long now = millis();
-  if (g_last_additional_request_ms != 0 && (now - g_last_additional_request_ms) < ADDITIONAL_SENSOR_REQUEST_INTERVAL_MS) {
+  if (!force && g_last_additional_request_ms != 0 && (now - g_last_additional_request_ms) < ADDITIONAL_SENSOR_REQUEST_INTERVAL_MS) {
     // recent data is still considered fresh; avoid WiFi reset thrash
     return;
   }
@@ -175,6 +177,7 @@ void additional_sensors_request() {
   }
 
   if (!begin_espnow_for_additional()) {
+    g_last_additional_request_ms = millis(); // back off even when initialization fails
     if (g_additional_reset_wifi_for_espnow) {
       init_wifi();
       slack_resume_after_wifi_reset();
@@ -184,6 +187,7 @@ void additional_sensors_request() {
   }
 
   esp_now_register_recv_cb(OnAdditionalDataRecv);
+  humidifier_exchange_begin();
 
   for (int i = 0; i < N_ADDITIONAL_SENSORS; ++i) {
     Serial.print("request data to additional sensor ");
@@ -210,6 +214,7 @@ void additional_sensors_request() {
     delay(10);
   }
 
+  humidifier_exchange_end();
   end_espnow_for_additional();
   g_last_additional_request_ms = millis();
 }

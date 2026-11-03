@@ -12,6 +12,7 @@
 #include "time_manager.h"
 #include "command.h"
 #include "memory.h"
+#include "humidifier.h"
 
 AC_status ac_status;
 Graph_data graph_data;
@@ -69,6 +70,7 @@ void loop() {
 
   // air conditioner auto mode
   ac_auto(settings, sensor_data, ac_status, time_info);
+  humidifier_update(settings, sensor_data, time_info);
   slack_maintain();
 
   // send regular message

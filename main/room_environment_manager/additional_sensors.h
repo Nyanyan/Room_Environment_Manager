@@ -5,7 +5,7 @@
 #include "token.h"
 
 // Trigger an ESP-NOW request to all additional sensors and update cached data.
-void additional_sensors_request();
+void additional_sensors_request(bool force = false);
 
 // Update representative data that will be embedded in the next request packet.
 void additional_sensors_set_representative(const SensorReading &representative);
