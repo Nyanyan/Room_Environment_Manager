@@ -26,6 +26,8 @@ void setup() {
   init_display();
   display_print(0, 0, "[I] Initializing");
   init_wifi();
+  Serial.print("Parent STA MAC: ");
+  Serial.println(WiFi.macAddress());
   Time_info time_info = time_get();
   slack_send_message(time_info, "[INFO] Starting...");
   init_ac(ac_status);  
