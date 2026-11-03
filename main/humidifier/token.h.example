@@ -1,0 +1,10 @@
+#ifndef TOKEN_H
+#define TOKEN_H
+
+// Parent room_environment_manager's WiFi STA MAC (replace all six bytes).
+#define HUMIDIFIER_PARENT_MAC_ADDR {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+
+// HIGH for an active-high button driver; change to LOW for an active-low driver.
+#define HUMIDIFIER_BUTTON_ACTIVE_LEVEL HIGH
+
+#endif
