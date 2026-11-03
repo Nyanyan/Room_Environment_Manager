@@ -434,20 +434,7 @@ String get_graph_urls(Graph_data &graph_data, Graph_img &graph_img, Time_info &t
   graph_encode_jpeg(graph_img);
   String graph_co2 = slack_upload_img(graph_img.jpeg_buf, graph_img.jpeg_size, JPEG_GRAPH_FILE_NAME_CO2_CONCENTRATION);
 
-  String str;
-  bool has_target = false;
-  bool has_setting = false;
-  for (int i = 0; i < GRAPH_DATA_1_DAY; ++i) {
-    has_target |= graph_valid_value(graph_data.temperature_target[i]) || graph_valid_value(graph_data.humidity_target[i]);
-    has_setting |= graph_valid_value(graph_data.ac_set_temperature[i]);
-  }
-  if (has_target) {
-    str += "グラフの紫破線：その時点の自動目標値（直近24時間）\n";
-  }
-  if (has_setting) {
-    str += "気温グラフの青点線：その時点のエアコン設定温度（直近24時間）\n";
-  }
-  str +=
+  String str =
     String("<") + graph_temperature + String("| >") + 
     String("<") + graph_humidity + String("| >") + 
     String("<") + graph_pressure + String("| >") + 
