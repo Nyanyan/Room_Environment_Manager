@@ -8,6 +8,8 @@
 #include "display.h"
 #include "time_manager.h"
 #include "slack.h"
+#include "slack_event.h"
+#include "slack_websocket.h"
 
 // WiFi password & Slack token
 #include "token.h"
@@ -189,24 +191,28 @@ static String make_websocket_key() {
   return String(reinterpret_cast<const char *>(encoded));
 }
 
-static bool read_socket_bytes(uint8_t *buffer, size_t length, unsigned long timeout_ms) {
+static uint32_t g_slack_message_started_ms = 0;
+static const uint32_t SLACK_MESSAGE_TIMEOUT_MS = 2500;
+
+static bool read_slack_message_bytes(uint8_t *buffer, size_t length) {
   size_t offset = 0;
-  unsigned long start = millis();
+  uint32_t last_progress = millis();
   while (offset < length) {
-    if (!g_slack_socket.connected()) {
+    const uint32_t now = millis();
+    if (now - g_slack_message_started_ms >= SLACK_MESSAGE_TIMEOUT_MS ||
+        now - last_progress >= 1000 || !g_slack_socket.connected()) {
       return false;
     }
     int available = g_slack_socket.available();
     if (available > 0) {
-      int n = g_slack_socket.read(buffer + offset, length - offset);
+      size_t count = length - offset;
+      if (count > static_cast<size_t>(available)) count = available;
+      int n = g_slack_socket.read(buffer + offset, count);
       if (n > 0) {
         offset += static_cast<size_t>(n);
-        start = millis();
+        last_progress = millis();
         continue;
       }
-    }
-    if (millis() - start >= timeout_ms) {
-      return false;
     }
     delay(1);
   }
@@ -285,15 +291,17 @@ static bool websocket_send_text(const String &text) {
   return websocket_send_frame(0x1, reinterpret_cast<const uint8_t *>(text.c_str()), text.length());
 }
 
-static void slack_socket_ack(const char *envelope_id) {
-  if (envelope_id == nullptr || envelope_id[0] == '\0') {
-    return;
+static bool slack_socket_ack(const char *envelope_id) {
+  if (envelope_id == nullptr || envelope_id[0] == '\0' || strlen(envelope_id) > 128) {
+    return false;
   }
   JsonDocument ack_doc;
   ack_doc["envelope_id"] = envelope_id;
+  if (ack_doc.overflowed()) return false;
   String ack;
-  serializeJson(ack_doc, ack);
-  websocket_send_text(ack);
+  const size_t expected = measureJson(ack_doc);
+  if (serializeJson(ack_doc, ack) != expected || ack.length() != expected) return false;
+  return websocket_send_text(ack);
 }
 
 static void close_slack_socket(unsigned long reconnect_delay_ms) {
@@ -305,14 +313,7 @@ static void close_slack_socket(unsigned long reconnect_delay_ms) {
   g_next_socket_connect_ms = millis() + reconnect_delay_ms;
 }
 
-static void handle_slack_socket_text(const String &message) {
-  JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, message);
-  if (err) {
-    Serial.println(String("[ERROR] Slack socket JSON parse failed: ") + err.c_str());
-    return;
-  }
-
+static void handle_slack_socket_event(JsonDocument &doc) {
   const char *wrapper_type = doc["type"] | "";
   if (strcmp(wrapper_type, "hello") == 0) {
     Serial.println("[INFO] Slack Socket Mode connected");
@@ -323,15 +324,24 @@ static void handle_slack_socket_text(const String &message) {
     close_slack_socket(1000);
     return;
   }
+  // Acknowledge before ignoring bot/subtype/other-channel/unsupported events.
+  const char *envelope_id = doc["envelope_id"] | "";
+  if (envelope_id[0] != '\0') {
+    if (!slack_socket_ack(envelope_id)) {
+      Serial.println("[WARN] Slack socket ACK failed");
+      close_slack_socket(5000);
+      return;
+    }
+  } else if (strcmp(wrapper_type, "events_api") == 0) {
+    Serial.println("[WARN] Slack event missing envelope_id; ignored");
+    return;
+  }
   if (strcmp(wrapper_type, "events_api") != 0) {
     if (wrapper_type[0] != '\0') {
       Serial.println(String("[INFO] Slack socket message type: ") + wrapper_type);
     }
     return;
   }
-
-  const char *envelope_id = doc["envelope_id"] | "";
-  slack_socket_ack(envelope_id);
 
   JsonObject event = doc["payload"]["event"];
   const char *event_type = event["type"] | "";
@@ -340,16 +350,10 @@ static void handle_slack_socket_text(const String &message) {
   const char *text = event["text"] | "";
   const char *event_ts = event["event_ts"] | "";
 
-  Serial.println(String("[INFO] Slack event received: ") + event_type + String(" channel:") + channel);
-  if (strcmp(event_type, "message") != 0) {
-    return;
-  }
-  if (strcmp(channel, SLACK_CHANNEL_ID) != 0) {
-    Serial.println(String("[WARN] Slack event ignored for channel: ") + channel);
-    return;
-  }
-  if (subtype[0] != '\0') {
-    Serial.println(String("[INFO] Slack message subtype ignored: ") + subtype);
+  Serial.printf("[INFO] Slack event received: %s subtype:%s channel:%s retry:%d\n",
+                event_type, subtype, channel, doc["retry_attempt"] | 0);
+  if (!slack_command_event(doc, SLACK_CHANNEL_ID)) {
+    Serial.println("[INFO] Slack event acknowledged and ignored (not a user command)");
     return;
   }
 
@@ -368,78 +372,59 @@ static void handle_slack_socket_text(const String &message) {
   Serial.println(String("[INFO] Slack command queued: ") + command_text);
 }
 
+static void trace_slack_frame(uint8_t opcode, bool fin, uint64_t length) {
+  Serial.printf("[DIAG] Slack RX frame bytes:%llu opcode:0x%02x fin:%d\n",
+                static_cast<unsigned long long>(length), opcode, fin);
+}
+
+static bool handle_slack_control(uint8_t opcode, const uint8_t *payload, size_t length) {
+  return opcode != 0x9 || websocket_send_frame(0xA, payload, length);
+}
+
 static bool read_slack_socket_frame() {
-  if (!g_slack_socket.connected()) {
-    return false;
-  }
-  if (g_slack_socket.available() < 2) {
-    return false;
-  }
-
-  uint8_t header[2];
-  if (!read_socket_bytes(header, sizeof(header), 1000)) {
+  if (!g_slack_socket.connected() || g_slack_socket.available() < 2) return false;
+  g_slack_message_started_ms = millis();
+  SlackWebSocketReader reader(read_slack_message_bytes, handle_slack_control, trace_slack_frame);
+  if (!reader.begin()) {
+    Serial.printf("[WARN] Slack RX failed: %s\n", reader.error_text());
     close_slack_socket(5000);
     return false;
   }
-
-  uint8_t opcode = header[0] & 0x0F;
-  bool masked = (header[1] & 0x80) != 0;
-  uint64_t length = header[1] & 0x7F;
-  if (length == 126) {
-    uint8_t ext[2];
-    if (!read_socket_bytes(ext, sizeof(ext), 1000)) {
+  if (!reader.is_text()) {
+    if (!reader.finish()) {
+      Serial.printf("[WARN] Slack RX failed: %s\n", reader.error_text());
       close_slack_socket(5000);
       return false;
     }
-    length = (static_cast<uint16_t>(ext[0]) << 8) | ext[1];
-  } else if (length == 127) {
-    uint8_t ext[8];
-    if (!read_socket_bytes(ext, sizeof(ext), 1000)) {
-      close_slack_socket(5000);
-      return false;
-    }
-    length = 0;
-    for (size_t i = 0; i < sizeof(ext); ++i) {
-      length = (length << 8) | ext[i];
-    }
+    g_last_socket_rx_ms = millis();
+    return true;
   }
 
-  if (length > 8192) {
-    Serial.println("[ERROR] Slack socket frame too large");
+  SlackJsonAllocator allocator;
+  JsonDocument doc(&allocator);
+  JsonDocument filter(&allocator);
+  slack_event_filter(filter);
+  DeserializationError err = filter.overflowed() ? DeserializationError::NoMemory :
+    deserializeJson(doc, reader, DeserializationOption::Filter(filter), DeserializationOption::NestingLimit(24));
+  if (!reader.finish(!err)) {
+    Serial.printf("[WARN] Slack RX failed: %s\n", reader.error_text());
     close_slack_socket(5000);
     return false;
   }
-
-  uint8_t mask[4] = {0, 0, 0, 0};
-  if (masked && !read_socket_bytes(mask, sizeof(mask), 1000)) {
-    close_slack_socket(5000);
-    return false;
-  }
-
-  String payload;
-  payload.reserve(static_cast<unsigned int>(length));
-  for (uint64_t i = 0; i < length; ++i) {
-    uint8_t b = 0;
-    if (!read_socket_bytes(&b, 1, 1000)) {
-      close_slack_socket(5000);
-      return false;
-    }
-    if (masked) {
-      b ^= mask[i % 4];
-    }
-    payload += static_cast<char>(b);
-  }
-
   g_last_socket_rx_ms = millis();
-  if (opcode == 0x1) {
-    handle_slack_socket_text(payload);
-  } else if (opcode == 0x8) {
-    Serial.println("[WARN] Slack Socket Mode closed");
-    close_slack_socket(5000);
-  } else if (opcode == 0x9) {
-    websocket_send_frame(0xA, reinterpret_cast<const uint8_t *>(payload.c_str()), payload.length());
+  Serial.printf("[DIAG] Slack RX message bytes:%u JSON peak:%u type:%s\n",
+                reader.message_bytes(), static_cast<unsigned int>(allocator.peak()), doc["type"] | "");
+  if (err) {
+    Serial.println(String("[WARN] Slack socket JSON parse failed: ") + err.c_str());
+    // A malformed or over-budget event is never executed. If its envelope was
+    // already decoded, ACK it to avoid repeated delivery of an unusable event.
+    if (!slack_socket_ack(doc["envelope_id"] | "")) {
+      Serial.println("[WARN] Slack rejected event could not be acknowledged");
+    }
+    return true;
   }
-  return true;
+  handle_slack_socket_event(doc);
+  return g_slack_socket_started;
 }
 
 static bool slack_socket_open() {
@@ -540,8 +525,9 @@ static void slack_socket_service() {
   }
 
   for (uint8_t i = 0; i < 4 && g_slack_socket.available() > 0; ++i) {
-    read_slack_socket_frame();
+    if (!read_slack_socket_frame()) break;
   }
+  if (!g_slack_socket_started) return;
 
   now = millis();
   if (now - g_last_socket_ping_ms > 30000) {
