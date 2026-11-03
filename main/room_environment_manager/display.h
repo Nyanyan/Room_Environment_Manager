@@ -20,6 +20,6 @@ void init_display();
 void display_clear();
 void display_print(int x, int y, String str);
 void display_print(int x, int y, const char *str);
-void display_print_info(const Sensor_data &sensor_data, const Settings &settings, const AC_status &ac_status, const Time_info &time_info);
+void display_print_info(const Sensor_data &sensor_data, const Settings &settings, const AC_status &ac_status);
 
 #endif

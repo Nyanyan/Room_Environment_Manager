@@ -7,7 +7,6 @@
 #include "air_conditioner.h"
 #include "command.h"
 #include "sensors.h"
-#include "time_manager.h"
 
 constexpr int DISPLAY_COLUMNS = 20;
 constexpr int DISPLAY_ROWS = 4;
@@ -55,7 +54,7 @@ inline void display_format_clock(DisplayFrame &frame, int hour, int minute, int 
 }
 
 inline DisplayFrame display_format_info(const Sensor_data &sensors, const Settings &settings,
-                                       const AC_status &ac, const Time_info &time) {
+                                       const AC_status &ac) {
   DisplayFrame frame;
   const SensorReading &reading = sensors.representative;
   const float values[] = {reading.temperature, reading.humidity, reading.pressure, reading.co2_concentration};
@@ -65,7 +64,7 @@ inline DisplayFrame display_format_info(const Sensor_data &sensors, const Settin
     display_format_number(field, sizeof(field), values[y], y < 2 ? 1 : 0, suffixes[y]);
     display_format_field(frame, 0, y, DISPLAY_LEFT_WIDTH, field);
   }
-  display_format_clock(frame, time.hour, time.minute, time.second);
+  display_format_clock(frame, -1, -1, -1); // Filled from the live clock by the LCD task.
 
   char field[DISPLAY_RIGHT_WIDTH + 1];
   if (ac.state == AC_STATE_OFF) {

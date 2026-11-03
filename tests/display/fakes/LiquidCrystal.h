@@ -17,10 +17,12 @@ class LiquidCrystal {
     x = y = 0;
   }
   void setCursor(int column, int row) {
+    assert(fake_critical_depth == 0);
     assert(column >= 0 && column < 20 && row >= 0 && row < 4);
     x = column; y = row;
   }
   void write(uint8_t value) {
+    assert(fake_critical_depth == 0);
     assert(x < 20 && value >= ' ' && value <= '~');
     rows[y][x++] = (char)value;
     ++writes;

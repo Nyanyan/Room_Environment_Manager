@@ -69,12 +69,13 @@ void loop() {
   graph_data_update(time_info, graph_data, sensor_data, settings, ac_status);
   slack_maintain();
 
+  // Publish current values before any long report/upload. The LCD task keeps
+  // the clock ticking independently while this loop waits for sensors/network.
+  display_print_info(sensor_data, settings, ac_status);
+
   // send regular message
   regular_message(time_info, sensor_data, settings, ac_status, graph_data, graph_img);
   slack_maintain();
-
-  // LCD
-  display_print_info(sensor_data, settings, ac_status, time_info);
 
   slack_delay(1000);
 }
