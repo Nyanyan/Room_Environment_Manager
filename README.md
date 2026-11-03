@@ -13,6 +13,7 @@ This project can do
 * send room environment on Slack every 1 hour
 * send room environment graph (bitmap image) on Slack
 * control an air conditioner via Slack
+* control an optional humidifier via Slack, including humidity PID control and refill alerts
 
 Graphs:
 
@@ -96,3 +97,45 @@ You need
   * subscribe Bot Events to `message.groups` for private channels
   * reinstall the Slack app after changing scopes/events
   * invite the bot to the target channel
+
+## 加湿器（main版・任意設置）
+
+配線とESP-NOWのMACアドレス設定は [加湿器子機の説明](main/humidifier/README.md) を参照してください。既存のArduino ESP32 core 2.0.17で動作する構成です。
+
+| Slackコマンド | 動作 |
+| --- | --- |
+| `hm on w` / `hm on weak` | 弱運転。自動制御を解除 |
+| `hm on s` / `hm on strong` | 強運転。自動制御を解除 |
+| `hm off` | 停止。自動制御も解除（未接続時も解除） |
+| `hm a 50` / `hm auto 50` | 目標50%RHでPID制御。目標は0〜100、小数も可 |
+| `hm alert on` / `hm alert off` | 給水アラートの有効・無効 |
+| `hm mention on` / `hm mention off` | 給水アラートの `@channel` メンションの有効・無効 |
+
+給水アラートは既定で有効、メンションは無効、自動加湿は無効です。自動加湿の有効・無効、目標湿度、アラート・メンション設定をEEPROMに保存します。手動のON状態は再起動後に再送しません。既存のエアコン設定と予約領域の位置は変更していません。`reserve` でも同じ `hm` コマンドを使用できます。
+
+`monitor` と毎時の定期レポートに、加湿器の **OFF / WEAK / STRONG**、水切れの **YES / NO**、接続状態、自動制御の目標とPID出力、通知設定を表示します。未接続時の運転状態と水切れは **UNKNOWN** です。給水アラートは水切れを確認したときに一度送信し、水切れが解消して再発するまで繰り返しません。通知を再度有効にしたときは継続中の水切れも通知します。
+
+### 応答の遅い加湿器のPID制御
+
+既存の代表湿度を入力とし、30秒以上の間隔でPIDを更新します。計算結果0〜100%を停止・弱・強に変換します。湿度の変化率を使うD項には120秒の一次フィルターをかけ、湿度が上昇中なら出力を抑えます。I項には飽和時の蓄積防止と0〜100%の制限を入れています。
+
+| 切替 | PID出力 |
+| --- | --- |
+| 停止 → 弱 | 25%以上 |
+| 弱 → 停止 | 10%未満 |
+| 停止・弱 → 強 | 70%以上 |
+| 強 → 弱 | 55%未満（10%未満なら停止） |
+
+自動切替は最短2分間隔です。`hm a` で目標を指定し直した場合はPIDの履歴をリセットして直ちに再評価し、手動ON/OFFもこの間隔に制限されません。目標0は停止出力です。有効な湿度が得られない場合や給水が必要な場合はPIDをリセットし、停止を要求します（通信失敗時の再試行にも2分間隔を適用）。
+
+係数は [humidifier_pid.h](main/room_environment_manager/humidifier_pid.h) にまとめています。初期値は `Kp=12`, `Ki=0.015`, `Kd=300`（誤差は湿度の百分率ポイント、時間は秒）です。これは実機の応答を測定して調整するための開始値です。弱・強それぞれの加湿量、室内容積、換気、応答の遅れに合わせて調整してください。PC上のテストとESP32向けコンパイルで検証していますが、実機の応答・PID係数の最適値は未検証です。
+
+### 未設置・通信断
+
+親機に `HUMIDIFIER_MAC_ADDR` がなければ加湿器通信は完全に無効です。MACアドレスを設定していて子機が不在でも、既存の追加センサー問い合わせ（通常60秒間隔、1500ms待機）の通信枠を使うため、加湿器専用の待機時間は増えません。手動操作とPIDによる出力変更時は同じ通信処理を即時に実行します。未接続の定期警告は送信しません。
+
+手動コマンドはLED状態を含む応答で成功を確認し、確認できなければその場で通知して終了します。後日の再接続時に手動コマンドを再送することはありません。自動加湿が有効なら、再接続して有効な湿度が得られると制御を再開します。子機は親機と5分間通信できない場合に運転停止を試みます。
+
+### テスト
+
+Python 3とC++17対応の `g++` があれば、`python tests/humidifier/run_tests.py` で実装コードを模擬ハードウェア上で検証できます。`CXX` 環境変数で別のC++コンパイラーを指定できます。秘密情報を含む実際の `token.h` は使用しません。
