@@ -24,12 +24,20 @@ struct Settings{
   double alert_hot_temperature;
   int ac_auto_mode;
   double ac_auto_temp;
+  bool hm_auto;
+  double hm_target_humidity;
+  bool hm_water_alert;
+  bool hm_water_mention;
 
   Settings(){
     alert_when_hot = true;
     alert_hot_temperature = ALERT_HOT_TEMPERATURE_DEFAULT;
     ac_auto_mode = AC_AUTO_OFF;
     ac_auto_temp = 0.0;
+    hm_auto = false;
+    hm_target_humidity = 50.0;
+    hm_water_alert = true;
+    hm_water_mention = false;
   }
 };
 

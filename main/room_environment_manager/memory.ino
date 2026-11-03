@@ -135,6 +135,28 @@ struct ReservationBlock {
 	uint32_t checksum;
 };
 
+// Append the optional-device settings; never move the existing reservation block.
+struct HumidifierSettingsPersisted {
+	uint32_t magic;
+	uint8_t version;
+	uint8_t auto_enabled;
+	uint8_t water_alert;
+	uint8_t water_mention;
+	float target_humidity;
+	uint32_t checksum;
+};
+constexpr uint32_t kMagicHumidifier = 0x484D0001;
+constexpr int kHumidifierSettingsAddr = kReservationAddr + sizeof(ReservationBlock);
+static_assert(kHumidifierSettingsAddr + sizeof(HumidifierSettingsPersisted) <= kEepromSize,
+              "Humidifier settings exceed EEPROM capacity");
+
+uint32_t compute_checksum(const HumidifierSettingsPersisted &data) {
+	uint32_t sum = 0;
+	const uint8_t *raw = reinterpret_cast<const uint8_t *>(&data);
+	for (size_t i = 0; i < sizeof(data) - sizeof(data.checksum); ++i) sum += raw[i];
+	return sum;
+}
+
 uint32_t compute_checksum(const ReservationBlock &block) {
 	uint32_t sum = 0;
 	const uint8_t *raw = reinterpret_cast<const uint8_t *>(&block);
@@ -278,12 +300,22 @@ bool memory_save_settings(const Settings &settings) {
 	payload.checksum = compute_checksum(payload);
 
 	EEPROM.put(kSettingsAddr, payload);
+	HumidifierSettingsPersisted hm = {};
+	hm.magic = kMagicHumidifier;
+	hm.version = 1;
+	hm.auto_enabled = settings.hm_auto;
+	hm.water_alert = settings.hm_water_alert;
+	hm.water_mention = settings.hm_water_mention;
+	hm.target_humidity = static_cast<float>(settings.hm_target_humidity);
+	hm.checksum = compute_checksum(hm);
+	EEPROM.put(kHumidifierSettingsAddr, hm);
 	return EEPROM.commit();
 }
 
 
 bool memory_load_settings(Settings &settings) {
 	ensure_initialized();
+	settings = Settings();
 	SettingsPersisted payload = {};
 	EEPROM.get(kSettingsAddr, payload);
 
@@ -307,6 +339,16 @@ bool memory_load_settings(Settings &settings) {
 	settings.alert_hot_temperature = is_persisted_alert_temperature_valid(payload.alert_hot_temperature)
 		? payload.alert_hot_temperature
 		: ALERT_HOT_TEMPERATURE_DEFAULT;
+	HumidifierSettingsPersisted hm = {};
+	EEPROM.get(kHumidifierSettingsAddr, hm);
+	if (hm.magic == kMagicHumidifier && hm.version == 1 && hm.checksum == compute_checksum(hm) &&
+	    hm.auto_enabled <= 1 && hm.water_alert <= 1 && hm.water_mention <= 1 &&
+	    hm.target_humidity >= 0.0f && hm.target_humidity <= 100.0f) {
+		settings.hm_auto = hm.auto_enabled != 0;
+		settings.hm_water_alert = hm.water_alert != 0;
+		settings.hm_water_mention = hm.water_mention != 0;
+		settings.hm_target_humidity = hm.target_humidity;
+	}
 	return true;
 }
 
