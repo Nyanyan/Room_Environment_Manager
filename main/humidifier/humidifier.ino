@@ -143,7 +143,7 @@ void hm_process_request(uint32_t now) {
   if (!pending) return;
   last_parent_ms = now;
   if (request.type == HM_QUERY) {
-    hm_reply(request.sequence, controlling ? HM_BUSY : command_result);
+    hm_reply(request.sequence, controlling ? static_cast<uint8_t>(HM_BUSY) : command_result);
   } else if (have_command && request.sequence == command_sequence) {
     hm_reply(request.sequence, command_result); // retry is idempotent
   } else {
