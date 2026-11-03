@@ -54,14 +54,7 @@ void loop() {
   Time_info time_info = time_get_local();
 
   // update graph data
-  if (graph_data.last_data_update_minute == -1){ // forced update
-    int tmp_minute = time_info.minute;
-    time_info.minute = time_info.minute / GRAPH_DATA_INTERVAL * GRAPH_DATA_INTERVAL;
-    graph_data_update(time_info, graph_data, sensor_data);
-    time_info.minute = tmp_minute;
-  } else { // regular update
-    graph_data_update(time_info, graph_data, sensor_data);
-  }
+  graph_data_update(time_info, graph_data, sensor_data, settings, ac_status);
   slack_maintain();
 
   // get command from user
@@ -73,6 +66,7 @@ void loop() {
   // air conditioner auto mode
   ac_auto(settings, sensor_data, ac_status, time_info);
   humidifier_update(settings, sensor_data, time_info);
+  graph_data_update(time_info, graph_data, sensor_data, settings, ac_status);
   slack_maintain();
 
   // send regular message

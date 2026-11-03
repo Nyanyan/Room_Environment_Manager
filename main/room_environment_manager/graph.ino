@@ -6,6 +6,7 @@
 #include "time_manager.h"
 #include <math.h>
 #include <limits.h>
+#include <time.h>
 
 const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
   {255, 255, 255}, // white
@@ -270,14 +271,19 @@ int graph_calculate_n_main_scale(int y_min, int y_max, const Value_color scales[
 }
 
 
-void graph_calculate_range(const float data[], const Value_color scales[], const int n_scales, const int interval, int *y_min, int *y_max, const float references[], int n_references) {
+void graph_calculate_range(const float data[], const Value_color scales[], const int n_scales, const int interval, int *y_min, int *y_max, const float references[], const float other_references[]) {
   float low = FLT_MAX;
   float high = -FLT_MAX;
-  for (int i = 0; i < GRAPH_DATA_N + n_references; ++i){
-    const float value = i < GRAPH_DATA_N ? data[i] : references[i - GRAPH_DATA_N];
-    if (graph_valid_value(value)){
-      low = min(low, value);
-      high = max(high, value);
+  const float *series[] = {data, references, other_references};
+  const int lengths[] = {GRAPH_DATA_N, GRAPH_DATA_1_DAY, GRAPH_DATA_1_DAY};
+  for (int s = 0; s < 3; ++s) {
+    if (!series[s]) continue;
+    for (int i = 0; i < lengths[s]; ++i) {
+      const float value = series[s][i];
+      if (graph_valid_value(value)){
+        low = min(low, value);
+        high = max(high, value);
+      }
     }
   }
   // A report can be requested before any sensor samples are available.
@@ -346,33 +352,53 @@ void graph_plot(Graph_img &graph_img, float data[], int y_min, int y_max) {
 
 
 
-void graph_draw_reference(Graph_img &graph_img, int y_min, int y_max, float value, bool target) {
-  if (!graph_valid_value(value) || value < y_min || value > y_max || y_min >= y_max) {
-    return;
-  }
-  const int y = round((float)GRAPH_AREA_HEIGHT * (value - y_min) / (y_max - y_min));
-  // Two pixels remain visible when a reference coincides with a colored grid
-  // or measured curve. Offset the blue dots so equal references show both colors.
-  const int second_y = y < GRAPH_AREA_HEIGHT ? y + 1 : y - 1;
+void graph_draw_reference_pixel(Graph_img &graph_img, int x, int y, bool target) {
   const uint8_t color = target ? PALETTE_PURPLE : PALETTE_BLUE;
-  for (int x = 0; x < GRAPH_AREA_WIDTH; ++x) {
-    if (target ? x % 8 < 4 : x % 4 == 2) {
-      graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = color;
-      graph_img.graph[GRAPH_SY + second_y][GRAPH_SX + x] = color;
-    }
+  const int second_y = y < GRAPH_AREA_HEIGHT ? y + 1 : y - 1;
+  graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = color;
+  // Keep both colors visible even for a single sample with equal references.
+  if (target || graph_img.graph[GRAPH_SY + second_y][GRAPH_SX + x] != PALETTE_PURPLE) {
+    graph_img.graph[GRAPH_SY + second_y][GRAPH_SX + x] = color;
   }
 }
 
 
-void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info, const Graph_references &references) {
+void graph_draw_reference(Graph_img &graph_img, int y_min, int y_max, const float values[], bool target) {
+  if (y_min >= y_max) {
+    return;
+  }
+  int previous_y = -1;
+  for (int x = 0; x < GRAPH_DATA_1_DAY; ++x) {
+    const float value = values[x];
+    if (!graph_valid_value(value) || value < y_min || value > y_max) {
+      previous_y = -1; // Off/missing intervals must not be bridged.
+      continue;
+    }
+    const int y = round((float)GRAPH_AREA_HEIGHT * (value - y_min) / (y_max - y_min));
+    const bool endpoint = previous_y < 0 || x == GRAPH_DATA_1_DAY - 1 ||
+      !graph_valid_value(values[x + 1]) || values[x + 1] != value;
+    if (endpoint || previous_y != y || (target ? x % 8 < 4 : x % 4 == 2)) {
+      graph_draw_reference_pixel(graph_img, x, y, target);
+    }
+    if (previous_y >= 0 && previous_y != y) {
+      // A setting change is a step at this slot, not an interpolated ramp.
+      for (int step_y = min(previous_y, y); step_y <= max(previous_y, y); ++step_y) {
+        graph_draw_reference_pixel(graph_img, x, step_y, target);
+      }
+    }
+    previous_y = y;
+  }
+}
+
+
+void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info) {
   graph_draw_white(graph_img);
   graph_draw_x_scale(graph_img, graph_data);
   int y_min, y_max;
-  const float levels[] = {references.temperature_target, references.ac_set_temperature};
-  graph_calculate_range(graph_data.temperature, color_temperature, N_COLOR_TEMPERATURE, GRAPH_TEMPERATURE_SCALE_INTERVAL, &y_min, &y_max, levels, 2);
+  graph_calculate_range(graph_data.temperature, color_temperature, N_COLOR_TEMPERATURE, GRAPH_TEMPERATURE_SCALE_INTERVAL, &y_min, &y_max, graph_data.temperature_target, graph_data.ac_set_temperature);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_TEMPERATURE_SCALE_INTERVAL, color_temperature, N_COLOR_TEMPERATURE);
-  graph_draw_reference(graph_img, y_min, y_max, references.temperature_target, true);
-  graph_draw_reference(graph_img, y_min, y_max, references.ac_set_temperature, false);
+  graph_draw_reference(graph_img, y_min, y_max, graph_data.temperature_target, true);
+  graph_draw_reference(graph_img, y_min, y_max, graph_data.ac_set_temperature, false);
   graph_plot(graph_img, graph_data.temperature, y_min, y_max);
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_TEMPERATURE_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_temperature, CHAR_TEMPERATURE_N); // title + y unit
@@ -382,13 +408,13 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
 
 
 
-void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info, const Graph_references &references){
+void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info &time_info){
   graph_draw_white(graph_img);
   graph_draw_x_scale(graph_img, graph_data);
   int y_min, y_max;
-  graph_calculate_range(graph_data.humidity, color_humidity, N_COLOR_HUMIDITY, GRAPH_HUMIDITY_SCALE_INTERVAL, &y_min, &y_max, &references.humidity_target, 1);
+  graph_calculate_range(graph_data.humidity, color_humidity, N_COLOR_HUMIDITY, GRAPH_HUMIDITY_SCALE_INTERVAL, &y_min, &y_max, graph_data.humidity_target, nullptr);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_HUMIDITY_SCALE_INTERVAL, color_humidity, N_COLOR_HUMIDITY);
-  graph_draw_reference(graph_img, y_min, y_max, references.humidity_target, true);
+  graph_draw_reference(graph_img, y_min, y_max, graph_data.humidity_target, true);
   graph_plot(graph_img, graph_data.humidity, y_min, y_max);
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_HUMIDITY_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_humidity, CHAR_HUMIDITY_N); // title + y unit
@@ -403,7 +429,7 @@ void graph_draw_pressure(Graph_data &graph_data, Graph_img &graph_img, Time_info
   graph_draw_white(graph_img);
   graph_draw_x_scale(graph_img, graph_data);
   int y_min, y_max;
-  graph_calculate_range(graph_data.pressure, color_pressure, N_COLOR_PRESSURE, GRAPH_PRESSURE_SCALE_INTERVAL, &y_min, &y_max, nullptr, 0);
+  graph_calculate_range(graph_data.pressure, color_pressure, N_COLOR_PRESSURE, GRAPH_PRESSURE_SCALE_INTERVAL, &y_min, &y_max, nullptr, nullptr);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_PRESSURE_SCALE_INTERVAL, color_pressure, N_COLOR_PRESSURE);
   graph_plot(graph_img, graph_data.pressure, y_min, y_max);
   graph_draw_frame(graph_img);
@@ -418,7 +444,7 @@ void graph_draw_co2_concentration(Graph_data &graph_data, Graph_img &graph_img, 
   graph_draw_white(graph_img);
   graph_draw_x_scale(graph_img, graph_data);
   int y_min, y_max;
-  graph_calculate_range(graph_data.co2_concentration, color_co2_concentration, N_COLOR_CO2_CONCENTRATION, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, &y_min, &y_max, nullptr, 0);
+  graph_calculate_range(graph_data.co2_concentration, color_co2_concentration, N_COLOR_CO2_CONCENTRATION, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, &y_min, &y_max, nullptr, nullptr);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_CO2_CONCENTRATION_SCALE_INTERVAL, color_co2_concentration, N_COLOR_CO2_CONCENTRATION);
   graph_plot(graph_img, graph_data.co2_concentration, y_min, y_max);
   graph_draw_frame(graph_img);
@@ -478,12 +504,20 @@ void graph_encode_jpeg(Graph_img &graph_img) {
 
 
 
-void graph_add_data(Graph_data &graph_data, Sensor_data &sensor_data){
-  for (int i = 0; i < GRAPH_DATA_N - 1; ++i){
-    graph_data.temperature[i] = graph_data.temperature[i + 1];
-    graph_data.humidity[i] = graph_data.humidity[i + 1];
-    graph_data.pressure[i] = graph_data.pressure[i + 1];
-    graph_data.co2_concentration[i] = graph_data.co2_concentration[i + 1];
+void graph_add_data(Graph_data &graph_data, const Sensor_data &sensor_data, int slots){
+  // Shift all series together. Missed intervals remain empty instead of placing
+  // old samples/controls at the wrong time after a lengthy network operation.
+  for (int i = 0; i < GRAPH_DATA_N; ++i){
+    const int source = i + slots;
+    graph_data.temperature[i] = source < GRAPH_DATA_N ? graph_data.temperature[source] : GRAPH_DATA_UNDEFINED;
+    graph_data.humidity[i] = source < GRAPH_DATA_N ? graph_data.humidity[source] : GRAPH_DATA_UNDEFINED;
+    graph_data.pressure[i] = source < GRAPH_DATA_N ? graph_data.pressure[source] : GRAPH_DATA_UNDEFINED;
+    graph_data.co2_concentration[i] = source < GRAPH_DATA_N ? graph_data.co2_concentration[source] : GRAPH_DATA_UNDEFINED;
+    if (i < GRAPH_DATA_1_DAY) {
+      graph_data.temperature_target[i] = source < GRAPH_DATA_1_DAY ? graph_data.temperature_target[source] : GRAPH_DATA_UNDEFINED;
+      graph_data.ac_set_temperature[i] = source < GRAPH_DATA_1_DAY ? graph_data.ac_set_temperature[source] : GRAPH_DATA_UNDEFINED;
+      graph_data.humidity_target[i] = source < GRAPH_DATA_1_DAY ? graph_data.humidity_target[source] : GRAPH_DATA_UNDEFINED;
+    }
   }
 
   const SensorReading &reading = sensor_data.representative;
@@ -495,12 +529,31 @@ void graph_add_data(Graph_data &graph_data, Sensor_data &sensor_data){
 
 
 
-void graph_data_update(Time_info &time_info, Graph_data &graph_data, Sensor_data &sensor_data){
-  if (time_info.minute != graph_data.last_data_update_minute && time_info.minute % GRAPH_DATA_INTERVAL == 0){
-    graph_data.last_data_update_minute = time_info.minute;
+void graph_data_update(const Time_info &time_info, Graph_data &graph_data, const Sensor_data &sensor_data, const Settings &settings, const AC_status &ac_status){
+  struct tm time = {};
+  time.tm_year = time_info.year - 1900;
+  time.tm_mon = time_info.month - 1;
+  time.tm_mday = time_info.day;
+  time.tm_hour = time_info.hour;
+  time.tm_min = time_info.minute;
+  time.tm_isdst = -1;
+  const time_t seconds = mktime(&time);
+  if (seconds == (time_t)-1) return;
+  const int64_t slot = (int64_t)seconds / (GRAPH_DATA_INTERVAL * 60);
+  if (slot != graph_data.last_data_update_slot) {
+    int64_t elapsed = graph_data.last_data_update_slot < 0 ? 1 : slot - graph_data.last_data_update_slot;
+    if (elapsed < 0 || elapsed > GRAPH_DATA_N) elapsed = GRAPH_DATA_N;
+    graph_add_data(graph_data, sensor_data, (int)elapsed);
+    graph_data.last_data_update_slot = slot;
+    graph_data.last_data_update_minute = time_info.minute / GRAPH_DATA_INTERVAL * GRAPH_DATA_INTERVAL;
     graph_data.last_data_update_hour = time_info.hour;
-    graph_add_data(graph_data, sensor_data);
   }
+  // Refresh only the open slot so monitor sees commands/PID changes immediately.
+  // Completed slots retain their historical values, including auto/off gaps.
+  const Graph_references references = graph_control_references(settings, ac_status);
+  graph_data.temperature_target[GRAPH_DATA_1_DAY - 1] = references.temperature_target;
+  graph_data.ac_set_temperature[GRAPH_DATA_1_DAY - 1] = references.ac_set_temperature;
+  graph_data.humidity_target[GRAPH_DATA_1_DAY - 1] = references.humidity_target;
 }
 
 

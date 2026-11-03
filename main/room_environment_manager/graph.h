@@ -13,6 +13,11 @@ struct Graph_data{
   float humidity[GRAPH_DATA_N];
   float pressure[GRAPH_DATA_N];
   float co2_concentration[GRAPH_DATA_N];
+  // Control history follows the latest 24 hours (the black sensor trace).
+  float temperature_target[GRAPH_DATA_1_DAY];
+  float ac_set_temperature[GRAPH_DATA_1_DAY];
+  float humidity_target[GRAPH_DATA_1_DAY];
+  int64_t last_data_update_slot;
   int last_data_update_minute;
   int last_data_update_hour;
 
@@ -22,13 +27,19 @@ struct Graph_data{
       humidity[i] = GRAPH_DATA_UNDEFINED;
       pressure[i] = GRAPH_DATA_UNDEFINED;
       co2_concentration[i] = GRAPH_DATA_UNDEFINED;
+      if (i < GRAPH_DATA_1_DAY) {
+        temperature_target[i] = GRAPH_DATA_UNDEFINED;
+        ac_set_temperature[i] = GRAPH_DATA_UNDEFINED;
+        humidity_target[i] = GRAPH_DATA_UNDEFINED;
+      }
     }
+    last_data_update_slot = -1;
     last_data_update_minute = -1;
     last_data_update_hour = -1;
   }
 };
 
-// Current control values, shown as horizontal reference lines (not history).
+// Snapshot of control values to store in the current 10-minute slot.
 struct Graph_references {
   float temperature_target = GRAPH_DATA_UNDEFINED;
   float ac_set_temperature = GRAPH_DATA_UNDEFINED;
