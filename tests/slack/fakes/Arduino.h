@@ -3,14 +3,25 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <vector>
 
 class String : public std::string {
+  // Arduino String has no public iterator typedef; avoid selecting both of
+  // ArduinoJson's Arduino-String and STL-container reader specializations.
+  using const_iterator = std::string::const_iterator;
  public:
   using std::string::string;
   using std::string::operator=;
   String(const std::string &value) : std::string(value) {}
+  String(int value) : std::string(std::to_string(value)) {}
+  String(double value, int decimals) {
+    std::ostringstream stream;
+    stream << std::fixed << std::setprecision(decimals) << value;
+    assign(stream.str());
+  }
   String &operator=(const char *value) { assign(value ? value : ""); return *this; }
   bool concat(const char *value, unsigned int size) { append(value, size); return true; }
   bool concat(const char *value) { append(value); return true; }

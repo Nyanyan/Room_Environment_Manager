@@ -2,6 +2,7 @@
 import argparse
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
@@ -29,10 +30,17 @@ implementation += section("static bool websocket_send_frame", "static bool slack
 with tempfile.TemporaryDirectory(prefix="slack-tests-") as tmp:
     staging = Path(tmp)
     (staging / "socket_under_test.inc").write_text(implementation, encoding="utf-8")
-    executable = staging / ("test_socket.exe" if os.name == "nt" else "test_socket")
-    subprocess.run([os.environ.get("CXX", "g++"), "-std=c++17", "-Wall", "-Wextra", "-Werror",
-                    "-DARDUINOJSON_ENABLE_ARDUINO_STRING=1",
-                    "-I", str(tests / "fakes"), "-I", str(staging),
-                    "-I", str(parent), "-I", str(json_src),
-                    str(tests / "test_socket.cpp"), "-o", str(executable)], check=True)
-    subprocess.run([str(executable)], check=True, timeout=30)
+    message_implementation = section("static bool parse_slack_ok", "static void log_network_diagnostics")
+    message_implementation += section("static char *slack_post_message", "String slack_upload_img")
+    (staging / "message_under_test.inc").write_text(message_implementation, encoding="utf-8")
+    for name in ("slack_report.h", "sensors.h", "time_manager.h"):
+        shutil.copy2(parent / name, staging / name)
+    (staging / "token.h").write_text("#pragma once\n#define N_ADDITIONAL_SENSORS 3\n")
+    for name in ("test_socket", "test_report"):
+        executable = staging / (name + (".exe" if os.name == "nt" else ""))
+        subprocess.run([os.environ.get("CXX", "g++"), "-std=c++17", "-Wall", "-Wextra", "-Werror",
+                        "-DARDUINOJSON_ENABLE_ARDUINO_STRING=1",
+                        "-I", str(tests / "fakes"), "-I", str(staging),
+                        "-I", str(parent), "-I", str(json_src),
+                        str(tests / (name + ".cpp")), "-o", str(executable)], check=True)
+        subprocess.run([str(executable)], check=True, timeout=30)

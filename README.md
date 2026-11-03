@@ -98,6 +98,12 @@ You need
   * reinstall the Slack app after changing scopes/events
   * invite the bot to the target channel
 
+## 環境レポート（main版）
+
+`monitor` と毎時の定期報告は、Slack公式の [Block Kit tableブロック](https://docs.slack.dev/reference/block-kit/blocks/table-block/) で環境データを表示します。行は `parent`、各 `additional` センサー、`representative`、列はセンサー名・温度（°C）・湿度（%）・気圧（hPa）・CO2（ppm）です。数値は右揃えで、温度・湿度・気圧は小数1桁、CO2は整数、欠測値は `N/A` と表示します。加湿器の目標湿度を含め、湿度の表示単位は `%` です。
+
+同じメッセージ内に高温アラート、エアコン・加湿器の状態、通知設定、`Connection` 欄、グラフのリンクも表示します。通知・読み上げ用のトップレベル `text` にも全センサーの値と状態を含めます。
+
 ## Slack受信処理（main版）
 
 Socket Modeのイベントは、WebSocketのペイロードを256バイトずつ読み、ArduinoJsonのフィルターで必要な項目だけ解析します。添付、プレビュー、更新前メッセージなどを受信サイズ分の `String` に保存することはありません。8KiBを超える通常のイベントにも対応し、分割フレームと途中のPing/Pongを処理します。
@@ -114,7 +120,7 @@ Python 3、C++17対応の `g++` とArduinoJson 7を使い、以下で受信処�
 python tests/slack/run_tests.py --arduinojson-dir /path/to/ArduinoJson
 ```
 
-ライブラリのパスは `ARDUINOJSON_DIR` 環境変数でも指定できます。テストは実際の受信・ACK・コマンド振り分けコードを使用し、18万バイトのイベント、分割フレーム、Bot投稿、次のフレームの保持、タイムアウト、不正フレーム、メモリ上限を確認します。実際のSlack接続や秘密情報を含む `token.h` は使用しません。
+ライブラリのパスは `ARDUINOJSON_DIR` 環境変数でも指定できます。テストは実際の受信・ACK・コマンド振り分けコードを使用し、18万バイトのイベント、分割フレーム、Bot投稿、次のフレームの保持、タイムアウト、不正フレーム、メモリ上限を確認します。環境レポートについても、実際の送信コードを使い、tableブロックのJSON構造、値・単位・欠測値、通知用テキスト、従来のテキスト通知との互換性を検証します。実際のSlack接続や秘密情報を含む `token.h` は使用しません。
 
 ## 加湿器（main版・任意設置）
 
