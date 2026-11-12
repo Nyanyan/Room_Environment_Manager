@@ -149,7 +149,7 @@ void ac_heat_on(int set_temp){
 
 
 void ac_off(){
-  for (int i = 0; i < 5; ++i){
+  for (int i = 0; i < AC_N_TRY; ++i){
     ac.setModel(kPanasonicRkr);
     ac.off();
     ac.setFan(kPanasonicAcFanHigh);
