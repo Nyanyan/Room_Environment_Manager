@@ -1,5 +1,6 @@
 #include <float.h>
 #include <stdlib.h>
+#include <math.h>
 #include "command.h"
 #include "memory.h"
 #include "sensors.h"
@@ -300,6 +301,50 @@ bool is_alert_temperature_valid(double temperature) {
   return temperature >= ALERT_HOT_TEMPERATURE_MIN && temperature <= ALERT_HOT_TEMPERATURE_MAX;
 }
 
+const char *preset_ac_mode(const String &mode) {
+  if (mode == "cool" || mode == "c") return "c";
+  if (mode == "dry" || mode == "d") return "d";
+  if (mode == "heat" || mode == "h") return "h";
+  return nullptr;
+}
+
+bool preset_ac_temperature(const String &text, double &value) {
+  return parse_temperature_value(text, value) && isfinite(value) &&
+    value >= AC_TEMP_LIMIT_MIN && value <= AC_TEMP_LIMIT_MAX;
+}
+
+bool normalize_preset_command(const Command &command, String &text) {
+  text = "";
+  double value;
+  if (command.cmd == "ac" && !command.arg4.length()) {
+    if (command.arg1 == "off" && !command.arg2.length() && !command.arg3.length()) {
+      text = "ac off";
+    } else if (command.arg1 == "a" || command.arg1 == "auto") {
+      const char *mode = preset_ac_mode(command.arg2);
+      if (command.arg2 == "off" && !command.arg3.length()) text = "ac a off";
+      else if (mode && preset_ac_temperature(command.arg3, value)) {
+        text = String("ac a ") + mode + " " + command.arg3;
+      }
+    } else {
+      const char *mode = preset_ac_mode(command.arg1);
+      if (mode && !command.arg3.length() && preset_ac_temperature(command.arg2, value) && value == floor(value)) {
+        text = String("ac ") + mode + " " + String(static_cast<int>(value));
+      }
+    }
+  } else if (command.cmd == "hm" && !command.arg3.length() && !command.arg4.length()) {
+    if (command.arg1 == "off" && !command.arg2.length()) text = "hm off";
+    else if (command.arg1 == "on") {
+      if (command.arg2 == "w" || command.arg2 == "weak") text = "hm on w";
+      if (command.arg2 == "s" || command.arg2 == "strong") text = "hm on s";
+    } else {
+      const String target = command.arg1 == "a" || command.arg1 == "auto" ? command.arg2 :
+        (!command.arg2.length() ? command.arg1 : String());
+      if (parse_temperature_value(target, value) && hm_valid_humidity(value)) text = String("hm a ") + target;
+    }
+  }
+  return text.length() > 0 && text.length() < PRESET_COMMAND_MAX_LEN;
+}
+
 } // namespace
 
 
@@ -464,6 +509,12 @@ void command_print_command_list(Time_info &time_info){
   str += "  - `hm alert [on/off]`: refill alert\n";
   str += "  - `hm mention [on/off]`: channel mention for refill alert\n";
   str += "- `all off`: stop AC and humidifier; disable both auto modes\n";
+  str += "- `pr` (one preset per device, retained after reboot)\n";
+  str += "  - `pr n [ac/hm command]`: register or overwrite that device only\n";
+  str += "    - `pr n ac h 22`, `pr n ac a c 26.5`, `pr n hm 53` (= hm a 53)\n";
+  str += "  - `pr on`: execute all registered presets\n";
+  str += "  - `pr show`: show both presets\n";
+  str += "  - `pr clear` / `pr c`: clear both presets\n";
   str += "- `reserve` (r)\n";
   str += "  - command reservation\n";
   str += "  - `reserve new (r n) [YYYYMMDD|everyday|monday..sunday (optional)] [hhmm] [command]`\n";
@@ -811,6 +862,64 @@ void command_check_reboot(Command command, Time_info &time_info) {
 }
 
 
+void command_check_pr(Command command, Time_info &time_info, Sensor_data &sensor_data, Settings &settings, AC_status &ac_status) {
+  if (command.cmd != "pr") return;
+  CommandPresets presets;
+  memory_load_presets(presets);
+  if (command.arg1 == "n" || command.arg1 == "new") {
+    String nested = command.arg2;
+    if (command.arg3.length()) nested += " " + command.arg3;
+    if (command.arg4.length()) nested += " " + command.arg4;
+    nested.trim();
+    const Command operating = parse_command_text(nested);
+    String normalized;
+    if (!normalize_preset_command(operating, normalized)) {
+      slack_send_message(time_info, "[ERROR] Expected pr n [AC/HM operating command], e.g. pr n ac h 22 or pr n hm 53. AC: 16-30 C (manual: integer), HM: 0-100 %.");
+      return;
+    }
+    char *destination = operating.cmd == "ac" ? presets.ac : presets.hm;
+    // Normalization validates the length, so the saved command is never truncated.
+    strcpy(destination, normalized.c_str());
+    slack_send_message(time_info, memory_save_presets(presets) ?
+      String("[INFO] Preset saved: ") + normalized : String("[ERROR] Could not save preset. Previous presets retained."));
+    return;
+  }
+  if (command.arg2.length() || command.arg3.length() || command.arg4.length()) {
+    slack_send_message(time_info, "[ERROR] Expected pr n [command], pr on, pr show, pr clear or pr c.");
+    return;
+  }
+  if (command.arg1 == "show") {
+    String text = "< *Presets* >\n- AC: ";
+    text += presets.ac[0] ? presets.ac : "(empty)";
+    text += "\n- HM: ";
+    text += presets.hm[0] ? presets.hm : "(empty)";
+    slack_send_message(time_info, text);
+  } else if (command.arg1 == "clear" || command.arg1 == "c") {
+    slack_send_message(time_info, memory_save_presets(CommandPresets()) ?
+      "[INFO] Both presets cleared." : "[ERROR] Could not clear presets. Previous presets retained.");
+  } else if (command.arg1 == "on") {
+    if (!presets.ac[0] && !presets.hm[0]) {
+      slack_send_message(time_info, "[INFO] No presets registered. Use pr n ac h 22 or pr n hm 53.");
+      return;
+    }
+    const char *commands[] = {presets.ac, presets.hm};
+    for (const char *text : commands) {
+      if (!text[0]) continue;
+      String normalized;
+      if (!normalize_preset_command(parse_command_text(String(text)), normalized)) {
+        slack_send_message(time_info, String("[ERROR] Invalid saved preset: ") + text);
+        continue;
+      }
+      const Command operating = parse_command_text(normalized);
+      command_check_ac(operating, time_info, settings, ac_status);
+      command_check_hm(operating, time_info, settings, sensor_data);
+    }
+  } else {
+    slack_send_message(time_info, "[ERROR] Expected pr n [command], pr on, pr show, pr clear or pr c.");
+  }
+}
+
+
 void command_check_all(Command command, Time_info &time_info, Sensor_data &sensor_data, Settings &settings, AC_status &ac_status) {
   if (command.cmd != "all") return;
   if (command.arg1 != "off" || command.arg2.length() || command.arg3.length() || command.arg4.length()) {
@@ -833,6 +942,7 @@ void command_process(Command command, Time_info &time_info, Sensor_data &sensor_
   command_check_ac(command, time_info, settings, ac_status);
   command_check_hm(command, time_info, settings, sensor_data);
   command_check_all(command, time_info, sensor_data, settings, ac_status);
+  command_check_pr(command, time_info, sensor_data, settings, ac_status);
   command_check_reserve(command, time_info, settings, ac_status);
   command_check_set(command, time_info);
   command_check_monitor(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);

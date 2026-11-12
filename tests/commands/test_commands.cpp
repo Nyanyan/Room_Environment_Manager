@@ -99,6 +99,11 @@ static void test_all_off() {
 }
 
 static void test_preset_storage() {
+  CommandReservation reservation;
+  reservation.year = 2027; reservation.month = 1; reservation.day = 1;
+  strcpy(reservation.command, "all off");
+  uint32_t id;
+  assert(reservation_add(reservation, id));
   const auto before = EEPROM.bytes;
   CommandPresets presets;
   strcpy(presets.ac, "ac h 22"); strcpy(presets.hm, "hm a 53");
@@ -132,10 +137,184 @@ static void test_preset_storage() {
   assert(!memory_load_presets(loaded) && !loaded.ac[0] && !loaded.hm[0]);
   assert(memory_load_settings(settings));
   assert(memory_save_presets(CommandPresets()));
+  CommandReservation list[RESERVATION_MAX]; size_t count;
+  assert(reservation_list(list, RESERVATION_MAX, count) && count == 1 && list[0].id == id);
+  assert(strcmp(list[0].command, "all off") == 0);
+  assert(reservation_delete(id));
+}
+
+static CommandPresets saved_presets() {
+  CommandPresets presets;
+  assert(memory_load_presets(presets));
+  return presets;
+}
+
+static void test_preset_commands() {
+  const size_t ac_before = ac_requests.size();
+  const int hm_before = hm_requests;
+  const int mode_before = settings.ac_auto_mode;
+  const bool auto_before = settings.hm_auto;
+  run("pr n ac h 22");
+  auto presets = saved_presets();
+  assert(strcmp(presets.ac, "ac h 22") == 0 && !presets.hm[0]);
+  run("pr n hm 53");
+  presets = saved_presets();
+  assert(strcmp(presets.ac, "ac h 22") == 0 && strcmp(presets.hm, "hm a 53") == 0);
+  run("pr show");
+  assert(messages.back().find("AC: ac h 22") != std::string::npos);
+  assert(messages.back().find("HM: hm a 53") != std::string::npos);
+  run("pr n ac cool 26");
+  presets = saved_presets();
+  assert(strcmp(presets.ac, "ac c 26") == 0 && strcmp(presets.hm, "hm a 53") == 0);
+  assert(ac_requests.size() == ac_before && hm_requests == hm_before);
+  assert(settings.ac_auto_mode == mode_before && settings.hm_auto == auto_before);
+
+  sensors.representative.humidity = 40;
+  additional_sensors_request(false);
+  const int before_execution = hm_requests;
+  run("pr on");
+  assert(ac_requests.size() == ac_before + 1 && ac.state == AC_STATE_COOL && ac.temp == 26);
+  assert(settings.ac_auto_mode == AC_AUTO_OFF && settings.hm_auto && settings.hm_target_humidity == 53);
+  assert(hm_requests == before_execution + 1 && device_state == HM_STRONG);
+
+  run("pr new ac auto heat 23.5");
+  presets = saved_presets();
+  assert(strcmp(presets.ac, "ac a h 23.5") == 0 && strcmp(presets.hm, "hm a 53") == 0);
+  assert(settings.ac_auto_mode == AC_AUTO_OFF); // Registration is separate from execution.
+  run("pr on");
+  assert(ac.state == AC_STATE_HEAT && ac.temp == 24);
+  assert(settings.ac_auto_mode == AC_AUTO_HEAT && settings.ac_auto_temp == 23.5);
+  assert(settings.hm_auto && settings.hm_target_humidity == 53);
+
+  struct Case { const char *input; const char *ac; const char *hm; };
+  for (const auto &item : {
+         Case{"pr n ac d 16", "ac d 16", "hm a 53"},
+         Case{"pr n ac h 30", "ac h 30", "hm a 53"},
+         Case{"pr n ac h 2.2e1", "ac h 22", "hm a 53"},
+         Case{"pr n ac a d 26.5", "ac a d 26.5", "hm a 53"},
+         Case{"pr n ac a c 25", "ac a c 25", "hm a 53"},
+         Case{"pr n hm auto 50.5", "ac a c 25", "hm a 50.5"},
+         Case{"pr n hm a 0", "ac a c 25", "hm a 0"},
+         Case{"pr n hm 100", "ac a c 25", "hm a 100"},
+         Case{"pr n hm on weak", "ac a c 25", "hm on w"},
+         Case{"pr n hm on s", "ac a c 25", "hm on s"},
+         Case{"pr n ac a off", "ac a off", "hm on s"},
+         Case{"pr n hm off", "ac a off", "hm off"},
+         Case{"pr n ac off", "ac off", "hm off"}}) {
+    const size_t requests_before = ac_requests.size();
+    const int queries_before = hm_requests;
+    run(item.input);
+    presets = saved_presets();
+    assert(strcmp(presets.ac, item.ac) == 0 && strcmp(presets.hm, item.hm) == 0);
+    assert(ac_requests.size() == requests_before && hm_requests == queries_before);
+  }
+  run("pr on");
+  assert(ac.state == AC_STATE_OFF && device_state == HM_OFF);
+  assert(settings.ac_auto_mode == AC_AUTO_OFF && !settings.hm_auto);
+}
+
+static void test_invalid_preset_commands() {
+  const auto before = EEPROM.bytes;
+  const size_t requests_before = ac_requests.size();
+  const int queries_before = hm_requests;
+  const int commits_before = EEPROM.commits;
+  for (const char *invalid : {
+         "pr", "pr unknown", "pr n", "pr n ac", "pr n ac h", "pr n ac h 15", "pr n ac h 31",
+         "pr n ac h nan", "pr n ac h inf", "pr n ac h 22abc", "pr n ac h 22.5", "pr n ac h 22 extra",
+         "pr n ac a h", "pr n ac a h 0", "pr n ac a h 31", "pr n ac a h nan", "pr n ac a h inf",
+         "pr n ac a h 23 extra", "pr n ac off extra", "pr n ac a off extra",
+         "pr n hm", "pr n hm -1", "pr n hm 101", "pr n hm nan", "pr n hm inf", "pr n hm 53abc",
+         "pr n hm a", "pr n hm a 53 extra", "pr n hm a 0.0000000000000000000000000000000000001",
+         "pr n hm on", "pr n hm on bad", "pr n hm off extra", "pr n hm mention on", "pr n hm alert off",
+         "pr n reboot", "pr n all off", "pr n pr on", "pr on extra", "pr show extra", "pr clear extra", "pr c extra"}) {
+    run(invalid);
+    assert(messages.back().find("[ERROR]") == 0);
+    assert(EEPROM.bytes == before);
+  }
+  assert(ac_requests.size() == requests_before && hm_requests == queries_before && EEPROM.commits == commits_before);
+}
+
+static void test_single_presets_clear_and_failures() {
+  // Clearing presets never switches off the currently running devices.
+  const auto requests_before = ac_requests.size();
+  const int queries_before = hm_requests;
+  run("pr clear");
+  auto presets = saved_presets();
+  assert(!presets.ac[0] && !presets.hm[0]);
+  run("pr show");
+  assert(messages.back().find("AC: (empty)") != std::string::npos && messages.back().find("HM: (empty)") != std::string::npos);
+  run("pr on");
+  assert(messages.back().find("No presets registered") != std::string::npos);
+  assert(ac_requests.size() == requests_before && hm_requests == queries_before);
+
+  run("pr n ac h 22");
+  run("pr on");
+  assert(ac.state == AC_STATE_HEAT && ac.temp == 22 && hm_requests == queries_before);
+  run("pr c");
+  presets = saved_presets();
+  assert(!presets.ac[0] && !presets.hm[0] && ac.state == AC_STATE_HEAT);
+
+  run("pr n hm on strong");
+  run("pr on");
+  assert(ac_requests.size() == requests_before + 1 && device_state == HM_STRONG && !settings.hm_auto);
+  run("pr n hm on w"); run("pr on");
+  assert(device_state == HM_WEAK);
+  run("pr n hm 53");
+  run("pr n ac h 22");
+  EEPROM.commit_ok = false;
+  run("pr n hm 60");
+  assert(messages.back().find("[ERROR]") == 0);
+  assert(strcmp(saved_presets().hm, "hm a 53") == 0);
+  run("pr clear");
+  assert(messages.back().find("[ERROR]") == 0);
+  assert(strcmp(saved_presets().ac, "ac h 22") == 0 && strcmp(saved_presets().hm, "hm a 53") == 0);
+  EEPROM.commit_ok = true;
+
+  // Loss of one controller does not prevent the other preset from executing.
+  device_online = false;
+  run("pr on");
+  assert(ac.state == AC_STATE_HEAT && settings.hm_auto && settings.hm_target_humidity == 53);
+  assert(messages.back().find("waiting for controller") != std::string::npos);
+  run("all off");
+  assert(!settings.hm_auto && settings.ac_auto_mode == AC_AUTO_OFF);
+  assert(strcmp(saved_presets().ac, "ac h 22") == 0 && strcmp(saved_presets().hm, "hm a 53") == 0);
+  device_online = true;
+
+  // Never execute a malformed saved command, even with a valid block checksum.
+  PresetsPersisted malformed = {};
+  EEPROM.get(kPresetsAddr, malformed);
+  strcpy(malformed.commands.ac, "ac h 99");
+  malformed.checksum = compute_checksum(malformed);
+  EEPROM.put(kPresetsAddr, malformed);
+  const auto invalid_before = ac_requests.size();
+  run("pr on");
+  assert(ac_requests.size() == invalid_before);
+  assert(settings.hm_auto && settings.hm_target_humidity == 53);
+  run("pr c");
+}
+
+static void test_reserved_preset_and_all_off() {
+  now.year = 2026; now.month = 11; now.day = 12; now.hour = 13; now.minute = 0;
+  run("pr n ac h 22"); run("pr n hm 53");
+  run("r n 1400 pr on"); run("r n 1410 all off");
+  run("pr n ac c 26"); // Execute the latest preset when the reservation is due.
+  now.hour = 14;
+  command_execute_reservations(now, sensors, settings, ac, data, image);
+  assert(ac.state == AC_STATE_COOL && ac.temp == 26 && settings.hm_auto && settings.hm_target_humidity == 53);
+  now.minute = 10;
+  command_execute_reservations(now, sensors, settings, ac, data, image);
+  assert(ac.state == AC_STATE_OFF && device_state == HM_OFF);
+  assert(settings.ac_auto_mode == AC_AUTO_OFF && !settings.hm_auto);
+  CommandReservation list[RESERVATION_MAX]; size_t count;
+  assert(reservation_list(list, RESERVATION_MAX, count) && count == 0);
 }
 
 int main() {
   test_all_off();
   test_preset_storage();
+  test_preset_commands();
+  test_invalid_preset_commands();
+  test_single_presets_clear_and_failures();
+  test_reserved_preset_and_all_off();
   std::cout << "All command tests passed.\n";
 }
