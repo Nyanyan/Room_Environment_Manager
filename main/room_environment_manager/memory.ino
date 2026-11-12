@@ -150,6 +150,31 @@ constexpr int kHumidifierSettingsAddr = kReservationAddr + sizeof(ReservationBlo
 static_assert(kHumidifierSettingsAddr + sizeof(HumidifierSettingsPersisted) <= kEepromSize,
               "Humidifier settings exceed EEPROM capacity");
 
+struct PresetsPersisted {
+	uint32_t magic;
+	uint8_t version;
+	uint8_t reserved[3];
+	CommandPresets commands;
+	uint32_t checksum;
+};
+constexpr uint32_t kMagicPresets = 0x50520001;
+constexpr int kPresetsAddr = kHumidifierSettingsAddr + sizeof(HumidifierSettingsPersisted);
+static_assert(kPresetsAddr + sizeof(PresetsPersisted) <= kEepromSize,
+              "Preset commands exceed EEPROM capacity");
+
+uint32_t compute_checksum(const PresetsPersisted &data) {
+	uint32_t sum = 0;
+	const uint8_t *raw = reinterpret_cast<const uint8_t *>(&data);
+	for (size_t i = 0; i < sizeof(data) - sizeof(data.checksum); ++i) sum += raw[i];
+	return sum;
+}
+
+bool preset_strings_valid(const CommandPresets &commands) {
+	return memchr(commands.ac, '\0', sizeof(commands.ac)) && memchr(commands.hm, '\0', sizeof(commands.hm)) &&
+	       (!commands.ac[0] || strncmp(commands.ac, "ac ", 3) == 0) &&
+	       (!commands.hm[0] || strncmp(commands.hm, "hm ", 3) == 0);
+}
+
 uint32_t compute_checksum(const HumidifierSettingsPersisted &data) {
 	uint32_t sum = 0;
 	const uint8_t *raw = reinterpret_cast<const uint8_t *>(&data);
@@ -352,6 +377,35 @@ bool memory_load_settings(Settings &settings) {
 	return true;
 }
 
+
+
+bool memory_save_presets(const CommandPresets &presets) {
+	if (!preset_strings_valid(presets)) return false;
+	ensure_initialized();
+	PresetsPersisted previous = {};
+	EEPROM.get(kPresetsAddr, previous);
+	PresetsPersisted payload = {};
+	payload.magic = kMagicPresets;
+	payload.version = 1;
+	payload.commands = presets;
+	payload.checksum = compute_checksum(payload);
+	EEPROM.put(kPresetsAddr, payload);
+	if (EEPROM.commit()) return true;
+	// A failed flash commit must not leave a new preset in the EEPROM RAM buffer.
+	EEPROM.put(kPresetsAddr, previous);
+	return false;
+}
+
+bool memory_load_presets(CommandPresets &presets) {
+	ensure_initialized();
+	presets = CommandPresets();
+	PresetsPersisted payload = {};
+	EEPROM.get(kPresetsAddr, payload);
+	if (payload.magic != kMagicPresets || payload.version != 1 ||
+	    payload.checksum != compute_checksum(payload) || !preset_strings_valid(payload.commands)) return false;
+	presets = payload.commands;
+	return true;
+}
 
 
 bool reservation_add(const CommandReservation &reservation, uint32_t &assigned_id) {

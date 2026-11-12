@@ -98,7 +98,44 @@ static void test_all_off() {
   assert(ac_requests.size() == 2 && hm_requests == 2);
 }
 
+static void test_preset_storage() {
+  const auto before = EEPROM.bytes;
+  CommandPresets presets;
+  strcpy(presets.ac, "ac h 22"); strcpy(presets.hm, "hm a 53");
+  assert(memory_save_presets(presets));
+  assert(std::equal(before.begin(), before.begin() + kPresetsAddr, EEPROM.bytes.begin()));
+  assert(std::equal(before.begin() + kPresetsAddr + sizeof(PresetsPersisted), before.end(),
+                    EEPROM.bytes.begin() + kPresetsAddr + sizeof(PresetsPersisted)));
+  CommandPresets loaded;
+  g_initialized = false; // Reinitialize without clearing flash.
+  assert(memory_load_presets(loaded));
+  assert(strcmp(loaded.ac, "ac h 22") == 0 && strcmp(loaded.hm, "hm a 53") == 0);
+  assert(memory_save_settings(settings));
+  assert(memory_load_presets(loaded) && strcmp(loaded.hm, "hm a 53") == 0);
+
+  EEPROM.commit_ok = false;
+  strcpy(presets.ac, "ac c 26");
+  assert(!memory_save_presets(presets));
+  assert(memory_load_presets(loaded) && strcmp(loaded.ac, "ac h 22") == 0);
+  EEPROM.commit_ok = true;
+  assert(memory_save_presets(presets));
+
+  memset(presets.ac, 'a', sizeof(presets.ac));
+  assert(!memory_save_presets(presets)); // Unterminated commands cannot escape the block.
+  assert(memory_load_presets(loaded) && strcmp(loaded.ac, "ac c 26") == 0);
+  strcpy(presets.ac, "reboot");
+  assert(!memory_save_presets(presets));
+
+  EEPROM.bytes[kPresetsAddr] ^= 1;
+  assert(!memory_load_presets(loaded) && !loaded.ac[0] && !loaded.hm[0]);
+  std::fill(EEPROM.bytes.begin() + kPresetsAddr, EEPROM.bytes.end(), 0xff); // Legacy flash has no presets.
+  assert(!memory_load_presets(loaded) && !loaded.ac[0] && !loaded.hm[0]);
+  assert(memory_load_settings(settings));
+  assert(memory_save_presets(CommandPresets()));
+}
+
 int main() {
   test_all_off();
+  test_preset_storage();
   std::cout << "All command tests passed.\n";
 }

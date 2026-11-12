@@ -9,6 +9,12 @@
 // Reservation capacity and limits
 const size_t RESERVATION_MAX = 8;
 const size_t RESERVATION_COMMAND_MAX_LEN = 80;
+const size_t PRESET_COMMAND_MAX_LEN = 32; // Includes the terminating NUL.
+
+struct CommandPresets {
+	char ac[PRESET_COMMAND_MAX_LEN] = {};
+	char hm[PRESET_COMMAND_MAX_LEN] = {};
+};
 
 const uint8_t RESERVATION_REPEAT_NONE = 0;
 const uint8_t RESERVATION_REPEAT_EVERYDAY = 1;
@@ -53,6 +59,10 @@ bool memory_save_settings(const Settings &settings);
 
 // Load last saved settings from EEPROM. Returns true when valid data is restored.
 bool memory_load_settings(Settings &settings);
+
+// One operating command per device, stored separately from active settings.
+bool memory_save_presets(const CommandPresets &presets);
+bool memory_load_presets(CommandPresets &presets);
 
 // Add a new reservation to EEPROM. Returns false when storage is full.
 bool reservation_add(const CommandReservation &reservation, uint32_t &assigned_id);
