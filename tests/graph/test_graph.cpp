@@ -285,13 +285,17 @@ static void test_time_rollover_and_gaps() {
   Graph_data data;
   Settings settings; settings.hm_auto = true; settings.hm_target_humidity = 55;
   AC_status ac;
+  ac.state = AC_STATE_COOL; ac.temp = 24;
   Sensor_data sensor; sensor.representative.humidity = 45;
   auto time = report_time(); time.hour = 23; time.minute = 57;
   graph_data_update(time, data, sensor, settings, ac);
   time.day += 1; time.hour = 0; time.minute = 3;
   settings.hm_target_humidity = 60;
+  ac.state = AC_STATE_HEAT; // Same temperature, different mode across midnight.
   graph_data_update(time, data, sensor, settings, ac);
   assert(data.humidity_target[142] == 55 && data.humidity_target[143] == 60);
+  assert(data.ac_state[142] == AC_STATE_COOL && data.ac_state[143] == AC_STATE_HEAT);
+  assert(data.ac_set_temperature[142] == 24 && data.ac_set_temperature[143] == 24);
   assert(data.humidity[286] == 45 && data.humidity[287] == 45);
   assert(data.last_data_update_hour == 0 && data.last_data_update_minute == 0);
 
@@ -302,17 +306,22 @@ static void test_time_rollover_and_gaps() {
   assert(!graph_valid_value(data.humidity_target[142]));
   assert(!graph_valid_value(data.humidity[285]));
   assert(!graph_valid_value(data.humidity[286]));
+  assert(data.ac_state[140] == AC_STATE_HEAT && data.ac_state[143] == AC_STATE_HEAT);
+  assert(data.ac_state[141] == AC_STATE_OFF && data.ac_state[142] == AC_STATE_OFF);
 
   time.day += 1;
   graph_data_update(time, data, sensor, settings, ac);
   for (int i = 0; i < GRAPH_DATA_1_DAY - 1; ++i) assert(!graph_valid_value(data.humidity_target[i]));
   assert(data.humidity_target[143] == 60);
   assert(data.humidity[143] == 45); // Previous day's measured trace is still retained.
+  for (int i = 0; i < GRAPH_DATA_1_DAY - 1; ++i) assert(data.ac_state[i] == AC_STATE_OFF);
+  assert(data.ac_state[143] == AC_STATE_HEAT);
 
   time.minute = 12; // A backward clock correction must not reuse misdated history.
   graph_data_update(time, data, sensor, settings, ac);
   for (int i = 0; i < GRAPH_DATA_N - 1; ++i) assert(!graph_valid_value(data.humidity[i]));
   assert(data.humidity_target[143] == 60);
+  for (int i = 0; i < GRAPH_DATA_1_DAY - 1; ++i) assert(data.ac_state[i] == AC_STATE_OFF);
 }
 
 static void test_steps_and_off_gaps() {
@@ -470,6 +479,36 @@ static void test_ac_band_over_sensor_traces() {
   guarded.check();
 }
 
+static void test_jpeg_overlay_colors() {
+  Graph_img image;
+  for (int y = 0; y < GRAPH_IMG_HEIGHT; ++y) {
+    for (int x = 0; x < GRAPH_IMG_WIDTH; ++x) {
+      image.graph[y][x] = (y * GRAPH_IMG_WIDTH + x) % BMP_N_COLOR_PALETTE;
+    }
+  }
+  graph_encode_jpeg(image);
+  assert(image.jpeg_size == 128);
+  const int tiles_x = (GRAPH_IMG_WIDTH + 7) / 8;
+  const int tiles_y = (GRAPH_IMG_HEIGHT + 7) / 8;
+  assert(jpeg_test_mcus.size() == static_cast<size_t>(tiles_x * tiles_y * 64 * 3));
+  for (int out_y = 0; out_y < tiles_y * 8; ++out_y) {
+    for (int out_x = 0; out_x < tiles_x * 8; ++out_x) {
+      const int x = min(out_x, GRAPH_IMG_WIDTH - 1);
+      const int y = max(0, GRAPH_IMG_HEIGHT - 1 - out_y);
+      const int pixel = image.graph[y][x];
+      const int base = pixel % BMP_N_BASE_COLORS;
+      const bool cool = pixel >= PALETTE_AC_COOL && pixel < PALETTE_AC_HEAT;
+      const bool heat = pixel >= PALETTE_AC_HEAT;
+      const int tint[3] = {heat ? 255 : 160, heat ? 160 : 200, heat ? 160 : 255};
+      const size_t offset = ((out_y / 8 * tiles_x + out_x / 8) * 64 + (out_y % 8 * 8 + out_x % 8)) * 3;
+      for (int c = 0; c < 3; ++c) {
+        const int expected = cool || heat ? (color_palette[base][c] + tint[c]) / 2 : color_palette[base][c];
+        assert(jpeg_test_mcus[offset + 2 - c] == expected);
+      }
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   test_control_modes();
   test_temperature_lines();
@@ -481,12 +520,13 @@ int main(int argc, char **argv) {
   test_ac_band_blending();
   test_ac_band_steps_and_gaps();
   test_ac_band_over_sensor_traces();
+  test_jpeg_overlay_colors();
   if (argc == 2) {
     auto data = history(); auto time = report_time();
     for (int x = 0; x < GRAPH_DATA_1_DAY; ++x) {
       data.temperature_target[x] = x < 36 ? 26 : x < 72 ? 24 : x < 96 ? GRAPH_DATA_UNDEFINED : 25;
       data.humidity_target[x] = x < 36 ? 55 : x < 72 ? 60 : x < 96 ? GRAPH_DATA_UNDEFINED : 50;
-      data.ac_set_temperature[x] = x < 36 ? 20 : x < 72 ? 22 : x < 96 ? GRAPH_DATA_UNDEFINED : 21;
+      data.ac_set_temperature[x] = x < 36 ? 23 : x < 72 ? 24 : x < 96 ? GRAPH_DATA_UNDEFINED : x < 120 ? 24 : 25;
       data.ac_state[x] = x < 72 ? AC_STATE_COOL : x < 96 ? AC_STATE_OFF : AC_STATE_HEAT;
     }
     Graph_img image;
@@ -494,6 +534,13 @@ int main(int argc, char **argv) {
     save_ppm(image, std::string(argv[1]) + "/temperature.ppm");
     graph_draw_humidity(data, image, time);
     save_ppm(image, std::string(argv[1]) + "/humidity.ppm");
+    std::fill_n(data.temperature_target, GRAPH_DATA_1_DAY, 24);
+    std::fill_n(data.ac_set_temperature, GRAPH_DATA_1_DAY, 24);
+    for (int x = 0; x < GRAPH_DATA_1_DAY; ++x) {
+      data.ac_state[x] = x < 72 ? AC_STATE_COOL : AC_STATE_HEAT;
+    }
+    graph_draw_temperature(data, image, time);
+    save_ppm(image, std::string(argv[1]) + "/temperature-overlap.ppm");
   }
   std::cout << "All graph tests passed.\n";
 }
