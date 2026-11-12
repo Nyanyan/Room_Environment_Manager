@@ -463,6 +463,7 @@ void command_print_command_list(Time_info &time_info){
   str += "  - `hm a [0-100]` / `hm auto [0-100]`: humidity PID control\n";
   str += "  - `hm alert [on/off]`: refill alert\n";
   str += "  - `hm mention [on/off]`: channel mention for refill alert\n";
+  str += "- `all off`: stop AC and humidifier; disable both auto modes\n";
   str += "- `reserve` (r)\n";
   str += "  - command reservation\n";
   str += "  - `reserve new (r n) [YYYYMMDD|everyday|monday..sunday (optional)] [hhmm] [command]`\n";
@@ -603,7 +604,7 @@ void command_check_ac(Command command, Time_info &time_info, Settings &settings,
 }
 
 
-void command_check_reserve(Command command, Time_info &time_info, Settings &settings, AC_status &ac_status) {
+void command_check_reserve(Command command, Time_info &time_info, Settings &, AC_status &) {
   if (command.cmd != "reserve" && command.cmd != "r") {
     return;
   }
@@ -810,12 +811,28 @@ void command_check_reboot(Command command, Time_info &time_info) {
 }
 
 
+void command_check_all(Command command, Time_info &time_info, Sensor_data &sensor_data, Settings &settings, AC_status &ac_status) {
+  if (command.cmd != "all") return;
+  if (command.arg1 != "off" || command.arg2.length() || command.arg3.length() || command.arg4.length()) {
+    slack_send_message(time_info, "[ERROR] Expected all off.");
+    return;
+  }
+  Command off;
+  off.arg1 = "off";
+  off.cmd = "ac";
+  command_check_ac(off, time_info, settings, ac_status);
+  off.cmd = "hm";
+  command_check_hm(off, time_info, settings, sensor_data);
+}
+
+
 void command_process(Command command, Time_info &time_info, Sensor_data &sensor_data, Settings &settings, AC_status &ac_status, Graph_data &graph_data, Graph_img &graph_img) {
   if (command.cmd.length() == 0) {
     return;
   }
   command_check_ac(command, time_info, settings, ac_status);
   command_check_hm(command, time_info, settings, sensor_data);
+  command_check_all(command, time_info, sensor_data, settings, ac_status);
   command_check_reserve(command, time_info, settings, ac_status);
   command_check_set(command, time_info);
   command_check_monitor(command, time_info, sensor_data, settings, ac_status, graph_data, graph_img);
