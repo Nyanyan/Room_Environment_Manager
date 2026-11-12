@@ -53,6 +53,7 @@ static Graph_data history() {
 static void fill_controls(Graph_data &data, const Graph_references &refs) {
   std::fill_n(data.temperature_target, GRAPH_DATA_1_DAY, refs.temperature_target);
   std::fill_n(data.ac_set_temperature, GRAPH_DATA_1_DAY, refs.ac_set_temperature);
+  std::fill_n(data.ac_state, GRAPH_DATA_1_DAY, refs.ac_state);
   std::fill_n(data.humidity_target, GRAPH_DATA_1_DAY, refs.humidity_target);
 }
 
@@ -62,12 +63,14 @@ static void test_control_modes() {
   auto refs = graph_control_references(settings, ac);
   assert(!graph_valid_value(refs.temperature_target));
   assert(!graph_valid_value(refs.ac_set_temperature));
+  assert(refs.ac_state == AC_STATE_OFF);
   assert(!graph_valid_value(refs.humidity_target));
 
   for (int mode : {AC_STATE_COOL, AC_STATE_DRY, AC_STATE_HEAT}) {
     ac.state = mode; ac.temp = 22;
     refs = graph_control_references(settings, ac);
     assert(refs.ac_set_temperature == 22);
+    assert(refs.ac_state == mode);
     assert(!graph_valid_value(refs.temperature_target));
   }
   for (int mode : {AC_AUTO_COOL, AC_AUTO_DRY, AC_AUTO_HEAT}) {
@@ -82,6 +85,7 @@ static void test_control_modes() {
   refs = graph_control_references(settings, ac);
   assert(refs.temperature_target == 26.5f);
   assert(!graph_valid_value(refs.ac_set_temperature));
+  assert(refs.ac_state == AC_STATE_OFF);
   settings.ac_auto_temp = 40;
   assert(graph_control_references(settings, ac).temperature_target == AC_TEMP_LIMIT_MAX);
   settings.ac_auto_temp = 0;
@@ -98,6 +102,7 @@ static void test_control_modes() {
   assert(!graph_valid_value(refs.temperature_target));
   assert(!graph_valid_value(refs.humidity_target));
   assert(!graph_valid_value(refs.ac_set_temperature));
+  assert(refs.ac_state == AC_STATE_OFF);
 }
 
 static void test_temperature_lines() {
@@ -220,24 +225,27 @@ static void test_setting_history() {
   assert(data.temperature[287] == 23 && !graph_valid_value(data.temperature[286]));
   assert(data.temperature_target[143] == 26);
   assert(!graph_valid_value(data.temperature_target[142]));
+  assert(data.ac_state[143] == AC_STATE_COOL && data.ac_state[142] == AC_STATE_OFF);
 
   // Commands/PID changes within the open slot are visible immediately.
   time.minute = 7;
-  settings.ac_auto_temp = 28; settings.hm_target_humidity = 60; ac.temp = 20;
+  settings.ac_auto_temp = 28; settings.hm_target_humidity = 60; ac.temp = 20; ac.state = AC_STATE_DRY;
   graph_data_update(time, data, sensor, settings, ac);
   assert(data.temperature_target[143] == 28 && data.ac_set_temperature[143] == 20);
   assert(data.humidity_target[143] == 60);
+  assert(data.ac_state[143] == AC_STATE_DRY);
   assert(!graph_valid_value(data.temperature_target[142]));
 
   time.minute = 10;
   graph_data_update(time, data, sensor, settings, ac);
   time.minute = 17;
-  settings.ac_auto_temp = 24; settings.hm_target_humidity = 45; ac.temp = 21;
+  settings.ac_auto_temp = 24; settings.hm_target_humidity = 45; ac.temp = 21; ac.state = AC_STATE_COOL;
   graph_data_update(time, data, sensor, settings, ac);
   assert(data.temperature_target[142] == 28 && data.ac_set_temperature[142] == 20);
   assert(data.humidity_target[142] == 60); // Earlier slots must never be rewritten.
   assert(data.temperature_target[143] == 24 && data.ac_set_temperature[143] == 21);
   assert(data.humidity_target[143] == 45);
+  assert(data.ac_state[142] == AC_STATE_DRY && data.ac_state[143] == AC_STATE_COOL);
 
   time.minute = 20;
   settings.ac_auto_mode = AC_AUTO_OFF; settings.hm_auto = false; ac.temp = 19;
@@ -250,6 +258,7 @@ static void test_setting_history() {
   graph_data_update(time, data, sensor, settings, ac);
   assert(!graph_valid_value(data.ac_set_temperature[143]));
   assert(data.ac_set_temperature[142] == 19);
+  assert(data.ac_state[142] == AC_STATE_COOL && data.ac_state[143] == AC_STATE_OFF);
   time.minute = 40;
   settings.ac_auto_mode = AC_AUTO_HEAT; settings.ac_auto_temp = 27;
   settings.hm_auto = true; settings.hm_target_humidity = 50;
@@ -257,6 +266,7 @@ static void test_setting_history() {
   graph_data_update(time, data, sensor, settings, ac);
   assert(data.temperature_target[143] == 27 && data.humidity_target[143] == 50);
   assert(data.ac_set_temperature[143] == 29);
+  assert(data.ac_state[143] == AC_STATE_HEAT && data.ac_state[142] == AC_STATE_OFF);
   assert(!graph_valid_value(data.temperature_target[142]));
   assert(!graph_valid_value(data.humidity_target[142]));
   assert(data.temperature_target[140] == 24 && data.humidity_target[140] == 45);
@@ -266,6 +276,7 @@ static void test_setting_history() {
   graph_data_update(time, data, sensor, settings, ac);
   assert(data.last_data_update_minute == 50);
   assert(data.temperature_target[142] == 27);
+  assert(data.ac_state[142] == AC_STATE_HEAT);
 }
 
 static void test_time_rollover_and_gaps() {

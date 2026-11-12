@@ -251,6 +251,7 @@ Graph_references graph_control_references(const Settings &settings, const AC_sta
        ac_status.state == AC_STATE_HEAT) &&
       ac_status.temp >= AC_TEMP_LIMIT_MIN && ac_status.temp <= AC_TEMP_LIMIT_MAX) {
     references.ac_set_temperature = ac_status.temp;
+    references.ac_state = ac_status.state;
   }
   if (settings.hm_auto && isfinite(settings.hm_target_humidity) &&
       settings.hm_target_humidity >= 0.0 && settings.hm_target_humidity <= 100.0) {
@@ -516,6 +517,7 @@ void graph_add_data(Graph_data &graph_data, const Sensor_data &sensor_data, int 
     if (i < GRAPH_DATA_1_DAY) {
       graph_data.temperature_target[i] = source < GRAPH_DATA_1_DAY ? graph_data.temperature_target[source] : GRAPH_DATA_UNDEFINED;
       graph_data.ac_set_temperature[i] = source < GRAPH_DATA_1_DAY ? graph_data.ac_set_temperature[source] : GRAPH_DATA_UNDEFINED;
+      graph_data.ac_state[i] = source < GRAPH_DATA_1_DAY ? graph_data.ac_state[source] : AC_STATE_OFF;
       graph_data.humidity_target[i] = source < GRAPH_DATA_1_DAY ? graph_data.humidity_target[source] : GRAPH_DATA_UNDEFINED;
     }
   }
@@ -553,6 +555,7 @@ void graph_data_update(const Time_info &time_info, Graph_data &graph_data, const
   const Graph_references references = graph_control_references(settings, ac_status);
   graph_data.temperature_target[GRAPH_DATA_1_DAY - 1] = references.temperature_target;
   graph_data.ac_set_temperature[GRAPH_DATA_1_DAY - 1] = references.ac_set_temperature;
+  graph_data.ac_state[GRAPH_DATA_1_DAY - 1] = references.ac_state;
   graph_data.humidity_target[GRAPH_DATA_1_DAY - 1] = references.humidity_target;
 }
 

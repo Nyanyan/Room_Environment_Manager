@@ -2,6 +2,7 @@
 #define GRAPH_H
 
 #include <JPEGENC.h>
+#include "air_conditioner.h"
 
 // graph data
 #define GRAPH_DATA_INTERVAL 10 // minute
@@ -16,6 +17,7 @@ struct Graph_data{
   // Control history follows the latest 24 hours (the black sensor trace).
   float temperature_target[GRAPH_DATA_1_DAY];
   float ac_set_temperature[GRAPH_DATA_1_DAY];
+  uint8_t ac_state[GRAPH_DATA_1_DAY];
   float humidity_target[GRAPH_DATA_1_DAY];
   int64_t last_data_update_slot;
   int last_data_update_minute;
@@ -30,6 +32,7 @@ struct Graph_data{
       if (i < GRAPH_DATA_1_DAY) {
         temperature_target[i] = GRAPH_DATA_UNDEFINED;
         ac_set_temperature[i] = GRAPH_DATA_UNDEFINED;
+        ac_state[i] = AC_STATE_OFF;
         humidity_target[i] = GRAPH_DATA_UNDEFINED;
       }
     }
@@ -43,6 +46,7 @@ struct Graph_data{
 struct Graph_references {
   float temperature_target = GRAPH_DATA_UNDEFINED;
   float ac_set_temperature = GRAPH_DATA_UNDEFINED;
+  uint8_t ac_state = AC_STATE_OFF;
   float humidity_target = GRAPH_DATA_UNDEFINED;
 };
 
