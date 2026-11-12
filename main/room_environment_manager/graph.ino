@@ -8,7 +8,7 @@
 #include <limits.h>
 #include <time.h>
 
-const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
+const uint8_t color_palette[BMP_N_BASE_COLORS][3] = { // RGB
   {255, 255, 255}, // white
   {  0,   0,   0}, // black
   {127, 127, 127}, // gray
@@ -24,6 +24,20 @@ const uint8_t color_palette[BMP_N_COLOR_PALETTE][3] = { // RGB
   { 67,  61, 139}, // navy blue
   { 46,  35, 108}  // dark blue
 };
+
+const uint8_t color_ac_setting[2][3] = {
+  {160, 200, 255}, // light blue: cooling/dehumidifying
+  {255, 160, 160}  // light red: heating
+};
+
+void graph_pixel_rgb(uint8_t palette_idx, uint8_t rgb[3]) {
+  const uint8_t base = palette_idx % BMP_N_BASE_COLORS;
+  const uint8_t overlay = palette_idx / BMP_N_BASE_COLORS;
+  for (int channel = 0; channel < 3; ++channel) {
+    rgb[channel] = overlay == 0 ? color_palette[base][channel] :
+      (color_palette[base][channel] + color_ac_setting[overlay - 1][channel]) / 2;
+  }
+}
 
 const Value_color color_temperature[N_COLOR_TEMPERATURE] = {
   {5, PALETTE_NAVYBLUE},
@@ -353,18 +367,14 @@ void graph_plot(Graph_img &graph_img, float data[], int y_min, int y_max) {
 
 
 
-void graph_draw_reference_pixel(Graph_img &graph_img, int x, int y, bool target) {
-  const uint8_t color = target ? PALETTE_PURPLE : PALETTE_BLUE;
+void graph_draw_reference_pixel(Graph_img &graph_img, int x, int y) {
   const int second_y = y < GRAPH_AREA_HEIGHT ? y + 1 : y - 1;
-  graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = color;
-  // Keep both colors visible even for a single sample with equal references.
-  if (target || graph_img.graph[GRAPH_SY + second_y][GRAPH_SX + x] != PALETTE_PURPLE) {
-    graph_img.graph[GRAPH_SY + second_y][GRAPH_SX + x] = color;
-  }
+  graph_img.graph[GRAPH_SY + y][GRAPH_SX + x] = PALETTE_PURPLE;
+  graph_img.graph[GRAPH_SY + second_y][GRAPH_SX + x] = PALETTE_PURPLE;
 }
 
 
-void graph_draw_reference(Graph_img &graph_img, int y_min, int y_max, const float values[], bool target) {
+void graph_draw_reference(Graph_img &graph_img, int y_min, int y_max, const float values[]) {
   if (y_min >= y_max) {
     return;
   }
@@ -378,16 +388,44 @@ void graph_draw_reference(Graph_img &graph_img, int y_min, int y_max, const floa
     const int y = round((float)GRAPH_AREA_HEIGHT * (value - y_min) / (y_max - y_min));
     const bool endpoint = previous_y < 0 || x == GRAPH_DATA_1_DAY - 1 ||
       !graph_valid_value(values[x + 1]) || values[x + 1] != value;
-    if (endpoint || previous_y != y || (target ? x % 8 < 4 : x % 4 == 2)) {
-      graph_draw_reference_pixel(graph_img, x, y, target);
+    if (endpoint || previous_y != y || x % 8 < 4) {
+      graph_draw_reference_pixel(graph_img, x, y);
     }
     if (previous_y >= 0 && previous_y != y) {
       // A setting change is a step at this slot, not an interpolated ramp.
       for (int step_y = min(previous_y, y); step_y <= max(previous_y, y); ++step_y) {
-        graph_draw_reference_pixel(graph_img, x, step_y, target);
+        graph_draw_reference_pixel(graph_img, x, step_y);
       }
     }
     previous_y = y;
+  }
+}
+
+
+void graph_draw_ac_setting(Graph_img &graph_img, int y_min, int y_max, const Graph_data &graph_data) {
+  if (y_min >= y_max) return;
+  int previous_y = -1;
+  uint8_t previous_bank = 0;
+  for (int x = 0; x < GRAPH_DATA_1_DAY; ++x) {
+    const float value = graph_data.ac_set_temperature[x];
+    const uint8_t state = graph_data.ac_state[x];
+    const uint8_t bank = state == AC_STATE_HEAT ? PALETTE_AC_HEAT :
+      (state == AC_STATE_COOL || state == AC_STATE_DRY ? PALETTE_AC_COOL : 0);
+    if (!bank || !graph_valid_value(value) || value < y_min || value > y_max) {
+      previous_y = -1;
+      continue;
+    }
+    const int y = round((float)GRAPH_AREA_HEIGHT * (value - y_min) / (y_max - y_min));
+    const int start_y = previous_y >= 0 && previous_bank == bank ? previous_y : y;
+    const int low = max(0, min(start_y, y) - GRAPH_AC_BAND_RADIUS);
+    const int high = min(GRAPH_AREA_HEIGHT, max(start_y, y) + GRAPH_AC_BAND_RADIUS);
+    // Draw each pixel once, including step corners, so opacity stays at 50%.
+    for (int band_y = low; band_y <= high; ++band_y) {
+      uint8_t &pixel = graph_img.graph[GRAPH_SY + band_y][GRAPH_SX + x];
+      pixel = bank + pixel % BMP_N_BASE_COLORS;
+    }
+    previous_y = y;
+    previous_bank = bank;
   }
 }
 
@@ -398,9 +436,9 @@ void graph_draw_temperature(Graph_data &graph_data, Graph_img &graph_img, Time_i
   int y_min, y_max;
   graph_calculate_range(graph_data.temperature, color_temperature, N_COLOR_TEMPERATURE, GRAPH_TEMPERATURE_SCALE_INTERVAL, &y_min, &y_max, graph_data.temperature_target, graph_data.ac_set_temperature);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_TEMPERATURE_SCALE_INTERVAL, color_temperature, N_COLOR_TEMPERATURE);
-  graph_draw_reference(graph_img, y_min, y_max, graph_data.temperature_target, true);
-  graph_draw_reference(graph_img, y_min, y_max, graph_data.ac_set_temperature, false);
+  graph_draw_reference(graph_img, y_min, y_max, graph_data.temperature_target);
   graph_plot(graph_img, graph_data.temperature, y_min, y_max);
+  graph_draw_ac_setting(graph_img, y_min, y_max, graph_data);
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_TEMPERATURE_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_temperature, CHAR_TEMPERATURE_N); // title + y unit
   graph_draw_str(graph_img, CHAR_UNIT_X_EY, CHAR_UNIT_X_EX, char_idx_time, CHAR_TIME_N); // x unit
@@ -415,7 +453,7 @@ void graph_draw_humidity(Graph_data &graph_data, Graph_img &graph_img, Time_info
   int y_min, y_max;
   graph_calculate_range(graph_data.humidity, color_humidity, N_COLOR_HUMIDITY, GRAPH_HUMIDITY_SCALE_INTERVAL, &y_min, &y_max, graph_data.humidity_target, nullptr);
   graph_draw_y_scale(graph_img, y_min, y_max, GRAPH_HUMIDITY_SCALE_INTERVAL, color_humidity, N_COLOR_HUMIDITY);
-  graph_draw_reference(graph_img, y_min, y_max, graph_data.humidity_target, true);
+  graph_draw_reference(graph_img, y_min, y_max, graph_data.humidity_target);
   graph_plot(graph_img, graph_data.humidity, y_min, y_max);
   graph_draw_frame(graph_img);
   graph_draw_str(graph_img, GRAPH_IMG_HEIGHT - CHAR_HEIGHT - CHAR_TITLE_MARGIN_Y, CHAR_HUMIDITY_N * (CHAR_WIDTH + CHAR_SPACE) - CHAR_SPACE + CHAR_TITLE_MARGIN_X, char_idx_humidity, CHAR_HUMIDITY_N); // title + y unit
@@ -488,11 +526,13 @@ void graph_encode_jpeg(Graph_img &graph_img) {
           if (img_x >= GRAPH_IMG_WIDTH) img_x = GRAPH_IMG_WIDTH - 1;
           if (img_y < 0) img_y = 0;
           const uint8_t palette_idx = graph_img.graph[img_y][img_x];
+          uint8_t rgb[3];
+          graph_pixel_rgb(palette_idx, rgb);
           const int mcu_idx = (py * mcu_w + px) * 3;
           // JPEGENC on this target interprets 24bpp bytes as B,G,R order.
-          mcu[mcu_idx + 0] = color_palette[palette_idx][2]; // B
-          mcu[mcu_idx + 1] = color_palette[palette_idx][1]; // G
-          mcu[mcu_idx + 2] = color_palette[palette_idx][0]; // R
+          mcu[mcu_idx + 0] = rgb[2]; // B
+          mcu[mcu_idx + 1] = rgb[1]; // G
+          mcu[mcu_idx + 2] = rgb[0]; // R
         }
       }
       rc = jpg.addMCU(&jpe, mcu, mcu_w * 3);

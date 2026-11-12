@@ -53,7 +53,11 @@ struct Graph_references {
 
 
 // bitmap color palette
-#define BMP_N_COLOR_PALETTE 14
+#define BMP_N_BASE_COLORS 14
+// Two overlay banks retain the underlying palette index for exact 50% blending.
+#define PALETTE_AC_COOL BMP_N_BASE_COLORS
+#define PALETTE_AC_HEAT (BMP_N_BASE_COLORS * 2)
+#define BMP_N_COLOR_PALETTE (BMP_N_BASE_COLORS * 3)
 #define PALETTE_WHITE 0
 #define PALETTE_BLACK 1
 #define PALETTE_GRAY 2
@@ -78,6 +82,7 @@ struct Graph_references {
 #define GRAPH_AREA_WIDTH 144
 #define GRAPH_SX 32
 #define GRAPH_SY 13
+#define GRAPH_AC_BAND_RADIUS 2 // A five-pixel ribbon centered on the setpoint.
 
 
 
