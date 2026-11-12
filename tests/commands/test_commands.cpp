@@ -157,7 +157,7 @@ static void test_preset_commands() {
   run("pr n ac h 22");
   auto presets = saved_presets();
   assert(strcmp(presets.ac, "ac h 22") == 0 && !presets.hm[0]);
-  run("pr n hm 53");
+  run("pr n hm a 53");
   presets = saved_presets();
   assert(strcmp(presets.ac, "ac h 22") == 0 && strcmp(presets.hm, "hm a 53") == 0);
   run("pr show");
@@ -195,7 +195,7 @@ static void test_preset_commands() {
          Case{"pr n ac a c 25", "ac a c 25", "hm a 53"},
          Case{"pr n hm auto 50.5", "ac a c 25", "hm a 50.5"},
          Case{"pr n hm a 0", "ac a c 25", "hm a 0"},
-         Case{"pr n hm 100", "ac a c 25", "hm a 100"},
+         Case{"pr n hm a 100", "ac a c 25", "hm a 100"},
          Case{"pr n hm on weak", "ac a c 25", "hm on w"},
          Case{"pr n hm on s", "ac a c 25", "hm on s"},
          Case{"pr n ac a off", "ac a off", "hm on s"},
@@ -223,7 +223,8 @@ static void test_invalid_preset_commands() {
          "pr n ac h nan", "pr n ac h inf", "pr n ac h 22abc", "pr n ac h 22.5", "pr n ac h 22 extra",
          "pr n ac a h", "pr n ac a h 0", "pr n ac a h 31", "pr n ac a h nan", "pr n ac a h inf",
          "pr n ac a h 23 extra", "pr n ac off extra", "pr n ac a off extra",
-         "pr n hm", "pr n hm -1", "pr n hm 101", "pr n hm nan", "pr n hm inf", "pr n hm 53abc",
+         "pr n hm", "pr n hm 0", "pr n hm 53", "pr n hm 100",
+         "pr n hm a -1", "pr n hm a 101", "pr n hm a nan", "pr n hm a inf", "pr n hm a 53abc",
          "pr n hm a", "pr n hm a 53 extra", "pr n hm a 0.0000000000000000000000000000000000001",
          "pr n hm on", "pr n hm on bad", "pr n hm off extra", "pr n hm mention on", "pr n hm alert off",
          "pr n reboot", "pr n all off", "pr n pr on", "pr on extra", "pr show extra", "pr clear extra", "pr c extra"}) {
@@ -259,10 +260,10 @@ static void test_single_presets_clear_and_failures() {
   assert(ac_requests.size() == requests_before + 1 && device_state == HM_STRONG && !settings.hm_auto);
   run("pr n hm on w"); run("pr on");
   assert(device_state == HM_WEAK);
-  run("pr n hm 53");
+  run("pr n hm a 53");
   run("pr n ac h 22");
   EEPROM.commit_ok = false;
-  run("pr n hm 60");
+  run("pr n hm a 60");
   assert(messages.back().find("[ERROR]") == 0);
   assert(strcmp(saved_presets().hm, "hm a 53") == 0);
   run("pr clear");
@@ -295,7 +296,7 @@ static void test_single_presets_clear_and_failures() {
 
 static void test_reserved_preset_and_all_off() {
   now.year = 2026; now.month = 11; now.day = 12; now.hour = 13; now.minute = 0;
-  run("pr n ac h 22"); run("pr n hm 53");
+  run("pr n ac h 22"); run("pr n hm a 53");
   run("r n 1400 pr on"); run("r n 1410 all off");
   run("pr n ac c 26"); // Execute the latest preset when the reservation is due.
   now.hour = 14;

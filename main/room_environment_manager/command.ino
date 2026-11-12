@@ -336,10 +336,8 @@ bool normalize_preset_command(const Command &command, String &text) {
     else if (command.arg1 == "on") {
       if (command.arg2 == "w" || command.arg2 == "weak") text = "hm on w";
       if (command.arg2 == "s" || command.arg2 == "strong") text = "hm on s";
-    } else {
-      const String target = command.arg1 == "a" || command.arg1 == "auto" ? command.arg2 :
-        (!command.arg2.length() ? command.arg1 : String());
-      if (parse_temperature_value(target, value) && hm_valid_humidity(value)) text = String("hm a ") + target;
+    } else if (command.arg1 == "a" || command.arg1 == "auto") {
+      if (parse_temperature_value(command.arg2, value) && hm_valid_humidity(value)) text = String("hm a ") + command.arg2;
     }
   }
   return text.length() > 0 && text.length() < PRESET_COMMAND_MAX_LEN;
@@ -511,7 +509,7 @@ void command_print_command_list(Time_info &time_info){
   str += "- `all off`: stop AC and humidifier; disable both auto modes\n";
   str += "- `pr` (one preset per device, retained after reboot)\n";
   str += "  - `pr n [ac/hm command]`: register or overwrite that device only\n";
-  str += "    - `pr n ac h 22`, `pr n ac a c 26.5`, `pr n hm 53` (= hm a 53)\n";
+  str += "    - `pr n ac h 22`, `pr n ac a c 26.5`, `pr n hm a 53`\n";
   str += "  - `pr on`: execute all registered presets\n";
   str += "  - `pr show`: show both presets\n";
   str += "  - `pr clear` / `pr c`: clear both presets\n";
@@ -874,7 +872,7 @@ void command_check_pr(Command command, Time_info &time_info, Sensor_data &sensor
     const Command operating = parse_command_text(nested);
     String normalized;
     if (!normalize_preset_command(operating, normalized)) {
-      slack_send_message(time_info, "[ERROR] Expected pr n [AC/HM operating command], e.g. pr n ac h 22 or pr n hm 53. AC: 16-30 C (manual: integer), HM: 0-100 %.");
+      slack_send_message(time_info, "[ERROR] Expected pr n [AC/HM operating command], e.g. pr n ac h 22 or pr n hm a 53. AC: 16-30 C (manual: integer), HM: 0-100 %.");
       return;
     }
     char *destination = operating.cmd == "ac" ? presets.ac : presets.hm;
@@ -899,7 +897,7 @@ void command_check_pr(Command command, Time_info &time_info, Sensor_data &sensor
       "[INFO] Both presets cleared." : "[ERROR] Could not clear presets. Previous presets retained.");
   } else if (command.arg1 == "on") {
     if (!presets.ac[0] && !presets.hm[0]) {
-      slack_send_message(time_info, "[INFO] No presets registered. Use pr n ac h 22 or pr n hm 53.");
+      slack_send_message(time_info, "[INFO] No presets registered. Use pr n ac h 22 or pr n hm a 53.");
       return;
     }
     const char *commands[] = {presets.ac, presets.hm};
